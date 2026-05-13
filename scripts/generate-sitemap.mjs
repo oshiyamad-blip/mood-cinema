@@ -41,18 +41,18 @@ const ARTICLE_SLUGS = [
   'why-use-quiz',
 ];
 
-// 主要診断パターン
-const RESULT_PATTERNS = [
-  'mood=cry',
-  'mood=laugh',
-  'mood=excited',
-  'mood=heal',
-  'mood=think',
-  'mood=scared',
-  'mood=cry&with=solo&runtime=short',
-  'mood=heal&with=family',
-  'mood=think&with=solo',
-  'mood=scared&with=friends',
+// SEO 静的シーンランディング
+const SCENE_SLUGS = [
+  'heartbreak-solo',
+  'friday-friends',
+  'rainy-night-solo',
+  'couple-romantic',
+  'family-sunday',
+  'scary-night',
+  'think-arty',
+  'epic-adventure',
+  'heal-winter',
+  'noir-mature',
 ];
 
 function url(loc, { changefreq = 'monthly', priority = '0.7', lastmod } = {}) {
@@ -62,7 +62,7 @@ function url(loc, { changefreq = 'monthly', priority = '0.7', lastmod } = {}) {
 
 const entries = [
   url(`${SITE_URL}/`, { changefreq: 'weekly', priority: '1.0' }),
-  url(`${SITE_URL}/quiz`, { changefreq: 'monthly', priority: '0.9' }),
+  url(`${SITE_URL}/mood`, { changefreq: 'monthly', priority: '0.9' }),
   url(`${SITE_URL}/articles`, { changefreq: 'weekly', priority: '0.8' }),
   url(`${SITE_URL}/about`, { changefreq: 'yearly', priority: '0.3' }),
   url(`${SITE_URL}/privacy`, { changefreq: 'yearly', priority: '0.2' }),
@@ -70,8 +70,8 @@ const entries = [
   ...ARTICLE_SLUGS.map(slug =>
     url(`${SITE_URL}/article/${slug}`, { lastmod: TODAY, priority: '0.8' }),
   ),
-  ...RESULT_PATTERNS.map(q =>
-    url(`${SITE_URL}/result?${q.replace(/&/g, '&amp;')}`, { changefreq: 'weekly', priority: '0.6' }),
+  ...SCENE_SLUGS.map(slug =>
+    url(`${SITE_URL}/scene/${slug}`, { lastmod: TODAY, priority: '0.7' }),
   ),
 ];
 

@@ -1,8 +1,10 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import Home from './pages/Home';
-import Quiz from './pages/Quiz';
+import Mood from './pages/Mood';
 import Result from './pages/Result';
+import SceneLanding from './pages/SceneLanding';
 import Article from './pages/Article';
 import ArticleList from './pages/ArticleList';
 import Privacy from './pages/Privacy';
@@ -29,7 +31,7 @@ export default function App() {
             <span className="brand__name">mood-cinema</span>
           </Link>
           <nav className="site-nav">
-            <Link to="/quiz">診断する</Link>
+            <Link to="/mood">診断する</Link>
             <Link to="/articles">特集</Link>
             <Link to="/about">運営</Link>
           </nav>
@@ -39,8 +41,10 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/mood" element={<Mood />} />
+          <Route path="/quiz" element={<Navigate to="/mood" replace />} />
           <Route path="/result" element={<Result />} />
+          <Route path="/scene/:slug" element={<SceneLanding />} />
           <Route path="/articles" element={<ArticleList />} />
           <Route path="/article/:slug" element={<Article />} />
           <Route path="/privacy" element={<Privacy />} />

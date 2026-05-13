@@ -21,7 +21,7 @@ export const ARTICLES: Article[] = [
     title: '失恋した夜に観たい、号泣できる映画 7 選',
     summary: '失恋・別れの夜に「思い切り泣いて立ち直りたい」あなたへ。泣けるラブストーリーとヒューマンドラマを厳選。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=cry&with=solo',
+    ctaQuery: 'b=cry,heartstring,solo',
     sections: [
       {
         body: [
@@ -56,7 +56,7 @@ export const ARTICLES: Article[] = [
     title: '90分以内で観れる名作映画 10 選',
     summary: '平日の夜・スキマ時間でも観れる、90 分以内に収まる名作・佳作だけを集めました。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=think&runtime=short',
+    ctaQuery: 'mood=think&b=light,bedtime',
     sections: [
       {
         body: [
@@ -84,7 +84,7 @@ export const ARTICLES: Article[] = [
     title: '家族で観れる映画 ファミリーナイト推奨作',
     summary: '子供から大人まで楽しめる、家族の団欒にぴったりの映画特集。ホラー・暴力描写を避けた厳選作品。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=heal&with=family',
+    ctaQuery: 'b=family,family-watch,sunday-afternoon',
     sections: [
       {
         body: [
@@ -112,7 +112,7 @@ export const ARTICLES: Article[] = [
     title: '恋人と観たい、空気が良くなる映画の選び方',
     summary: 'デートで観る映画選びで気まずくならないために。ジャンル選び・気分の合わせ方を解説。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=heal&with=partner',
+    ctaQuery: 'b=romantic,partner,friday-night',
     sections: [
       {
         body: [
@@ -143,7 +143,7 @@ export const ARTICLES: Article[] = [
     title: '怖い映画で叫びたい夜に。今夜のホラー診断',
     summary: '友達と集まる夜、一人で震えたい夜——シーン別のホラー映画の選び方とおすすめ作品の探し方。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=scared&with=friends',
+    ctaQuery: 'b=scared,solo,dense&with=friends',
     sections: [
       {
         body: [
@@ -175,7 +175,7 @@ export const ARTICLES: Article[] = [
     title: '雨の日に観たい映画 おすすめ10選【気分が上がる・癒される】',
     summary: '雨の日は映画日和。外に出たくない休日に、気分を上げてくれる映画・ゆっくり癒してくれる映画を状況別に紹介します。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=heal',
+    ctaQuery: 'b=rainy-night,solo,heartstring',
     sections: [
       {
         body: [
@@ -212,7 +212,7 @@ export const ARTICLES: Article[] = [
     title: '仕事疲れ・ストレス発散に観たい映画【スッキリできる10選】',
     summary: '仕事終わりの疲れをスカッと吹き飛ばしてくれる映画特集。スカっとするアクション・笑えるコメディ・テンポが良くてスッキリできる作品を厳選。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=excited&with=solo',
+    ctaQuery: 'b=excited,friday-night,friends&with=solo',
     sections: [
       {
         body: [
@@ -251,7 +251,7 @@ export const ARTICLES: Article[] = [
     title: '一人暮らしの夜に観たい映画 おすすめ10選',
     summary: '誰にも気兼ねせず観れる一人映画の夜。部屋の電気を消して没入したい名作・考えさせられる作品・ひとりだからこそ刺さる映画を集めました。',
     publishedAt: '2026-05-13',
-    ctaQuery: 'mood=think&with=solo',
+    ctaQuery: 'b=think,solo,rainy-night',
     sections: [
       {
         body: [

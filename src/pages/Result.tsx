@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { buildDiscoverParams, buildRecommendReason } from '../data/moodMapping';
-import type { AnswerMap, StepKey } from '../data/questions';
+import { BALLOON_MAP } from '../data/balloons';
+import { buildParamsFromBalloons, buildBalloonShareText } from '../lib/balloonMapper';
+import { buildRecommendReason } from '../data/moodMapping';
 import { discoverMovies, TmdbConfigError } from '../lib/tmdb';
 import type { TmdbMovie } from '../lib/tmdb';
 import MovieCard from '../components/MovieCard';
@@ -9,84 +10,70 @@ import AdBanner from '../components/AdBanner';
 import ShareButtons from '../components/ShareButtons';
 import { useSeo } from '../lib/seo';
 import { saveHistory } from '../lib/history';
-import { getRelatedArticles, MOOD_SHARE_TEXT } from '../data/moodArticleMap';
-
-const KEYS: StepKey[] = ['mood', 'with', 'runtime', 'era', 'origin'];
-
-function parseAnswers(params: URLSearchParams): AnswerMap {
-  const a: AnswerMap = {};
-  for (const k of KEYS) {
-    const v = params.get(k);
-    if (v) a[k] = v;
-  }
-  return a;
-}
+import { getRelatedArticles } from '../data/moodArticleMap';
+import { track } from '../lib/analytics';
 
 export default function Result() {
   const [search] = useSearchParams();
-  const answers = parseAnswers(search);
-  const { params, labels, moodReason } = buildDiscoverParams(answers);
+
+  const balloonIds = (search.get('b') ?? '').split(',').filter(id => id && BALLOON_MAP[id]);
+  const balloons = balloonIds.map(id => BALLOON_MAP[id]).filter(Boolean);
+  const { params, labels, moodReason } = buildParamsFromBalloons(balloons);
+  const shareTitle = buildBalloonShareText(balloons);
 
   const [movies, setMovies] = useState<TmdbMovie[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const relatedArticles = getRelatedArticles(answers);
-  const shareTitle = MOOD_SHARE_TEXT[answers.mood ?? ''] ?? '気分で選ぶ映画診断、やってみた';
+  const canonicalB = [...balloonIds].sort().join(',');
 
   useSeo({
-    title: `${labels.join(' / ') || '映画'} のおすすめ 5 選 | mood-cinema`,
-    description: `気分「${labels.join(' / ') || 'おまかせ'}」のあなたへ。今夜ぴったりの映画 5 本を診断結果として紹介します。`,
-    canonicalPath: `/result?${search.toString()}`,
+    title: `${labels.slice(0,3).map(l=>l.replace(/^./,'')).join(' × ') || '映画'} のおすすめ 5 選 | mood-cinema`,
+    description: `「${balloons.slice(0,3).map(b=>b.label).join('・')}」の気分にぴったりな映画 5 本を診断結果として紹介します。`,
+    canonicalPath: canonicalB ? `/result?b=${canonicalB}` : '/result',
   });
 
   useEffect(() => {
     let mounted = true;
     setMovies(null);
     setError(null);
+
     discoverMovies(params)
-      .then((res) => {
+      .then(res => {
         if (!mounted) return;
-        setMovies(res.slice(0, 5));
-        saveHistory({
-          answers,
-          labels,
-          query: search.toString(),
-        });
+        const list = res.slice(0, 5);
+        setMovies(list);
+        track.resultView(balloonIds.join(','));
+        saveHistory({ answers: {}, labels, query: search.toString() });
       })
       .catch((e: unknown) => {
         if (!mounted) return;
-        if (e instanceof TmdbConfigError) {
-          setError(e.message);
-        } else if (e instanceof Error) {
-          setError(`取得エラー: ${e.message}`);
-        } else {
-          setError('不明なエラー');
-        }
+        if (e instanceof TmdbConfigError) setError(e.message);
+        else if (e instanceof Error) setError(`取得エラー: ${e.message}`);
+        else setError('不明なエラー');
       });
-    return () => {
-      mounted = false;
-    };
+
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.toString()]);
 
-  const shareUrl =
-    typeof window !== 'undefined' ? window.location.href : '';
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const relatedArticles = getRelatedArticles(balloonIds);
 
   return (
     <div className="container">
       <section className="result__header">
         <h1>今夜のおすすめ 5 本</h1>
-        <p className="result__summary">
-          {labels.length > 0
-            ? `「${labels.join(' / ')}」の条件で抽出しました`
-            : '人気作品から抽出しました'}
-        </p>
         {labels.length > 0 && (
-          <div className="result__tags">
-            {labels.map((l) => (
-              <span key={l} className="result__tag">{l}</span>
-            ))}
-          </div>
+          <>
+            <p className="result__summary">
+              「{balloons.map(b => b.label).join(' × ')}」の条件で抽出しました
+            </p>
+            <div className="result__tags">
+              {balloons.map(b => (
+                <span key={b.id} className="result__tag">{b.emoji}{b.label}</span>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
@@ -100,14 +87,10 @@ export default function Result() {
           </p>
         </div>
       )}
-
-      {!error && !movies && (
-        <div className="state-box">読み込み中…</div>
-      )}
-
+      {!error && !movies && <div className="state-box">読み込み中…</div>}
       {movies && movies.length === 0 && (
         <div className="state-box">
-          条件に合う作品が見つかりませんでした。条件を変えてもう一度お試しください。
+          条件に合う作品が見つかりませんでした。バルーンを変えてもう一度お試しください。
         </div>
       )}
 
@@ -132,7 +115,7 @@ export default function Result() {
         <section className="result__related">
           <h2>この結果に合う特集記事</h2>
           <ul className="article-list">
-            {relatedArticles.map((a) => (
+            {relatedArticles.map(a => (
               <li key={a.slug} className="article-list-item">
                 <Link to={`/article/${a.slug}`}>
                   <h3>{a.reason}</h3>
@@ -145,7 +128,7 @@ export default function Result() {
       )}
 
       <div className="result__retry">
-        <Link to="/quiz" className="btn btn--primary">もう一度診断する</Link>
+        <Link to="/mood" className="btn btn--primary">もう一度選びなおす</Link>
         <Link to="/" className="btn btn--secondary">トップに戻る</Link>
       </div>
 
