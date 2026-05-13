@@ -5,13 +5,13 @@ import { loadHistory } from '../lib/history';
 import type { HistoryEntry } from '../lib/history';
 import { ARTICLES } from '../data/articles';
 
-const SHORTCUTS: { label: string; query: string; emoji: string }[] = [
-  { label: '泣ける映画', query: '?mood=cry', emoji: '😢' },
-  { label: '笑えるコメディ', query: '?mood=laugh', emoji: '😂' },
-  { label: '90分以内で観れる名作', query: '?mood=cry&runtime=short', emoji: '⏱️' },
-  { label: 'ひとりで観たい SF', query: '?mood=think&with=solo', emoji: '🧠' },
-  { label: '家族で観れるアニメ', query: '?mood=heal&with=family', emoji: '🌿' },
-  { label: '怖がりたい夜に', query: '?mood=scared&with=friends', emoji: '👻' },
+const SHORTCUTS: { label: string; balloons: string; emoji: string }[] = [
+  { label: '泣ける映画',           balloons: 'cry,heartstring,solo',          emoji: '💧' },
+  { label: '笑えるコメディ',       balloons: 'laugh,friday-night,friends',    emoji: '😂' },
+  { label: '短くて観やすい名作',   balloons: 'light,bedtime,heal',            emoji: '⏱️' },
+  { label: 'ひとりで観たい SF',    balloons: 'think,scifi-theme,solo',        emoji: '🚀' },
+  { label: '家族で観れる映画',     balloons: 'heal,family-watch,light',       emoji: '👪' },
+  { label: '怖がりたい夜に',       balloons: 'scared,solo,winter-night',      emoji: '👻' },
 ];
 
 export default function Home() {
@@ -32,11 +32,11 @@ export default function Home() {
       <section className="hero">
         <h1>今の気分から、<br />観たい映画が見つかる。</h1>
         <p className="lead">
-          5 つの質問に答えるだけ。<br />
-          映画・海外ドラマ 数十万作品からあなたに合う 5 本を診断します。
+          気分のバルーンを選ぶだけ。<br />
+          数十万作品の中から今夜ぴったりの 5 本を診断します。
         </p>
         <div className="hero__cta">
-          <Link to="/quiz" className="btn btn--primary">無料で診断を始める</Link>
+          <Link to="/mood" className="btn btn--primary">今夜の気分を選ぶ →</Link>
         </div>
       </section>
 
@@ -44,9 +44,9 @@ export default function Home() {
         <h2>気分別ショートカット</h2>
         <div className="card-grid">
           {SHORTCUTS.map((s) => (
-            <Link key={s.query} to={`/result${s.query}`} className="history-item">
-              <span style={{ marginRight: 8 }}>{s.emoji}</span>
-              {s.label}
+            <Link key={s.balloons} to={`/result?b=${s.balloons}`} className="shortcut-item">
+              <span className="shortcut-item__emoji">{s.emoji}</span>
+              <span>{s.label}</span>
             </Link>
           ))}
         </div>

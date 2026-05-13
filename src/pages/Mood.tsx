@@ -116,6 +116,7 @@ export default function Mood() {
                         key={b.id}
                         type="button"
                         className={`balloon-chip${isSelected ? ' balloon-chip--selected' : ''}${isDisabled ? ' balloon-chip--disabled' : ''}`}
+                        data-cat={b.category}
                         onClick={() => !isDisabled && toggle(b.id)}
                         aria-pressed={isSelected}
                       >
