@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { buildDiscoverParams } from '../data/moodMapping';
+import { buildDiscoverParams, buildRecommendReason } from '../data/moodMapping';
 import type { AnswerMap, StepKey } from '../data/questions';
 import { discoverMovies, TmdbConfigError } from '../lib/tmdb';
 import type { TmdbMovie } from '../lib/tmdb';
@@ -25,7 +25,7 @@ function parseAnswers(params: URLSearchParams): AnswerMap {
 export default function Result() {
   const [search] = useSearchParams();
   const answers = parseAnswers(search);
-  const { params, labels } = buildDiscoverParams(answers);
+  const { params, labels, moodReason } = buildDiscoverParams(answers);
 
   const [movies, setMovies] = useState<TmdbMovie[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +117,10 @@ export default function Result() {
           <div className="result__list">
             {movies.map((m, i) => (
               <div key={m.id}>
-                <MovieCard movie={m} />
+                <MovieCard
+                  movie={m}
+                  reason={buildRecommendReason(moodReason, m.vote_average, m.vote_count)}
+                />
                 {i === 1 && <AdBanner />}
               </div>
             ))}

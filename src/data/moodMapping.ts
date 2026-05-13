@@ -29,15 +29,46 @@ interface MoodConfig {
   withGenres: number[];
   withoutGenres?: number[];
   label: string;
+  reasonTemplate: string;
 }
 
 const MOOD_CONFIG: Record<string, MoodConfig> = {
-  laugh: { withGenres: [GENRE.COMEDY], withoutGenres: [GENRE.HORROR], label: '笑える' },
-  cry: { withGenres: [GENRE.DRAMA, GENRE.ROMANCE], label: '泣ける' },
-  excited: { withGenres: [GENRE.ACTION, GENRE.THRILLER], label: '興奮する' },
-  heal: { withGenres: [GENRE.FAMILY, GENRE.ANIMATION], withoutGenres: [GENRE.HORROR], label: '癒される' },
-  think: { withGenres: [GENRE.DRAMA, GENRE.SCIFI, GENRE.MYSTERY], label: '考えさせられる' },
-  scared: { withGenres: [GENRE.HORROR, GENRE.THRILLER], label: '怖い' },
+  laugh: {
+    withGenres: [GENRE.COMEDY],
+    withoutGenres: [GENRE.HORROR, GENRE.THRILLER],
+    label: '笑える',
+    reasonTemplate: '思わず笑えるコメディの隠れた名作',
+  },
+  cry: {
+    withGenres: [GENRE.DRAMA, GENRE.ROMANCE],
+    withoutGenres: [GENRE.HORROR, GENRE.ACTION],
+    label: '泣ける',
+    reasonTemplate: '感情を揺さぶるドラマの中でも特に評価が高い一本',
+  },
+  excited: {
+    withGenres: [GENRE.ACTION, GENRE.THRILLER, GENRE.ADVENTURE],
+    withoutGenres: [GENRE.FAMILY],
+    label: '興奮する',
+    reasonTemplate: 'スクリーンから目が離せないアクション・スリラーの傑作',
+  },
+  heal: {
+    withGenres: [GENRE.FAMILY, GENRE.ANIMATION, GENRE.ROMANCE],
+    withoutGenres: [GENRE.HORROR, GENRE.THRILLER, GENRE.ACTION],
+    label: '癒される',
+    reasonTemplate: '心がほぐれる温かいストーリーの名作',
+  },
+  think: {
+    withGenres: [GENRE.DRAMA, GENRE.MYSTERY, GENRE.HISTORY, GENRE.SCIFI],
+    withoutGenres: [GENRE.COMEDY, GENRE.HORROR],
+    label: '考えさせられる',
+    reasonTemplate: '観終わった後もずっと頭に残る深みのある作品',
+  },
+  scared: {
+    withGenres: [GENRE.HORROR, GENRE.THRILLER],
+    withoutGenres: [GENRE.FAMILY, GENRE.ANIMATION],
+    label: '怖い',
+    reasonTemplate: '評価が高いホラー・スリラーの中でも特に鳥肌が立つ一本',
+  },
 };
 
 interface RuntimeConfig {
@@ -105,6 +136,8 @@ export interface DiscoverParams {
   'certification.lte'?: string;
   sort_by?: string;
   'vote_count.gte'?: number;
+  'vote_count.lte'?: number;
+  'vote_average.gte'?: number;
   language?: string;
   region?: string;
   page?: number;
@@ -114,23 +147,35 @@ export interface DiscoverParams {
 export interface MappingResult {
   params: DiscoverParams;
   labels: string[];
+  moodReason: string;
+}
+
+/** 日付ベースのページ番号（1-3）。同じ日は同じページ → キャッシュ有効。翌日は変化 */
+function dailyPage(): number {
+  const day = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  return (day % 3) + 1;
 }
 
 export function buildDiscoverParams(answers: AnswerMap): MappingResult {
   const labels: string[] = [];
   const params: DiscoverParams = {
-    sort_by: 'popularity.desc',
-    'vote_count.gte': 100,
+    sort_by: 'vote_average.desc',
+    'vote_count.gte': 200,
+    'vote_count.lte': 50000,
+    'vote_average.gte': 6.8,
     language: 'ja-JP',
     region: 'JP',
     include_adult: false,
+    page: dailyPage(),
   };
 
   const mood = answers.mood ? MOOD_CONFIG[answers.mood] : undefined;
+  let moodReason = '';
   if (mood) {
     params.with_genres = mood.withGenres.join(',');
     if (mood.withoutGenres) params.without_genres = mood.withoutGenres.join(',');
     labels.push(mood.label);
+    moodReason = mood.reasonTemplate;
   }
 
   const runtime = answers.runtime ? RUNTIME_CONFIG[answers.runtime] : undefined;
@@ -145,6 +190,11 @@ export function buildDiscoverParams(answers: AnswerMap): MappingResult {
   if (era.lte) params['primary_release_date.lte'] = era.lte;
   if (answers.era && answers.era !== 'any') labels.push(era.label);
 
+  // 名作（1999年以前）は有名作品も含めるため上限を緩和
+  if (answers.era === 'classic') {
+    params['vote_count.lte'] = 200000;
+  }
+
   const origin = originConfig(answers.origin);
   if (origin.country) params.with_origin_country = origin.country;
   if (answers.origin && answers.origin !== 'any') labels.push(origin.label);
@@ -156,5 +206,21 @@ export function buildDiscoverParams(answers: AnswerMap): MappingResult {
     labels.push(cert.label);
   }
 
-  return { params, labels };
+  return { params, labels, moodReason };
+}
+
+/** 映画カードの推薦理由テキストを生成 */
+export function buildRecommendReason(
+  moodReason: string,
+  voteAverage: number,
+  voteCount: number,
+): string {
+  if (!moodReason) return '';
+  const avg = voteAverage.toFixed(1);
+  const countLabel = voteCount < 5000
+    ? '知る人ぞ知る'
+    : voteCount < 20000
+    ? 'コアなファンに支持される'
+    : '多くの人に愛される';
+  return `${countLabel}${moodReason}。TMDB評価 ${avg}点。`;
 }

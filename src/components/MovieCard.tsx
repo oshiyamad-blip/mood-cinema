@@ -4,9 +4,10 @@ import AffiliateButtons from './AffiliateButtons';
 
 interface Props {
   movie: TmdbMovie;
+  reason?: string;
 }
 
-export default function MovieCard({ movie }: Props) {
+export default function MovieCard({ movie, reason }: Props) {
   const poster = posterUrl(movie.poster_path);
   const year = movie.release_date ? movie.release_date.slice(0, 4) : undefined;
   return (
@@ -27,6 +28,7 @@ export default function MovieCard({ movie }: Props) {
         <p className="movie-card__rating" aria-label={`評価 ${movie.vote_average.toFixed(1)} / 10`}>
           ★ {movie.vote_average.toFixed(1)} <span style={{ color: 'var(--color-text-muted)' }}>({movie.vote_count.toLocaleString()})</span>
         </p>
+        {reason && <p className="movie-card__reason">{reason}</p>}
         {movie.overview && <p className="movie-card__overview">{movie.overview}</p>}
         <div className="movie-card__actions">
           <AffiliateButtons title={movie.title} year={year} />
