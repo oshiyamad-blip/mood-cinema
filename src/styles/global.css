@@ -454,6 +454,19 @@ main {
 .result__header {
   padding: var(--space-6) 0 var(--space-4);
 }
+.result__course {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cat-mood);
+  background: color-mix(in srgb, var(--cat-mood) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat-mood) 30%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+  margin: 0 0 var(--space-2);
+}
 .result__header h1 {
   font-size: 1.7rem;
   font-weight: 800;

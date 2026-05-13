@@ -39,6 +39,16 @@ const ARTICLE_SLUGS = [
   'solo-night-movies',
   'weekend-movies',
   'why-use-quiz',
+  'romance-movies',
+  'action-movies',
+  'late-night-movies',
+  'cheer-up-movies',
+  'scifi-movies',
+  'mystery-thriller',
+  'anime-movies-adult',
+  'winter-cozy-movies',
+  'feel-good-endings',
+  'hidden-gem-movies',
 ];
 
 // SEO 静的シーンランディング

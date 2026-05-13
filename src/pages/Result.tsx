@@ -11,6 +11,7 @@ import ShareButtons from '../components/ShareButtons';
 import { useSeo } from '../lib/seo';
 import { saveHistory } from '../lib/history';
 import { getRelatedArticles } from '../data/moodArticleMap';
+import { getCombinationName } from '../lib/courseNames';
 import { track } from '../lib/analytics';
 
 export default function Result() {
@@ -26,10 +27,13 @@ export default function Result() {
 
   const canonicalB = [...balloonIds].sort().join(',');
 
+  const courseName = getCombinationName(balloonIds);
+
   useSeo({
     title: `${labels.slice(0,3).map(l=>l.replace(/^./,'')).join(' × ') || '映画'} のおすすめ 5 選 | mood-cinema`,
     description: `「${balloons.slice(0,3).map(b=>b.label).join('・')}」の気分にぴったりな映画 5 本を診断結果として紹介します。`,
     canonicalPath: canonicalB ? `/result?b=${canonicalB}` : '/result',
+    noindex: true,
   });
 
   useEffect(() => {
@@ -62,6 +66,7 @@ export default function Result() {
   return (
     <div className="container">
       <section className="result__header">
+        <p className="result__course">{courseName}</p>
         <h1>今夜のおすすめ 5 本</h1>
         {labels.length > 0 && (
           <>
@@ -128,8 +133,10 @@ export default function Result() {
       )}
 
       <div className="result__retry">
-        <Link to="/mood" className="btn btn--primary">もう一度選びなおす</Link>
-        <Link to="/" className="btn btn--secondary">トップに戻る</Link>
+        <Link to={`/mood?s=${balloonIds.join(',')}`} className="btn btn--primary">
+          バルーンを変えて再診断
+        </Link>
+        <Link to="/mood" className="btn btn--secondary">最初から選びなおす</Link>
       </div>
 
       <AdBanner />

@@ -8,6 +8,7 @@ interface SeoInput {
   description?: string;
   image?: string;
   canonicalPath?: string;
+  noindex?: boolean;
   jsonLd?: Record<string, unknown>;
 }
 
@@ -46,7 +47,7 @@ function setJsonLd(data: Record<string, unknown>) {
   el.textContent = JSON.stringify(data);
 }
 
-export function useSeo({ title, description, image, canonicalPath, jsonLd }: SeoInput) {
+export function useSeo({ title, description, image, canonicalPath, noindex, jsonLd }: SeoInput) {
   useEffect(() => {
     const prevTitle = document.title;
     document.title = title;
@@ -65,6 +66,8 @@ export function useSeo({ title, description, image, canonicalPath, jsonLd }: Seo
     if (canonicalPath !== undefined) {
       setLink('canonical', SITE_URL + canonicalPath);
     }
+
+    setMeta('meta[name="robots"]', 'content', noindex ? 'noindex,follow' : 'index,follow');
 
     const defaultJsonLd: Record<string, unknown> = {
       '@context': 'https://schema.org',
