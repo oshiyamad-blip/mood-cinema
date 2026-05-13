@@ -331,57 +331,16 @@ main {
   font-weight: 600;
 }
 
-/* カテゴリアコーディオン */
-.balloon-categories {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.balloon-category {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition: border-color 0.15s;
-}
-.balloon-category:has([aria-expanded="true"]) {
-  border-color: rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05);
-}
-.balloon-category__header {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  background: transparent;
-  border: none;
-  color: var(--color-text);
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
-  letter-spacing: 0.01em;
-}
-.balloon-category__header:hover {
-  background: rgba(255,255,255,0.04);
-}
-.balloon-category__arrow {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  transition: transform 0.2s;
-}
-[aria-expanded="true"] .balloon-category__arrow {
-  color: var(--color-text);
-}
-
 /* バルーングリッド */
 .balloon-grid {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3) var(--space-4);
+}
+.balloon-grid--all {
+  padding: 0;
+  gap: var(--space-2);
 }
 
 /* バルーンチップ — カテゴリ別カラー */
@@ -464,26 +423,6 @@ main {
   color: color-mix(in srgb, var(--cat-with) 60%, var(--color-text-muted));
 }
 
-/* カテゴリヘッダーの左アクセント */
-.balloon-category:has(.balloon-chip[data-cat="mood"])       .balloon-category__header::before { background: var(--cat-mood); }
-.balloon-category:has(.balloon-chip[data-cat="scene"])      .balloon-category__header::before { background: var(--cat-scene); }
-.balloon-category:has(.balloon-chip[data-cat="intensity"])  .balloon-category__header::before { background: var(--cat-intensity); }
-.balloon-category:has(.balloon-chip[data-cat="theme"])      .balloon-category__header::before { background: var(--cat-theme); }
-.balloon-category:has(.balloon-chip[data-cat="atmosphere"]) .balloon-category__header::before { background: var(--cat-atmosphere); }
-.balloon-category:has(.balloon-chip[data-cat="with"])       .balloon-category__header::before { background: var(--cat-with); }
-
-.balloon-category__header {
-  gap: var(--space-2);
-}
-.balloon-category__header::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-text-muted);
-  flex-shrink: 0;
-}
 
 /* 送信バー */
 .submit-bar {
