@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- 静的ページ -->
+  <url><loc>https://mood-cinema.example.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://mood-cinema.example.com/quiz</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mood-cinema.example.com/articles</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/about</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://mood-cinema.example.com/privacy</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://mood-cinema.example.com/contact</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+
+  <!-- 記事ページ -->
+  <url><loc>https://mood-cinema.example.com/article/tearjerker-movies</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/short-runtime-classics</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/family-night</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/date-night</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/horror-night</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/rainy-day-movies</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/stress-relief-movies</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/solo-night-movies</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/weekend-movies</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mood-cinema.example.com/article/why-use-quiz</loc><lastmod>2026-05-13</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+
+  <!-- 主要診断パターン (ランディング用) -->
+  <url><loc>https://mood-cinema.example.com/result?mood=cry</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=laugh</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=excited</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=heal</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=think</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=scared</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=cry&amp;with=solo&amp;runtime=short</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=heal&amp;with=family</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=think&amp;with=solo</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://mood-cinema.example.com/result?mood=scared&amp;with=friends</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+
+</urlset>

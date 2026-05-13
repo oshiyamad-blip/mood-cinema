@@ -1,0 +1,13 @@
+{
+  "name": "mood-cinema — 気分で選ぶ映画レコメンド",
+  "short_name": "mood-cinema",
+  "description": "今の気分・シチュエーションから、観たい映画・海外ドラマを5分で診断。",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "display": "standalone",
+  "lang": "ja",
+  "start_url": "/",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
