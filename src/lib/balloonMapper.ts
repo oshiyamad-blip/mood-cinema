@@ -1,4 +1,4 @@
-import type { Balloon, MoodKey, AtmosphereKey } from '../data/balloons';
+import type { Balloon, BalloonCategory, MoodKey, AtmosphereKey } from '../data/balloons';
 import { MOOD_CONFIG } from '../data/moodMapping';
 import type { DiscoverParams, MappingResult } from '../data/moodMapping';
 
@@ -140,7 +140,7 @@ export function pickRandomBalloons(allBalloons: Balloon[]): string[] {
   if (moodPick) ids.push(moodPick);
 
   // 残カテゴリからランダム2個
-  const otherCats = (['scene', 'intensity', 'theme', 'atmosphere', 'with'] as const)
+  const otherCats = (['scene', 'intensity', 'theme', 'atmosphere', 'with'] as BalloonCategory[])
     .sort(() => Math.random() - 0.5)
     .slice(0, 2);
   for (const cat of otherCats) {

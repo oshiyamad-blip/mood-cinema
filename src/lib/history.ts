@@ -1,11 +1,9 @@
-import type { AnswerMap } from '../data/questions';
-
 const KEY = 'mc:history';
 const MAX = 10;
 
 export interface HistoryEntry {
   ts: number;
-  answers: AnswerMap;
+  answers: Record<string, string>;
   labels: string[];
   query: string;
 }
