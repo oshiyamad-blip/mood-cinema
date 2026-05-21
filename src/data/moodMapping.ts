@@ -102,9 +102,14 @@ export function buildRecommendReason(
   moodReason: string,
   voteAverage: number,
   voteCount: number,
+  lang = 'ja',
 ): string {
-  if (!moodReason) return '';
   const avg = voteAverage.toFixed(1);
+  if (lang === 'en') {
+    const label = voteCount < 5000 ? 'Hidden gem' : voteCount < 20000 ? 'Cult favorite' : 'Fan favorite';
+    return `${label} · TMDB ${avg}/10`;
+  }
+  if (!moodReason) return '';
   const countLabel = voteCount < 5000
     ? '知る人ぞ知る'
     : voteCount < 20000

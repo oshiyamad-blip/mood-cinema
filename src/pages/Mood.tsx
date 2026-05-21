@@ -3,15 +3,19 @@ import { BALLOONS, BALLOON_MAP } from '../data/balloons';
 import { pickRandomBalloons } from '../lib/balloonMapper';
 import { track } from '../lib/analytics';
 import { useSeo } from '../lib/seo';
+import { useI18n } from '../i18n';
 
 const MIN_SELECT = 2;
 const MAX_SELECT = 6;
 
 export default function Mood() {
+  const { t, prefix, lang } = useI18n();
+
   useSeo({
-    title: '今夜の気分を選ぶ | mood-cinema',
-    description: '好きなバルーンを 2〜6 個タップして、今夜ぴったりの映画を見つけよう。',
-    canonicalPath: '/mood',
+    title: t.mood.title,
+    description: t.mood.description,
+    canonicalPath: `${prefix}/mood`,
+    lang,
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,13 +39,11 @@ export default function Mood() {
     }
   };
 
-  const handleRandom = () => {
-    setSelected(pickRandomBalloons(BALLOONS));
-  };
+  const handleRandom = () => { setSelected(pickRandomBalloons(BALLOONS)); };
 
   const goResult = () => {
     if (selectedIds.length < MIN_SELECT) return;
-    navigate(`/result?b=${selectedIds.join(',')}`);
+    navigate(`${prefix}/result?b=${selectedIds.join(',')}`);
   };
 
   const canSubmit = selectedIds.length >= MIN_SELECT;
@@ -50,24 +52,24 @@ export default function Mood() {
   return (
     <div className="container mood-page">
       <div className="mood-header">
-        <h1>今夜の気分を選ぼう</h1>
-        <p className="mood-header__sub">気になるワードを {MIN_SELECT}〜{MAX_SELECT} 個タップ</p>
+        <h1>{t.mood.heading}</h1>
+        <p className="mood-header__sub">{t.mood.subheading(MIN_SELECT, MAX_SELECT)}</p>
         <button type="button" className="btn btn--random" onClick={handleRandom}>
-          ↺ ランダムで選ぶ
+          {t.mood.randomBtn}
         </button>
       </div>
 
       {selectedBalloons.length > 0 && (
-        <div className="balloon-tray" aria-label="選択中のバルーン">
+        <div className="balloon-tray" aria-label={t.mood.trayLabel}>
           {selectedBalloons.map(b => (
             <button
               key={b.id}
               type="button"
               className="balloon-tray__chip"
               onClick={() => toggle(b.id)}
-              aria-label={`${b.label}を外す`}
+              aria-label={t.mood.trayRemove(t.balloonLabel[b.id] ?? b.label)}
             >
-              {b.emoji}{b.label} ×
+              {b.emoji}{t.balloonLabel[b.id] ?? b.label} ×
             </button>
           ))}
           <span className="balloon-tray__count">{selectedIds.length}/{MAX_SELECT}</span>
@@ -88,7 +90,7 @@ export default function Mood() {
               aria-pressed={isSelected}
             >
               <span className="balloon-chip__emoji">{b.emoji}</span>
-              <span className="balloon-chip__label">{b.label}</span>
+              <span className="balloon-chip__label">{t.balloonLabel[b.id] ?? b.label}</span>
             </button>
           );
         })}
@@ -102,8 +104,8 @@ export default function Mood() {
           disabled={!canSubmit}
         >
           {canSubmit
-            ? `この ${selectedIds.length} つで映画を探す →`
-            : `あと ${MIN_SELECT - selectedIds.length} 個選んでね`}
+            ? t.mood.submitReady(selectedIds.length)
+            : t.mood.submitNotReady(MIN_SELECT - selectedIds.length)}
         </button>
       </div>
     </div>

@@ -71,6 +71,7 @@ function url(loc, { changefreq = 'monthly', priority = '0.7', lastmod } = {}) {
 }
 
 const entries = [
+  // ── Japanese (root) ──────────────────────────────────
   url(`${SITE_URL}/`, { changefreq: 'weekly', priority: '1.0' }),
   url(`${SITE_URL}/mood`, { changefreq: 'monthly', priority: '0.9' }),
   url(`${SITE_URL}/articles`, { changefreq: 'weekly', priority: '0.8' }),
@@ -82,6 +83,16 @@ const entries = [
   ),
   ...SCENE_SLUGS.map(slug =>
     url(`${SITE_URL}/scene/${slug}`, { lastmod: TODAY, priority: '0.7' }),
+  ),
+  // ── English (/en/) ───────────────────────────────────
+  url(`${SITE_URL}/en/`, { changefreq: 'weekly', priority: '1.0' }),
+  url(`${SITE_URL}/en/mood`, { changefreq: 'monthly', priority: '0.9' }),
+  url(`${SITE_URL}/en/articles`, { changefreq: 'weekly', priority: '0.8' }),
+  url(`${SITE_URL}/en/about`, { changefreq: 'yearly', priority: '0.3' }),
+  url(`${SITE_URL}/en/privacy`, { changefreq: 'yearly', priority: '0.2' }),
+  url(`${SITE_URL}/en/contact`, { changefreq: 'yearly', priority: '0.2' }),
+  ...ARTICLE_SLUGS.map(slug =>
+    url(`${SITE_URL}/en/article/${slug}`, { lastmod: TODAY, priority: '0.8' }),
   ),
 ];
 

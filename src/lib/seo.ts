@@ -10,6 +10,7 @@ interface SeoInput {
   canonicalPath?: string;
   noindex?: boolean;
   jsonLd?: Record<string, unknown>;
+  lang?: 'ja' | 'en';
 }
 
 function setMeta(selector: string, attr: string, value: string) {
@@ -47,7 +48,20 @@ function setJsonLd(data: Record<string, unknown>) {
   el.textContent = JSON.stringify(data);
 }
 
-export function useSeo({ title, description, image, canonicalPath, noindex, jsonLd }: SeoInput) {
+function setHreflang(hreflangVal: string, href: string) {
+  const id = `seo-hreflang-${hreflangVal}`;
+  let el = document.head.querySelector(`link[data-seo="${id}"]`) as HTMLLinkElement | null;
+  if (!el) {
+    el = document.createElement('link');
+    el.setAttribute('rel', 'alternate');
+    el.setAttribute('hreflang', hreflangVal);
+    el.setAttribute('data-seo', id);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('href', href);
+}
+
+export function useSeo({ title, description, image, canonicalPath, noindex, jsonLd, lang }: SeoInput) {
   useEffect(() => {
     const prevTitle = document.title;
     document.title = title;
@@ -65,6 +79,16 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
 
     if (canonicalPath !== undefined) {
       setLink('canonical', SITE_URL + canonicalPath);
+    }
+
+    // hreflang: if page has a language, emit alternate links for both versions
+    if (lang && canonicalPath !== undefined) {
+      const isEn = lang === 'en';
+      const jaPath = isEn ? canonicalPath.replace(/^\/en/, '') || '/' : canonicalPath;
+      const enPath = isEn ? canonicalPath : `/en${canonicalPath}`;
+      setHreflang('ja', SITE_URL + jaPath);
+      setHreflang('en', SITE_URL + enPath);
+      setHreflang('x-default', SITE_URL + jaPath);
     }
 
     setMeta('meta[name="robots"]', 'content', noindex ? 'noindex,follow' : 'index,follow');
@@ -95,13 +119,15 @@ export function buildArticleJsonLd(opts: {
   description: string;
   slug: string;
   publishedAt: string;
+  basePath?: string;
 }): Record<string, unknown> {
+  const base = opts.basePath ?? '/article';
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: opts.title,
     description: opts.description,
-    url: `${SITE_URL}/article/${opts.slug}`,
+    url: `${SITE_URL}${base}/${opts.slug}`,
     datePublished: opts.publishedAt,
     dateModified: opts.publishedAt,
     publisher: {
@@ -111,7 +137,7 @@ export function buildArticleJsonLd(opts: {
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}/article/${opts.slug}`,
+      '@id': `${SITE_URL}${base}/${opts.slug}`,
     },
   };
 }

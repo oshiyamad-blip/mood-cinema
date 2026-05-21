@@ -6,10 +6,10 @@ function dailyPage(): number {
   return (Math.floor(Date.now() / 86_400_000) % 3) + 1;
 }
 
-export function buildParamsFromBalloons(balloons: Balloon[]): MappingResult {
+export function buildParamsFromBalloons(balloons: Balloon[], tmdbLanguage = 'ja-JP'): MappingResult {
   if (balloons.length === 0) {
     return {
-      params: { sort_by: 'vote_average.desc', 'vote_count.gte': 200, 'vote_count.lte': 50000, 'vote_average.gte': 6.8, language: 'ja-JP', region: 'JP', include_adult: false, page: dailyPage() },
+      params: { sort_by: 'vote_average.desc', 'vote_count.gte': 200, 'vote_count.lte': 50000, 'vote_average.gte': 6.8, language: tmdbLanguage, region: 'JP', include_adult: false, page: dailyPage() },
       labels: [],
       moodReason: '',
     };
@@ -92,8 +92,8 @@ export function buildParamsFromBalloons(balloons: Balloon[]): MappingResult {
     'vote_count.gte': 200,
     'vote_count.lte': voteCountMax,
     'vote_average.gte': voteAvgMin,
-    language: 'ja-JP',
-    region: 'JP',
+    language: tmdbLanguage,
+    region: tmdbLanguage.startsWith('ja') ? 'JP' : undefined,
     include_adult: false,
     page: dailyPage(),
   };
@@ -123,11 +123,16 @@ export function buildParamsFromBalloons(balloons: Balloon[]): MappingResult {
   return { params, labels, moodReason };
 }
 
-export function buildBalloonShareText(balloons: Balloon[]): string {
-  if (balloons.length === 0) return '気分で選ぶ映画診断、やってみた';
+export function buildBalloonShareText(
+  balloons: Balloon[],
+  labelMap: Record<string, string>,
+  shareDefault: string,
+  shareText: (emojis: string, labels: string) => string,
+): string {
+  if (balloons.length === 0) return shareDefault;
   const emojis = balloons.slice(0, 4).map(b => b.emoji).join('');
-  const labels = balloons.slice(0, 3).map(b => b.label).join('・');
-  return `今夜の気分 ${emojis}「${labels}」の映画を診断してみた`;
+  const labels = balloons.slice(0, 3).map(b => labelMap[b.id] ?? b.label).join('·');
+  return shareText(emojis, labels);
 }
 
 export function pickRandomBalloons(allBalloons: Balloon[]): string[] {

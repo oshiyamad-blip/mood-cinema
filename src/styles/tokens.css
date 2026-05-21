@@ -1,19 +1,28 @@
 :root {
-  --color-bg: #0d0d18;
-  --color-bg-elev: #16162a;
-  --color-bg-card: #1a1a2e;
-  --color-surface: #1e1e38;
-  --color-text: #f0f0ff;
-  --color-text-muted: #8888aa;
-  --color-accent: #ff9500;
-  --color-accent-hover: #ffb300;
-  --color-unext: #000000;
-  --color-amazon: #ff9900;
-  --color-border: #2a2a4a;
-  --color-success: #10b981;
-  --color-danger: #ef4444;
+  /* ── ベース背景: 暖かみのあるチャコール（黒ではなく映画館のロビー） */
+  --color-bg:       #13131a;
+  --color-bg-elev:  #1a1a22;
+  --color-bg-card:  #1e1e28;
+  --color-surface:  #232330;
 
-  /* カテゴリカラー */
+  /* ── テキスト */
+  --color-text:       #f0eef8;
+  --color-text-muted: #857f9a;
+
+  /* ── アクセント: リッチアンバー */
+  --color-accent:       #ffa830;
+  --color-accent-hover: #ffbe55;
+
+  /* ── サービスカラー */
+  --color-unext:   #000000;
+  --color-amazon:  #ff9900;
+  --color-success: #10b981;
+  --color-danger:  #ef4444;
+
+  /* ── ボーダー: 暖かみのあるスレート */
+  --color-border: #2c2a38;
+
+  /* ── カテゴリカラー（バルーン） */
   --cat-mood:       #ff4d88;
   --cat-scene:      #00d4ff;
   --cat-intensity:  #ff7a2f;
@@ -21,15 +30,18 @@
   --cat-atmosphere: #00e5a0;
   --cat-with:       #ffd84d;
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 24px;
+  /* ── 角丸 */
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   24px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  /* ── 影 */
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 16px;
 
+  /* ── スペーシング */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -39,9 +51,11 @@
   --space-7: 40px;
   --space-8: 48px;
 
+  /* ── フォント */
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
     "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+  --font-display: 'Cinzel', 'Georgia', serif;
 
   --max-width: 720px;
 }

@@ -1,6 +1,5 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Mood from './pages/Mood';
 import Result from './pages/Result';
@@ -11,29 +10,47 @@ import Privacy from './pages/Privacy';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
+import { I18nContext, translations } from './i18n';
+import type { Lang } from './i18n';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
 
-export default function App() {
+function LangSwitcher({ lang, prefix }: { lang: Lang; prefix: string }) {
+  const { pathname } = useLocation();
+  const t = translations[lang];
+  // Strip current prefix to get bare path, then attach opposite prefix
+  const barePath = prefix ? pathname.replace(new RegExp(`^${prefix}`), '') || '/' : pathname;
+  const otherHref = lang === 'ja' ? `/en${barePath}` : barePath;
+
   return (
-    <>
+    <a href={otherHref} className="lang-switch">
+      {t.nav.langSwitch}
+    </a>
+  );
+}
+
+function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
+  const t = translations[lang];
+  const value = { lang, t, prefix };
+
+  return (
+    <I18nContext.Provider value={value}>
       <ScrollToTop />
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to="/" className="brand" aria-label="mood-cinema トップへ">
+          <Link to={`${prefix}/`} className="brand" aria-label="mood-cinema トップへ">
             <span className="brand__icon" aria-hidden>🎬</span>
             <span className="brand__name">mood-cinema</span>
           </Link>
           <nav className="site-nav">
-            <Link to="/mood">診断する</Link>
-            <Link to="/articles">特集</Link>
-            <Link to="/about">運営</Link>
+            <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
+            <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
+            <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
+            <LangSwitcher lang={lang} prefix={prefix} />
           </nav>
         </div>
       </header>
@@ -42,7 +59,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/mood" element={<Mood />} />
-          <Route path="/quiz" element={<Navigate to="/mood" replace />} />
+          <Route path="/quiz" element={<Navigate to={`${prefix}/mood`} replace />} />
           <Route path="/result" element={<Result />} />
           <Route path="/scene/:slug" element={<SceneLanding />} />
           <Route path="/articles" element={<ArticleList />} />
@@ -57,16 +74,25 @@ export default function App() {
       <footer className="site-footer">
         <div className="container">
           <nav className="site-footer__nav">
-            <Link to="/about">運営者情報</Link>
-            <Link to="/privacy">プライバシーポリシー</Link>
-            <Link to="/contact">お問い合わせ</Link>
+            <Link to={`${prefix}/about`}>{t.footer.about}</Link>
+            <Link to={`${prefix}/privacy`}>{t.footer.privacy}</Link>
+            <Link to={`${prefix}/contact`}>{t.footer.contact}</Link>
           </nav>
           <p className="site-footer__meta">
-            データ提供: TMDB (The Movie Database)。<br />
+            {t.footer.tmdb}<br />
             © {new Date().getFullYear()} mood-cinema
           </p>
         </div>
       </footer>
-    </>
+    </I18nContext.Provider>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/en/*" element={<AppShell lang="en" prefix="/en" />} />
+      <Route path="/*"    element={<AppShell lang="ja" prefix=""    />} />
+    </Routes>
   );
 }

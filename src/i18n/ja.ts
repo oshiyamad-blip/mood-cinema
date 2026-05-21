@@ -1,0 +1,123 @@
+export const ja = {
+  nav: {
+    diagnose: '診断する',
+    articles: '特集',
+    about: '運営',
+    langSwitch: 'English',
+  },
+  footer: {
+    about: '運営者情報',
+    privacy: 'プライバシーポリシー',
+    contact: 'お問い合わせ',
+    tmdb: 'データ提供: TMDB (The Movie Database)。',
+  },
+  home: {
+    title: 'mood-cinema | 気分で選ぶ映画レコメンド診断',
+    description:
+      '今の気分とシチュエーションを答えるだけ。あなたに今夜ぴったりの映画・海外ドラマを5本おすすめします。',
+    heroHeading: '今の気分から、\n観たい映画が見つかる。',
+    heroSub: '気分のバルーンを選ぶだけ。\n数十万作品の中から今夜ぴったりの 5 本を診断します。',
+    heroCta: '今夜の気分を選ぶ →',
+    shortcutsHeading: '気分別ショートカット',
+    historyHeading: '最近の診断',
+    articlesHeading: '特集記事',
+    shortcuts: [
+      { label: '泣ける映画',         balloons: 'cry,heartstring,solo',       emoji: '💧' },
+      { label: '笑えるコメディ',     balloons: 'laugh,friday-night,friends', emoji: '😂' },
+      { label: '短くて観やすい名作', balloons: 'light,bedtime,heal',         emoji: '⏱️' },
+      { label: 'ひとりで観たい SF',  balloons: 'think,scifi-theme,solo',     emoji: '🚀' },
+      { label: '家族で観れる映画',   balloons: 'heal,family-watch,light',    emoji: '👪' },
+      { label: '怖がりたい夜に',     balloons: 'scared,solo,winter-night',   emoji: '👻' },
+    ],
+    historyTime: (ts: number) => new Date(ts).toLocaleString('ja-JP'),
+  },
+  mood: {
+    title: '今夜の気分を選ぶ | mood-cinema',
+    description: '好きなバルーンを 2〜6 個タップして、今夜ぴったりの映画を見つけよう。',
+    heading: '今夜の気分を選ぼう',
+    subheading: (min: number, max: number) => `気になるワードを ${min}〜${max} 個タップ`,
+    randomBtn: '↺ ランダムで選ぶ',
+    trayLabel: '選択中のバルーン',
+    trayRemove: (label: string) => `${label}を外す`,
+    submitReady: (n: number) => `この ${n} つで映画を探す →`,
+    submitNotReady: (n: number) => `あと ${n} 個選んでね`,
+  },
+  result: {
+    heading: '今夜のおすすめ 5 本',
+    summarySep: ' × ',
+    loading: '読み込み中…',
+    noResults: '条件に合う作品が見つかりませんでした。バルーンを変えてもう一度お試しください。',
+    devHint: '.env.local に VITE_TMDB_TOKEN を設定してください。',
+    relatedHeading: 'この結果に合う特集記事',
+    relatedReadMore: '特集を読む →',
+    retryBtn: 'バルーンを変えて再診断',
+    retryBtnFull: '最初から選びなおす',
+  },
+  articles: {
+    title: '特集記事 | mood-cinema',
+    description:
+      '気分・シチュエーション別に映画の選び方を解説。失恋に効く映画、家族で観れる映画、ホラー特集など。',
+    heading: '特集記事',
+  },
+  article: {
+    notFound: '記事が見つかりません',
+    published: (date: string) => `公開: ${date}`,
+    breadHome: 'ホーム',
+    breadArticles: '特集記事',
+    ctaBtn: 'この特集の診断結果を見る',
+    diagnosisBtn: '自分で診断してみる',
+  },
+  balloonLabel: {
+    cry: '泣きたい',
+    laugh: '笑いたい',
+    think: '考えたい',
+    heartstring: '切ない',
+    excited: '興奮したい',
+    scared: '怖がりたい',
+    'rainy-night': '雨の夜',
+    'friday-night': '金曜の夜',
+    'sunday-afternoon': '日曜の昼',
+    bedtime: '寝る前',
+    'winter-night': '寒い夜',
+    dense: '濃いやつ',
+    light: '軽めで',
+    epic: '壮大なやつ',
+    heartbreak: '失恋',
+    family: '家族',
+    society: '社会派',
+    'scifi-theme': 'SF',
+    'mystery-theme': 'ミステリー',
+    life: '人生',
+    mature: '大人な',
+    artsy: 'アート系',
+    noir: 'ノワール',
+    romantic: 'ロマンチック',
+    solo: 'ひとり',
+    partner: '恋人と',
+    'family-watch': '家族と',
+    friends: '友達と',
+  } as Record<string, string>,
+  getCombinationName(ids: string[]): string {
+    const MOOD: Record<string, string> = {
+      cry: '涙活', laugh: '爆笑', think: '思索', heal: '癒し',
+      excited: '興奮', scared: 'ホラー', heartstring: '切なさ', heartbreak: '失恋',
+    };
+    const SCENE: Record<string, string> = {
+      solo: 'ひとり', partner: '恋人と', friends: '友達と',
+      family: '家族と', 'family-watch': '家族と',
+      'rainy-night': '雨夜', 'friday-night': '金曜夜',
+      'winter-night': '冬の夜', 'sunday-afternoon': '日曜昼', bedtime: '眠れぬ夜',
+    };
+    const mood = ids.find(id => MOOD[id]);
+    const scene = ids.find(id => SCENE[id]);
+    if (mood && scene) return `${SCENE[scene]}の${MOOD[mood]}コース`;
+    if (mood)  return `${MOOD[mood]}映画コース`;
+    if (scene) return `${SCENE[scene]}映画コース`;
+    return '今夜のおすすめコース';
+  },
+  shareDefault: '気分で選ぶ映画診断、やってみた',
+  shareText: (emojis: string, labels: string) =>
+    `今夜の気分 ${emojis}「${labels}」の映画を診断してみた`,
+  tmdbLanguage: 'ja-JP',
+  locale: 'ja-JP',
+};

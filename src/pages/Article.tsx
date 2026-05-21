@@ -1,12 +1,16 @@
 import { Link, useParams } from 'react-router-dom';
 import { ARTICLE_MAP } from '../data/articles';
+import { ARTICLE_MAP_EN } from '../data/articles.en';
 import { useSeo, buildArticleJsonLd, buildBreadcrumbJsonLd } from '../lib/seo';
 import AdBanner from '../components/AdBanner';
 import NotFound from './NotFound';
+import { useI18n } from '../i18n';
 
 export default function Article() {
   const { slug } = useParams();
-  const article = slug ? ARTICLE_MAP[slug] : undefined;
+  const { t, prefix, lang } = useI18n();
+  const articleMap = lang === 'en' ? ARTICLE_MAP_EN : ARTICLE_MAP;
+  const article = slug ? articleMap[slug] : undefined;
 
   const jsonLd = article
     ? {
@@ -17,37 +21,39 @@ export default function Article() {
             description: article.summary,
             slug: article.slug,
             publishedAt: article.publishedAt,
+            basePath: `${prefix}/article`,
           }),
           buildBreadcrumbJsonLd([
-            { name: 'ホーム', path: '/' },
-            { name: '特集記事', path: '/articles' },
-            { name: article.title, path: `/article/${article.slug}` },
+            { name: t.article.breadHome, path: `${prefix}/` },
+            { name: t.articles.heading,  path: `${prefix}/articles` },
+            { name: article.title,       path: `${prefix}/article/${article.slug}` },
           ]),
         ],
       }
     : undefined;
 
   useSeo({
-    title: article ? `${article.title} | mood-cinema` : '記事が見つかりません',
+    title: article ? `${article.title} | mood-cinema` : t.article.notFound,
     description: article?.summary,
-    canonicalPath: article ? `/article/${article.slug}` : undefined,
+    canonicalPath: article ? `${prefix}/article/${article.slug}` : undefined,
     jsonLd,
+    lang,
   });
 
   if (!article) return <NotFound />;
 
   return (
     <div className="container article">
-      <nav aria-label="パンくずリスト" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: 16 }}>
-        <Link to="/">ホーム</Link>
+      <nav aria-label="breadcrumb" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: 16 }}>
+        <Link to={`${prefix}/`}>{t.article.breadHome}</Link>
         <span style={{ margin: '0 6px' }}>›</span>
-        <Link to="/articles">特集記事</Link>
+        <Link to={`${prefix}/articles`}>{t.articles.heading}</Link>
         <span style={{ margin: '0 6px' }}>›</span>
         <span>{article.title}</span>
       </nav>
 
       <h1 style={{ marginTop: 16 }}>{article.title}</h1>
-      <p className="article__meta">公開: {article.publishedAt}</p>
+      <p className="article__meta">{t.article.published(article.publishedAt)}</p>
 
       <div className="article__body">
         {article.sections.map((s, i) => (
@@ -64,11 +70,11 @@ export default function Article() {
 
       <div className="result__retry">
         {article.ctaQuery && (
-          <Link to={`/result?${article.ctaQuery}`} className="btn btn--primary">
-            この特集の診断結果を見る
+          <Link to={`${prefix}/result?${article.ctaQuery}`} className="btn btn--primary">
+            {t.article.ctaBtn}
           </Link>
         )}
-        <Link to="/quiz" className="btn btn--secondary">自分で診断してみる</Link>
+        <Link to={`${prefix}/mood`} className="btn btn--secondary">{t.article.diagnosisBtn}</Link>
       </div>
     </div>
   );
