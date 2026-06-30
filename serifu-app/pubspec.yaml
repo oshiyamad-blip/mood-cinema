@@ -19,6 +19,17 @@ dependencies:
   # PDFテキスト抽出（テキスト埋込PDF用、無料のCommunity版）
   syncfusion_flutter_pdf: ^27.2.5
 
+  # docx 解析（zip解凍 + XMLパース、純Dart）
+  archive: ^3.6.1
+  xml: ^6.5.0
+
+  # OCR（オンデバイス・日本語対応。台本は端末外に出ない）
+  google_mlkit_text_recognition: ^0.13.1
+
+  # 画像PDFのページをラスタライズしてOCRへ渡す
+  pdfx: ^2.6.0
+  path_provider: ^2.1.5
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

@@ -20,7 +20,9 @@ lib/
   parser/rule_based_parser.dart   … 日本語台本のルールベース解析（端末内）
   speech/speech_engine.dart       … 読み上げエンジンの抽象
   speech/device_speech_engine.dart… 端末内蔵TTS実装（flutter_tts）
-  services/text_extractor.dart    … PDF/TXTテキスト抽出（端末内）
+  services/text_extractor.dart    … 取り込み振り分け（PDF/docx/画像/TXT、端末内）
+  services/docx_text_extractor.dart… .docx 抽出（zip+XML, 純Dart）
+  services/ocr_service.dart       … OCR（ML Kit, 日本語, オンデバイス）
   data/script_repository.dart     … 台本の保管（MVPは端末メモリ内）
   screens/
     home_screen.dart              … 一覧 + 取り込み
@@ -29,6 +31,7 @@ lib/
     rehearsal_screen.dart         … 再生（自分の番はポーズ、相手はTTS、ハイライト）
 test/
   rule_based_parser_test.dart     … 解析器の単体テスト
+  docx_text_extractor_test.dart   … docx抽出の単体テスト
 ```
 
 ## セットアップと実行
@@ -74,9 +77,11 @@ flutter run
 ```
 
 ## 既知の制約 / 次の実装（TODO）
-- **docx 取り込み**：未対応（PDF/TXTのみ）。docx解析を追加する。
-- **画像PDFのOCR**：未対応。ML Kit / Apple Vision を追加する。
-- **永続化**：MVPはメモリ内。`sqflite`/`hive` で端末ローカル保存に。
+- **docx 取り込み**：✅ 対応済み（`docx_text_extractor.dart`、純Dart・テスト付き）。
+- **OCR（写真・画像PDF）**：✅ 対応済み（`ocr_service.dart`、ML Kit・オンデバイス）。
+  画像PDFはテキスト抽出に失敗したとき自動でOCRへフォールバック。
+  ※ OCR/PDFラスタライズは実機依存のため本環境では未検証。
+- **永続化**：MVPはメモリ内。`sqflite`/`hive` で端末ローカル保存に（次のステップ）。
 - **解析修正UI**：役の取り違え・ト書き誤判定を直す画面（仕様書 §3-3）。
 - **クラウドTTS（任意）**：高品質音声を*オプトイン*で。学習非利用が保証されたAPIのみ・
   Zero Data Retention 設定で（仕様書 §3-8）。

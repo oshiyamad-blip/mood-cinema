@@ -28,7 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'txt'],
+        allowedExtensions: const [
+          'pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'bmp',
+        ],
       );
       final path = result?.files.single.path;
       if (path == null) return;
@@ -37,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final parsed = _parser.parse(raw);
 
       if (parsed.lines.isEmpty) {
-        _snack('テキストを抽出できませんでした（画像PDFの可能性）。');
+        _snack('テキストを抽出できませんでした。画質の良いPDF/画像でお試しください。');
         return;
       }
 
@@ -134,7 +136,7 @@ class _EmptyState extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'PDF / TXT に対応（台本は端末内でのみ処理されます）',
+              'PDF / Word(docx) / 画像・写真 / TXT に対応\n（台本は端末内でのみ処理されます）',
               style: TextStyle(fontSize: 12, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
