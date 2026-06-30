@@ -1,0 +1,110 @@
+<!-- @dsCard group="Screens" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ホーム — セリフ稽古</title>
+<style>
+  :root{
+    --indigo-700:#4B3FB0;--indigo-600:#5B4ECC;--indigo-500:#6C5CE7;--indigo-400:#8B7DF0;
+    --indigo-100:#E9E6FB;--indigo-050:#F4F2FE;
+    --amber-500:#F5A623;--ink-900:#1A1830;--ink-700:#3A3650;--ink-500:#6B6880;--ink-300:#A7A3BC;
+    --line:#E6E3F0;--surface:#FFFFFF;--bg:#F6F5FB;
+    --r-sm:10px;--r-md:16px;--r-lg:24px;--r-pill:999px;
+    --shadow-sm:0 2px 8px rgba(28,24,60,.08);--shadow-md:0 8px 24px rgba(28,24,60,.12);--shadow-lg:0 16px 40px rgba(28,24,60,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#33304a;display:flex;justify-content:center;padding:24px;color:var(--ink-900);}
+  .phone{width:390px;height:844px;background:var(--bg);border-radius:40px;box-shadow:0 16px 40px rgba(0,0,0,.4);overflow:hidden;position:relative;}
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:700;}
+  .appbar{padding:6px 22px 16px;display:flex;align-items:center;justify-content:space-between;}
+  .appbar h1{font-size:26px;font-weight:800;}
+  .appbar .gear{width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .scroll{padding:0 20px 120px;height:calc(844px - 44px - 70px);overflow:auto;}
+  .count{font-size:12px;font-weight:700;color:var(--ink-500);margin-bottom:12px;}
+
+  .card{background:#fff;border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--line);margin-bottom:14px;position:relative;overflow:hidden;}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(var(--indigo-500),var(--indigo-400));}
+  .card .ct{font-size:18px;font-weight:800;margin-bottom:8px;}
+  .meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .pill{font-size:11px;font-weight:700;background:var(--indigo-050);color:var(--indigo-700);padding:4px 10px;border-radius:var(--r-pill);}
+  .roles{display:flex;gap:6px;align-items:center;}
+  .ava{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;border:2px solid #fff;margin-left:-8px;}
+  .ava:first-child{margin-left:0;}
+  .last{font-size:12px;color:var(--ink-500);margin-left:auto;}
+
+  .fab{position:absolute;right:22px;bottom:32px;background:var(--indigo-500);color:#fff;border:none;font-family:inherit;font-weight:800;font-size:16px;padding:16px 22px;border-radius:var(--r-pill);box-shadow:0 10px 24px rgba(108,92,231,.5);display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .fab .plus{font-size:22px;line-height:1;}
+
+  /* empty state (shown small as preview at bottom) */
+  .empty{margin-top:22px;background:linear-gradient(180deg,#fff,var(--indigo-050));border:1.5px dashed var(--indigo-400);border-radius:var(--r-lg);padding:28px 22px;text-align:center;}
+  .empty .ico{font-size:44px;}
+  .empty .et{font-size:16px;font-weight:800;margin-top:10px;}
+  .empty .ed{font-size:13px;color:var(--ink-500);margin-top:6px;line-height:1.6;}
+  .empty .eb{margin-top:16px;background:var(--indigo-500);color:#fff;border:none;font-family:inherit;font-weight:700;font-size:14px;padding:11px 20px;border-radius:var(--r-pill);}
+  .divider{font-size:11px;color:var(--ink-300);text-align:center;margin:24px 0 8px;font-weight:700;letter-spacing:.1em;}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>セリフ稽古</span><span>●●● ▮</span></div>
+    <div class="appbar">
+      <h1>台本</h1>
+      <div class="gear">⚙</div>
+    </div>
+    <div class="scroll">
+      <div class="count">3件の台本</div>
+
+      <div class="card">
+        <div class="ct">桜の季節・第一幕</div>
+        <div class="meta-row">
+          <span class="pill">登場人物 3名</span>
+          <span class="pill">全48行</span>
+        </div>
+        <div class="roles">
+          <div class="ava" style="background:#6C5CE7">太</div>
+          <div class="ava" style="background:#E5709B">花</div>
+          <div class="ava" style="background:#36B3A8">店</div>
+          <span class="last">最終練習 6/28</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct">オーディション課題A</div>
+        <div class="meta-row">
+          <span class="pill">登場人物 2名</span>
+          <span class="pill">全22行</span>
+        </div>
+        <div class="roles">
+          <div class="ava" style="background:#6C5CE7">太</div>
+          <div class="ava" style="background:#E5709B">花</div>
+          <span class="last">最終練習 6/30</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct">独白練習・夜の手紙</div>
+        <div class="meta-row">
+          <span class="pill">登場人物 1名</span>
+          <span class="pill">全15行</span>
+        </div>
+        <div class="roles">
+          <div class="ava" style="background:#6C5CE7">太</div>
+          <span class="last">未練習</span>
+        </div>
+      </div>
+
+      <div class="divider">— 空状態 —</div>
+      <div class="empty">
+        <div class="ico">🎭</div>
+        <div class="et">台本を取り込んで<br>練習を始めましょう</div>
+        <div class="ed">PDF / Word / 画像 から読み込み、<br>すべて端末内で解析します。</div>
+        <button class="eb">＋ 台本を取り込む</button>
+      </div>
+    </div>
+
+    <button class="fab"><span class="plus">＋</span>台本を取り込む</button>
+  </div>
+</body>
+</html>

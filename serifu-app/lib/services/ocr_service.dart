@@ -40,6 +40,8 @@ class OcrService {
           final tmp = await _writeTemp(rendered.bytes, 'ocr_page_$i.png');
           final result = await recognizer.processImage(InputImage.fromFile(tmp));
           out.writeln(result.text);
+          // 台本内容を含む一時画像は使用後に削除する。
+          await tmp.delete().catchError((_) => tmp);
         } finally {
           await page.close();
         }

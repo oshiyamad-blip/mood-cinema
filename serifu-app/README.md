@@ -1,8 +1,14 @@
 # セリフ稽古（serifu_app）
 
 日本語の俳優セリフ練習・オーディション練習アプリ（iOS / Android, Flutter）。
-台本（PDF/TXT）を取り込み、**自分の役を選ぶと相手役をアプリが読み上げ**ます。
-相手役の声は **男性/女性・テンポ（速度）** を調整でき、**ト書きの読み上げ ON/OFF** も切り替えられます。
+台本（PDF / Word / 画像・写真 / TXT）を取り込み、**自分の役を選ぶと相手役をアプリが読み上げ**ます。
+
+主な機能：
+- 相手役の声を **男性/女性・声モデル選択・テンポ（速度）** 調整、**ト書きの読み上げ ON/OFF**
+- **台本表示モード**（テレプロンプター風に追従）と **暗記モード**（台本を隠して練習・チラ見可）
+- **ハンズフリー進行**（自分のセリフを言い終わると音声認識で自動的に相手役を再生）
+- **ゼロ遅延**：練習開始（読み込み）時に相手役の音声を事前合成しておき、本番は再生のみ＝
+  「自分が言い終わってからAIが返すまで」の処理待ちをなくす設計
 
 > **プライバシー（重要）**：MVPは**完全オンデバイス**。台本の抽出・解析・読み上げはすべて端末内で行い、
 > クラウドへ送信しません。したがって**台本データがAI学習に使われる経路は存在しません**。
@@ -11,6 +17,10 @@
 ## ドキュメント
 - `docs/01-tech-research.md` … 技術選定（TTS音質・料金比較、台本解析方式、フレームワーク）
 - `docs/02-spec-and-screens.md` … 機能仕様・画面設計・データモデル・非学習ポリシー
+- `docs/03-monetization.md` … 課金モデルの検討と実装要件
+- `docs/04-release-runbook.md` … App Store / Google Play 公開までの手順
+- `docs/05-security-review.md` … セキュリティレビューと対応
+- `design/` … Claude Design 取込用のUIデザイン一式（HTMLプレビュー）
 
 ## この雛形に含まれるもの（MVPコア）
 ```
@@ -20,7 +30,8 @@ lib/
   parser/rule_based_parser.dart   … 日本語台本のルールベース解析（端末内）
   speech/speech_engine.dart       … 読み上げエンジンの抽象
   speech/device_speech_engine.dart… 端末内蔵TTS実装（flutter_tts）
-  speech/speech_recognizer.dart   … 音声認識ラッパー（ハンズフリー進行）
+  speech/speech_recognizer.dart   … 音声認識ラッパー（ハンズフリー進行・オンデバイス優先）
+  speech/line_audio_preparer.dart … 相手役音声の事前合成（本番ゼロ遅延）
   services/text_extractor.dart    … 取り込み振り分け（PDF/docx/画像/TXT、端末内）
   services/docx_text_extractor.dart… .docx 抽出（zip+XML, 純Dart）
   services/ocr_service.dart       … OCR（ML Kit, 日本語, オンデバイス）
@@ -31,7 +42,7 @@ lib/
     script_detail_screen.dart     … 役選択 / ト書きON-OFF / 声設定への導線
     script_edit_screen.dart       … 解析結果の確認・修正（種別/話者/本文/削除）
     voice_settings_screen.dart    … 役ごとの 性別・テンポ + 試聴
-    rehearsal_screen.dart         … 再生（自分の番はポーズ、相手はTTS、ハイライト）
+    rehearsal_screen.dart         … 再生（台本表示/暗記の2モード、ハンズフリー、事前合成再生）
 test/
   rule_based_parser_test.dart     … 解析器の単体テスト
   docx_text_extractor_test.dart   … docx抽出の単体テスト
@@ -113,7 +124,20 @@ flutter run
 
 ---
 
-> このリポジトリではFlutterのSDKが無いためビルド検証は未実施。
-> 純Dart部分（`rule_based_parser` / `docx_text_extractor` / `script_serialization`）は
-> `flutter test` で検証可能。
+## 検証状況
+- ✅ `flutter pub get` 成功（Flutter 3.44 / Dart 3.10 で確認）
+- ✅ `flutter analyze` … **No issues found!**（エラー・警告・infoなし）
+- ✅ `flutter test` … **全8件パス**（解析器 / docx抽出 / 保存ラウンドトリップ）
+- ⏳ TTS / OCR / 音声認識 / 事前合成・音声再生は**実機/シミュレータ依存**のため、
+  実機での通し確認は別途必要（CIではユニットテストのみ）。
+
+## 多言語対応について
+読み上げ・音声認識・声の切替は**ロケール指定で多言語化しやすい**構造：
+- TTS（`flutter_tts`）／音声認識（`speech_to_text`）はロケール（`en-US` / `fr-FR` /
+  `ko-KR` / `zh-CN` 等）を渡すだけで対応。声モデルも各言語のものを選択可能。
+- アプリUIは Flutter の i18n（`flutter_localizations` + `intl`）で多言語化。
+- 唯一の言語依存は**台本解析**（`rule_based_parser` は日本語の「」/：/ト書き前提）。
+  他言語は書式が異なる（英語 `JOHN: ...` など）ため、言語別ルールの追加、または
+  **LLM解析（言語非依存）**で吸収するのが効率的。
+- まとめ：**「読む・聞く・声を選ぶ」は“ほぼワンタッチ”で多言語化可能**。解析だけ各言語対応が必要。
 

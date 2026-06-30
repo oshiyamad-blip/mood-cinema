@@ -4,7 +4,7 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.5.0
+  sdk: ^3.6.0
 
 dependencies:
   flutter:
@@ -28,6 +28,9 @@ dependencies:
 
   # 音声認識（ハンズフリー進行。OS標準の音声認識を利用）
   speech_to_text: ^7.0.0
+
+  # 事前合成した音声ファイルの再生（本番の処理待ちをゼロにするため）
+  audioplayers: ^6.1.0
 
   # 画像PDFのページをラスタライズしてOCRへ渡す
   pdfx: ^2.6.0

@@ -23,20 +23,30 @@ class SpeechRecognizer {
 
   /// 聞き取りを開始する。
   /// [onResult] は (認識テキスト, 確定か) を返す。確定でハンズフリー進行する。
+  ///
+  /// プライバシー方針：[preferOnDevice] を既定 true とし、可能な限り
+  /// **オンデバイス音声認識**を使う（読んだセリフをクラウドへ送らない）。
+  /// 端末がオンデバイス認識に非対応の場合は自動進行が働かないため、
+  /// 手動の「言えた・次へ」で進められるようにしてある。
   Future<void> start({
     required void Function(String text, bool isFinal) onResult,
     String localeId = 'ja_JP',
     Duration listenFor = const Duration(seconds: 30),
     Duration pauseFor = const Duration(seconds: 2),
+    bool preferOnDevice = true,
   }) async {
     if (!_available) {
       if (!await init()) return;
     }
     await _stt.listen(
       onResult: (r) => onResult(r.recognizedWords, r.finalResult),
-      localeId: localeId,
-      listenFor: listenFor,
-      pauseFor: pauseFor,
+      listenOptions: SpeechListenOptions(
+        onDevice: preferOnDevice,
+        partialResults: true,
+        localeId: localeId,
+        listenFor: listenFor,
+        pauseFor: pauseFor,
+      ),
     );
   }
 

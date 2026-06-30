@@ -1,0 +1,141 @@
+<!-- @dsCard group="Screens" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>声設定 — セリフ稽古</title>
+<style>
+  :root{
+    --indigo-700:#4B3FB0;--indigo-600:#5B4ECC;--indigo-500:#6C5CE7;--indigo-400:#8B7DF0;
+    --indigo-100:#E9E6FB;--indigo-050:#F4F2FE;
+    --amber-500:#F5A623;--ink-900:#1A1830;--ink-700:#3A3650;--ink-500:#6B6880;--ink-300:#A7A3BC;
+    --line:#E6E3F0;--surface:#FFFFFF;--bg:#F6F5FB;
+    --r-sm:10px;--r-md:16px;--r-lg:24px;--r-pill:999px;
+    --shadow-sm:0 2px 8px rgba(28,24,60,.08);--shadow-md:0 8px 24px rgba(28,24,60,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#33304a;display:flex;justify-content:center;padding:24px;color:var(--ink-900);}
+  .phone{width:390px;height:844px;background:var(--bg);border-radius:40px;box-shadow:0 16px 40px rgba(0,0,0,.4);overflow:hidden;position:relative;}
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:700;}
+  .nav{display:flex;align-items:center;gap:12px;padding:6px 20px 12px;}
+  .nav .back{font-size:22px;width:36px;height:36px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:center;}
+  .nav .nt{font-size:18px;font-weight:800;}
+  .scroll{padding:4px 20px 32px;height:calc(844px - 44px - 56px);overflow:auto;}
+
+  .info{background:var(--indigo-050);border:1px solid var(--indigo-100);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;color:var(--indigo-700);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .info b{font-size:14px;}
+
+  .vcard{background:#fff;border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:16px;}
+  .vhead{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .ava{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;}
+  .vhead .vn{font-size:16px;font-weight:800;}
+  .vhead .vt{font-size:11px;color:var(--ink-500);}
+
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  .flabel{font-size:12px;font-weight:800;color:var(--ink-700);margin-bottom:8px;}
+
+  /* gender segment */
+  .seg{display:flex;background:var(--bg);border-radius:var(--r-pill);padding:4px;}
+  .seg button{flex:1;border:none;background:transparent;font-family:inherit;font-weight:700;font-size:14px;padding:9px;border-radius:var(--r-pill);color:var(--ink-500);}
+  .seg button.active{background:var(--indigo-500);color:#fff;box-shadow:0 4px 10px rgba(108,92,231,.35);}
+
+  /* dropdown */
+  .dd{display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;background:#fff;}
+  .dd .ddv{font-size:14px;font-weight:700;}
+  .dd .arr{color:var(--ink-300);font-size:14px;}
+
+  /* slider */
+  .slider-label{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--ink-700);margin-bottom:10px;}
+  .slider-label .val{color:var(--indigo-600);}
+  .track{height:6px;border-radius:3px;background:var(--line);position:relative;margin:0 10px;}
+  .track .fill{position:absolute;left:0;top:0;height:6px;border-radius:3px;background:var(--indigo-500);}
+  .track .thumb{position:absolute;top:-9px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:var(--shadow-md);border:3px solid var(--indigo-500);}
+  .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-300);margin:8px 10px 0;font-family:ui-monospace,monospace;}
+
+  .preview{margin-top:14px;width:100%;background:var(--indigo-100);color:var(--indigo-700);border:none;font-family:inherit;font-weight:800;font-size:14px;padding:12px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;gap:8px;}
+
+  .global{background:linear-gradient(135deg,var(--indigo-050),#fff);border:1.5px dashed var(--indigo-400);}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>声設定</span><span>●●● ▮</span></div>
+    <div class="nav"><div class="back">‹</div><div class="nt">相手役の声設定</div></div>
+    <div class="scroll">
+
+      <div class="info">🔒 <span>この端末で使える声モデル：<b>4個</b>（オフライン・端末内蔵）</span></div>
+
+      <div class="vcard">
+        <div class="vhead">
+          <div class="ava" style="background:#E5709B">花</div>
+          <div><div class="vn">花子</div><div class="vt">相手役</div></div>
+        </div>
+
+        <div class="field">
+          <div class="flabel">性別</div>
+          <div class="seg">
+            <button>男性</button>
+            <button class="active">女性</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="flabel">声モデル</div>
+          <div class="dd"><span class="ddv">Kyoko（日本語・女性）</span><span class="arr">▾</span></div>
+        </div>
+
+        <div class="field">
+          <div class="slider-label"><span>テンポ（速度）</span><span class="val">1.1×</span></div>
+          <div class="track"><div class="fill" style="width:40%"></div><div class="thumb" style="left:calc(40% - 12px)"></div></div>
+          <div class="ticks"><span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span></div>
+        </div>
+
+        <button class="preview">▶ 試聴する</button>
+      </div>
+
+      <div class="vcard">
+        <div class="vhead">
+          <div class="ava" style="background:#36B3A8">店</div>
+          <div><div class="vn">店員</div><div class="vt">相手役</div></div>
+        </div>
+
+        <div class="field">
+          <div class="flabel">性別</div>
+          <div class="seg">
+            <button class="active">男性</button>
+            <button>女性</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="flabel">声モデル</div>
+          <div class="dd"><span class="ddv">Otoya（日本語・男性）</span><span class="arr">▾</span></div>
+        </div>
+
+        <div class="field">
+          <div class="slider-label"><span>テンポ（速度）</span><span class="val">1.0×</span></div>
+          <div class="track"><div class="fill" style="width:33%"></div><div class="thumb" style="left:calc(33% - 12px)"></div></div>
+          <div class="ticks"><span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span></div>
+        </div>
+
+        <button class="preview">▶ 試聴する</button>
+      </div>
+
+      <div class="vcard global">
+        <div class="vhead">
+          <div class="ava" style="background:#6B6880">既</div>
+          <div><div class="vn">グローバル既定</div><div class="vt">あなたの役以外すべてに適用</div></div>
+        </div>
+        <div class="field">
+          <div class="slider-label"><span>既定テンポ</span><span class="val">1.0×</span></div>
+          <div class="track"><div class="fill" style="width:33%"></div><div class="thumb" style="left:calc(33% - 12px)"></div></div>
+          <div class="ticks"><span>0.5×</span><span>1.0×</span><span>1.5×</span><span>2.0×</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
