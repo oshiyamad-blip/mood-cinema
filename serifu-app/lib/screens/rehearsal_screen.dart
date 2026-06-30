@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/script.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/speech_engine.dart';
+import '../speech/speech_recognizer.dart';
 
 /// リハーサル（再生）画面。
 ///
@@ -19,11 +20,14 @@ class RehearsalScreen extends StatefulWidget {
 
 class _RehearsalScreenState extends State<RehearsalScreen> {
   final SpeechEngine _engine = DeviceSpeechEngine();
+  final SpeechRecognizer _recognizer = SpeechRecognizer();
   final _narrator = VoiceProfile(gender: Gender.female, rate: 1.0);
 
   int _index = 0;
   bool _running = false;
   bool _waitingForUser = false;
+  bool _handsFree = false;
+  String _heard = '';
 
   Script get s => widget.script;
   List<Line> get lines => s.lines;
@@ -32,6 +36,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   void dispose() {
     _running = false;
     _engine.dispose();
+    _recognizer.dispose();
     super.dispose();
   }
 
@@ -49,7 +54,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       if (_isMine(line)) {
         // 自分の番：停止してユーザーの「次へ」を待つ。
         _running = false;
-        setState(() => _waitingForUser = true);
+        setState(() {
+          _waitingForUser = true;
+          _heard = '';
+        });
+        if (_handsFree) _listenForMyLine();
         return;
       }
 
@@ -68,15 +77,40 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     setState(() {});
   }
 
+  /// ハンズフリー：自分のセリフを聞き取り、言い終わり（確定）で自動で次へ。
+  Future<void> _listenForMyLine() async {
+    final ok = await _recognizer.init();
+    if (!ok) {
+      _snack('音声認識を利用できません。手動で進めてください。');
+      return;
+    }
+    await _recognizer.start(
+      onResult: (text, isFinal) {
+        if (!mounted || !_waitingForUser || !_handsFree) return;
+        setState(() => _heard = text);
+        if (isFinal && text.trim().isNotEmpty) {
+          _advanceMine();
+        }
+      },
+    );
+  }
+
   Future<void> _pause() async {
     _running = false;
     await _engine.stop();
+    await _recognizer.stop();
     setState(() => _waitingForUser = false);
   }
 
   void _advanceMine() {
+    _recognizer.stop();
     if (_index < lines.length) _index++;
     _run();
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _jump(int delta) async {
@@ -98,6 +132,18 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       appBar: AppBar(
         title: Text(s.title),
         actions: [
+          IconButton(
+            icon: Icon(_handsFree ? Icons.mic : Icons.mic_off),
+            tooltip: _handsFree ? 'ハンズフリー: ON' : 'ハンズフリー: OFF',
+            onPressed: () {
+              setState(() => _handsFree = !_handsFree);
+              if (_handsFree && _waitingForUser) {
+                _listenForMyLine();
+              } else if (!_handsFree) {
+                _recognizer.stop();
+              }
+            },
+          ),
           IconButton(icon: const Icon(Icons.replay), onPressed: _restart, tooltip: '頭出し'),
         ],
       ),
@@ -173,6 +219,22 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           if (line != null) ...[
             const SizedBox(height: 4),
             Text(line.text, textAlign: TextAlign.center),
+          ],
+          if (_handsFree) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_recognizer.isListening ? Icons.mic : Icons.mic_none, size: 18),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    _heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ),
+              ],
+            ),
           ],
           const SizedBox(height: 8),
           FilledButton.icon(

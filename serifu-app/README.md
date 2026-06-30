@@ -20,6 +20,7 @@ lib/
   parser/rule_based_parser.dart   … 日本語台本のルールベース解析（端末内）
   speech/speech_engine.dart       … 読み上げエンジンの抽象
   speech/device_speech_engine.dart… 端末内蔵TTS実装（flutter_tts）
+  speech/speech_recognizer.dart   … 音声認識ラッパー（ハンズフリー進行）
   services/text_extractor.dart    … 取り込み振り分け（PDF/docx/画像/TXT、端末内）
   services/docx_text_extractor.dart… .docx 抽出（zip+XML, 純Dart）
   services/ocr_service.dart       … OCR（ML Kit, 日本語, オンデバイス）
@@ -89,7 +90,30 @@ flutter run
 - **解析修正UI**：✅ 対応済み（`script_edit_screen.dart`。種別/話者/本文の修正・行削除・役追加）。
 - **クラウドTTS（任意）**：高品質音声を*オプトイン*で。学習非利用が保証されたAPIのみ・
   Zero Data Retention 設定で（仕様書 §3-8）。
-- **音声認識**：セリフ終わりの自動検知でハンズフリー進行。
+- **音声認識（ハンズフリー進行）**：✅ 対応済み（`speech_recognizer.dart`。リハーサル画面の
+  マイクアイコンでON/OFF。自分のセリフを言い終わると自動で相手役を再生）。
+  ※ 下記「権限設定」が必要。実機依存のため本環境では未検証。
+
+## 権限設定（音声認識・OCRに必要）
+`flutter create .` 後、各プラットフォームに以下を追記してください。
+
+**iOS（`ios/Runner/Info.plist`）**
+```xml
+<key>NSMicrophoneUsageDescription</key>
+<string>セリフ練習でのハンズフリー進行に音声を使用します。</string>
+<key>NSSpeechRecognitionUsageDescription</key>
+<string>自分のセリフの言い終わりを判定するために音声認識を使用します。</string>
+```
+
+**Android（`android/app/src/main/AndroidManifest.xml`）**
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+```
+（`google_mlkit_text_recognition` / `speech_to_text` の追加設定は各パッケージのREADMEを参照）
+
+---
 
 > このリポジトリではFlutterのSDKが無いためビルド検証は未実施。
-> 解析器（`rule_based_parser.dart`）は純Dartで `flutter test` により検証可能。
+> 純Dart部分（`rule_based_parser` / `docx_text_extractor` / `script_serialization`）は
+> `flutter test` で検証可能。
+

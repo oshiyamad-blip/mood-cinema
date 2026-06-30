@@ -26,6 +26,9 @@ dependencies:
   # OCR（オンデバイス・日本語対応。台本は端末外に出ない）
   google_mlkit_text_recognition: ^0.13.1
 
+  # 音声認識（ハンズフリー進行。OS標準の音声認識を利用）
+  speech_to_text: ^7.0.0
+
   # 画像PDFのページをラスタライズしてOCRへ渡す
   pdfx: ^2.6.0
   path_provider: ^2.1.5
