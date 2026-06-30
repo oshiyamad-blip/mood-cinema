@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.serifu.serifu_app"
-    compileSdk = flutter.compileSdkVersion
+    // file_picker / flutter_plugin_android_lifecycle が compileSdk 36 を要求するため固定。
+    compileSdk = maxOf(36, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
