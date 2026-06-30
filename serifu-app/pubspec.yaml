@@ -32,6 +32,9 @@ dependencies:
   # 事前合成した音声ファイルの再生（本番の処理待ちをゼロにするため）
   audioplayers: ^6.1.0
 
+  # アプリ内課金（サブスク）。RevenueCat のラッパー
+  purchases_flutter: ^8.0.0
+
   # 画像PDFのページをラスタライズしてOCRへ渡す
   pdfx: ^2.6.0
   path_provider: ^2.1.5

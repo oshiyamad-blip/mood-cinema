@@ -26,6 +26,11 @@
 ```
 lib/
   main.dart
+  theme/app_theme.dart            … デザイントークン→ThemeData（design/と一致）
+  billing/                        … 課金（RevenueCat）
+    purchase_service.dart         …   エンタイトルメント管理（未設定でも無料動作）
+    features.dart                 …   無料/有料の機能ゲート
+    billing_config.dart           …   APIキー（dart-defineで注入）
   models/script.dart              … 台本/行/声設定のデータモデル
   parser/rule_based_parser.dart   … 日本語台本のルールベース解析（端末内）
   speech/speech_engine.dart       … 読み上げエンジンの抽象
@@ -43,6 +48,7 @@ lib/
     script_edit_screen.dart       … 解析結果の確認・修正（種別/話者/本文/削除）
     voice_settings_screen.dart    … 役ごとの 性別・テンポ + 試聴
     rehearsal_screen.dart         … 再生（台本表示/暗記の2モード、ハンズフリー、事前合成再生）
+    paywall_screen.dart           … アップグレード（ペイウォール）
 test/
   rule_based_parser_test.dart     … 解析器の単体テスト
   docx_text_extractor_test.dart   … docx抽出の単体テスト
@@ -124,12 +130,21 @@ flutter run
 
 ---
 
+## 課金（RevenueCat）
+- 無料：端末内蔵TTS・台本表示/暗記モード・男女ボイス・台本3件まで。
+- プロ：台本無制限・ハンズフリー進行・声モデル選択・（将来）クラウド高品質音声・広告なし。
+- APIキーは `--dart-define=RC_IOS_KEY=... --dart-define=RC_ANDROID_KEY=...` で注入。
+  **未設定でも無料層として正常動作**（購入導線は「準備中」表示）。
+- エンタイトルメント識別子は `pro`（RevenueCatダッシュボードと一致させる）。
+
 ## 検証状況
 - ✅ `flutter pub get` 成功（Flutter 3.44 / Dart 3.10 で確認）
 - ✅ `flutter analyze` … **No issues found!**（エラー・警告・infoなし）
-- ✅ `flutter test` … **全8件パス**（解析器 / docx抽出 / 保存ラウンドトリップ）
-- ⏳ TTS / OCR / 音声認識 / 事前合成・音声再生は**実機/シミュレータ依存**のため、
-  実機での通し確認は別途必要（CIではユニットテストのみ）。
+- ✅ `flutter test` … **全9件パス**（解析器 / docx抽出 / 保存ラウンドトリップ /
+  ホーム画面のウィジェット・スモークテスト＝テーマ適用UIが実ビルドできることを確認）
+- ✅ デザインを全画面に反映（`design/` のトークン → `theme/app_theme.dart`）
+- ⏳ TTS / OCR / 音声認識 / 事前合成・音声再生 / 課金（実購入）は**実機/シミュレータ依存**のため、
+  実機での通し確認は別途必要（CIではユニット+ウィジェットテストのみ）。
 
 ## 多言語対応について
 読み上げ・音声認識・声の切替は**ロケール指定で多言語化しやすい**構造：

@@ -3,11 +3,14 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
+import '../billing/features.dart';
 import '../models/script.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/line_audio_preparer.dart';
 import '../speech/speech_engine.dart';
 import '../speech/speech_recognizer.dart';
+import '../theme/app_theme.dart';
+import 'paywall_screen.dart';
 
 /// リハーサル（再生）画面。
 ///
@@ -210,8 +213,17 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         actions: [
           IconButton(
             icon: Icon(_handsFree ? Icons.mic : Icons.mic_off),
-            tooltip: _handsFree ? 'ハンズフリー: ON' : 'ハンズフリー: OFF',
-            onPressed: () {
+            tooltip: _handsFree ? 'ハンズフリー: ON' : 'ハンズフリー: OFF（プロ）',
+            onPressed: () async {
+              // ハンズフリーは有料機能。未加入ならペイウォールへ。
+              if (!_handsFree && !Features.handsFree) {
+                final upgraded = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => const PaywallScreen(reason: 'ハンズフリー進行はプロの機能です'),
+                  ),
+                );
+                if (!mounted || upgraded != true) return;
+              }
               setState(() => _handsFree = !_handsFree);
               if (_handsFree && _waitingForUser) {
                 _listenForMyLine();
@@ -260,27 +272,38 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   Widget _buildPreparingOverlay() {
     final pct = _prepTotal == 0 ? 0.0 : _prepDone / _prepTotal;
     return Container(
-      color: Colors.black.withValues(alpha: 0.55),
+      color: AppColors.stage900.withValues(alpha: 0.6),
       child: Center(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('音声を準備中…', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                const Text('本番の待ち時間をなくすため、先に合成しています',
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: 200,
-                  child: LinearProgressIndicator(value: _prepTotal == 0 ? null : pct),
+        child: Container(
+          margin: const EdgeInsets.all(AppSpacing.xl),
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            boxShadow: AppShadows.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.graphic_eq, color: AppColors.primary, size: 32),
+              const SizedBox(height: AppSpacing.md),
+              Text('音声を準備中…',
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text('本番の待ち時間をなくすため、先に合成しています',
+                  style: AppText.caption, textAlign: TextAlign.center),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: 200,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  child: LinearProgressIndicator(
+                      value: _prepTotal == 0 ? null : pct, minHeight: 8),
                 ),
-                const SizedBox(height: 8),
-                Text(_prepTotal == 0 ? '' : '$_prepDone / $_prepTotal'),
-              ],
-            ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(_prepTotal == 0 ? '' : '$_prepDone / $_prepTotal', style: AppText.caption),
+            ],
           ),
         ),
       ),
@@ -299,32 +322,39 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: current
-                ? (mine ? Colors.amber.withValues(alpha: 0.25) : Colors.indigo.withValues(alpha: 0.12))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+                ? (mine ? AppColors.accent050 : AppColors.primary050)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border(
+              left: BorderSide(
+                color: current
+                    ? (mine ? AppColors.accent : AppColors.primary)
+                    : Colors.transparent,
+                width: 4,
+              ),
+            ),
+            boxShadow: current ? AppShadows.sm : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isDirection)
-                Text(
-                  '${l.speaker ?? ''}${mine ? '（あなた）' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: mine ? Colors.amber.shade900 : Colors.indigo,
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: _speakerBadge(l.speaker ?? '', mine),
                 ),
               Text(
                 l.text,
-                style: TextStyle(
-                  fontSize: current ? 18 : 15,
-                  fontStyle: isDirection ? FontStyle.italic : FontStyle.normal,
-                  color: isDirection ? Colors.grey.shade600 : null,
-                ),
+                style: isDirection
+                    ? AppText.body.copyWith(
+                        fontStyle: FontStyle.italic, color: AppColors.ink500, fontSize: 14)
+                    : AppText.body.copyWith(
+                        fontSize: current ? 18 : 15,
+                        fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                      ),
               ),
             ],
           ),
@@ -333,7 +363,29 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     );
   }
 
-  /// 暗記モード：台本本文を隠し、相手の音声と最小限の手がかりだけ表示。
+  /// 話者バッジ（pill）。自分の役はアンバー、相手はインディゴ/ピンク系。
+  Widget _speakerBadge(String speaker, bool mine) {
+    final bg = mine
+        ? AppColors.accent050
+        : (speaker.isNotEmpty && speaker.hashCode.isEven
+            ? AppColors.roleHanakoBg
+            : AppColors.roleTaroBg);
+    final fg = mine
+        ? AppColors.accent600
+        : (speaker.isNotEmpty && speaker.hashCode.isEven
+            ? AppColors.roleHanakoFg
+            : AppColors.roleTaroFg);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
+      child: Text(
+        '$speaker${mine ? '（あなた）' : ''}',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: fg),
+      ),
+    );
+  }
+
+  /// 暗記モード：台本本文を隠し、相手の音声と最小限の手がかりだけ表示（舞台ダーク）。
   Widget _buildMemorizeView() {
     final line = (_index < lines.length) ? lines[_index] : null;
     final mine = line != null && _isMine(line);
@@ -347,35 +399,51 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                 ? 'ト書き'
                 : '相手：${line.speaker ?? ''}';
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${_index.clamp(0, lines.length)} / ${lines.length}',
-                style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 16),
-            Icon(mine ? Icons.record_voice_over : Icons.hearing,
-                size: 48, color: mine ? Colors.amber.shade700 : Colors.indigo),
-            const SizedBox(height: 12),
-            Text(cue, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (_peek && line != null)
-              Text(line.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16))
-            else
-              Text(
-                mine ? 'セリフを思い出して言ってみましょう' : '（相手のセリフを再生中）',
-                style: const TextStyle(color: Colors.grey),
-                textAlign: TextAlign.center,
+    return Container(
+      color: AppColors.stage900,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${_index.clamp(0, lines.length)} / ${lines.length}',
+                  style: const TextStyle(color: AppColors.stageMuted, fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppSpacing.xl),
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: mine ? AppColors.accent : AppColors.stage700,
+                ),
+                child: Icon(mine ? Icons.record_voice_over : Icons.hearing,
+                    size: 44, color: mine ? AppColors.onAccent : AppColors.stageText),
               ),
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: () => setState(() => _peek = !_peek),
-              icon: Icon(_peek ? Icons.visibility_off : Icons.visibility),
-              label: Text(_peek ? '隠す' : 'チラ見'),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              Text(cue,
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.stageText)),
+              const SizedBox(height: AppSpacing.md),
+              if (_peek && line != null)
+                Text(line.text,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16, color: AppColors.stageText, height: 1.6))
+              else
+                Text(
+                  mine ? 'セリフを思い出して言ってみましょう' : '（相手のセリフを再生中）',
+                  style: const TextStyle(color: AppColors.stageMuted),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: AppSpacing.lg),
+              TextButton.icon(
+                onPressed: () => setState(() => _peek = !_peek),
+                style: TextButton.styleFrom(foregroundColor: AppColors.accent),
+                icon: Icon(_peek ? Icons.visibility_off : Icons.visibility),
+                label: Text(_peek ? '隠す' : 'チラ見'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -385,35 +453,52 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     final line = (_index < lines.length) ? lines[_index] : null;
     return Container(
       width: double.infinity,
-      color: Colors.amber.withValues(alpha: 0.2),
-      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        color: AppColors.accent050,
+        border: Border(top: BorderSide(color: AppColors.accent200)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       child: Column(
         children: [
-          const Text('あなたの番です', style: TextStyle(fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.record_voice_over, size: 18, color: AppColors.accent600),
+              const SizedBox(width: 6),
+              Text('あなたの番です',
+                  style: AppText.body.copyWith(
+                      fontWeight: FontWeight.w800, color: AppColors.accent600)),
+            ],
+          ),
           // 暗記モードでは本文を出さない（チラ見で確認）。
           if (line != null && _showScript) ...[
             const SizedBox(height: 4),
-            Text(line.text, textAlign: TextAlign.center),
+            Text(line.text, textAlign: TextAlign.center, style: AppText.body),
           ],
           if (_handsFree) ...[
             const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(_recognizer.isListening ? Icons.mic : Icons.mic_none, size: 18),
+                Icon(_recognizer.isListening ? Icons.mic : Icons.mic_none,
+                    size: 18, color: AppColors.accent600),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     _heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: AppText.caption,
                   ),
                 ),
               ],
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: _advanceMine,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.onAccent,
+            ),
             icon: const Icon(Icons.skip_next),
             label: const Text('言えた・次へ'),
           ),
@@ -425,9 +510,17 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   Widget _buildEndBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      color: Colors.green.withValues(alpha: 0.15),
-      child: const Text('お疲れさまでした（最後まで到達）', textAlign: TextAlign.center),
+      padding: const EdgeInsets.all(14),
+      color: AppColors.success.withValues(alpha: 0.12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+          const SizedBox(width: 8),
+          Text('お疲れさまでした（最後まで到達）',
+              style: AppText.body.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 
