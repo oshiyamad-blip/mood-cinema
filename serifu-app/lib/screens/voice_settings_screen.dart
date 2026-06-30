@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/script_repository.dart';
 import '../models/script.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/speech_engine.dart';
@@ -19,6 +20,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   @override
   void dispose() {
     _engine.dispose();
+    ScriptRepository.instance.touch(); // 声設定を保存
     super.dispose();
   }
 

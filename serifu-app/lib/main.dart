@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'data/script_repository.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 保存済みの台本を端末ローカルから読み込む。
+  await ScriptRepository.instance.init();
   runApp(const SerifuApp());
 }
 

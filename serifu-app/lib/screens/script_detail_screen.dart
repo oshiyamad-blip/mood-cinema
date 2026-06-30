@@ -31,6 +31,7 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => ScriptEditScreen(script: s)),
               );
+              ScriptRepository.instance.touch(); // 修正を保存
               if (mounted) setState(() {});
             },
           ),
@@ -48,7 +49,10 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
               return ChoiceChip(
                 label: Text(c),
                 selected: selected,
-                onSelected: (_) => setState(() => s.myCharacter = c),
+                onSelected: (_) {
+                  setState(() => s.myCharacter = c);
+                  ScriptRepository.instance.touch();
+                },
               );
             }).toList(),
           ),
@@ -58,7 +62,10 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
             subtitle: const Text('OFFにすると画面表示のみ'),
             value: s.readDirections,
             contentPadding: EdgeInsets.zero,
-            onChanged: (v) => setState(() => s.readDirections = v),
+            onChanged: (v) {
+              setState(() => s.readDirections = v);
+              ScriptRepository.instance.touch();
+            },
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,

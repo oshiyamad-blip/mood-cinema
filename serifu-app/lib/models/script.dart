@@ -40,6 +40,20 @@ class VoiceProfile {
       voiceId: voiceId ?? this.voiceId,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'gender': gender.name,
+        'rate': rate,
+        'pitch': pitch,
+        'voiceId': voiceId,
+      };
+
+  factory VoiceProfile.fromJson(Map<String, dynamic> json) => VoiceProfile(
+        gender: Gender.values.byName((json['gender'] as String?) ?? 'female'),
+        rate: (json['rate'] as num?)?.toDouble() ?? 1.0,
+        pitch: (json['pitch'] as num?)?.toDouble() ?? 1.0,
+        voiceId: json['voiceId'] as String?,
+      );
 }
 
 /// 台本の1行。
@@ -57,6 +71,20 @@ class Line {
   /// 話者（役名）。ト書きは null。
   String? speaker;
   String text;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'type': type.name,
+        'speaker': speaker,
+        'text': text,
+      };
+
+  factory Line.fromJson(Map<String, dynamic> json) => Line(
+        id: json['id'] as String,
+        type: LineType.values.byName((json['type'] as String?) ?? 'dialogue'),
+        speaker: json['speaker'] as String?,
+        text: (json['text'] as String?) ?? '',
+      );
 }
 
 /// 台本。
@@ -94,5 +122,44 @@ class Script {
   /// 指定役の声設定を取得（無ければ既定を作成）。
   VoiceProfile voiceFor(String character) {
     return voiceByCharacter.putIfAbsent(character, VoiceProfile.new);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'characters': characters,
+        'lines': lines.map((l) => l.toJson()).toList(),
+        'importedAt': importedAt.toIso8601String(),
+        'lastPracticedAt': lastPracticedAt?.toIso8601String(),
+        'voiceByCharacter':
+            voiceByCharacter.map((k, v) => MapEntry(k, v.toJson())),
+        'myCharacter': myCharacter,
+        'readDirections': readDirections,
+      };
+
+  factory Script.fromJson(Map<String, dynamic> json) {
+    final voices = <String, VoiceProfile>{};
+    final rawVoices = (json['voiceByCharacter'] as Map?) ?? {};
+    rawVoices.forEach((k, v) {
+      voices[k as String] = VoiceProfile.fromJson(Map<String, dynamic>.from(v as Map));
+    });
+    return Script(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      characters: ((json['characters'] as List?) ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      lines: ((json['lines'] as List?) ?? const [])
+          .map((e) => Line.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      importedAt: DateTime.tryParse((json['importedAt'] as String?) ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      lastPracticedAt: (json['lastPracticedAt'] as String?) != null
+          ? DateTime.tryParse(json['lastPracticedAt'] as String)
+          : null,
+      voiceByCharacter: voices,
+      myCharacter: json['myCharacter'] as String?,
+      readDirections: (json['readDirections'] as bool?) ?? true,
+    );
   }
 }

@@ -23,7 +23,8 @@ lib/
   services/text_extractor.dart    … 取り込み振り分け（PDF/docx/画像/TXT、端末内）
   services/docx_text_extractor.dart… .docx 抽出（zip+XML, 純Dart）
   services/ocr_service.dart       … OCR（ML Kit, 日本語, オンデバイス）
-  data/script_repository.dart     … 台本の保管（MVPは端末メモリ内）
+  data/script_repository.dart     … 台本の保管（端末ローカルに永続化）
+  data/script_store.dart          … JSONファイル保存/読込（オンデバイス）
   screens/
     home_screen.dart              … 一覧 + 取り込み
     script_detail_screen.dart     … 役選択 / ト書きON-OFF / 声設定への導線
@@ -33,6 +34,7 @@ lib/
 test/
   rule_based_parser_test.dart     … 解析器の単体テスト
   docx_text_extractor_test.dart   … docx抽出の単体テスト
+  script_serialization_test.dart  … 保存/読込のラウンドトリップテスト
 ```
 
 ## セットアップと実行
@@ -82,7 +84,8 @@ flutter run
 - **OCR（写真・画像PDF）**：✅ 対応済み（`ocr_service.dart`、ML Kit・オンデバイス）。
   画像PDFはテキスト抽出に失敗したとき自動でOCRへフォールバック。
   ※ OCR/PDFラスタライズは実機依存のため本環境では未検証。
-- **永続化**：MVPはメモリ内。`sqflite`/`hive` で端末ローカル保存に（次のステップ）。
+- **永続化**：✅ 対応済み（`script_store.dart`、端末ローカルのJSONファイル。テスト付き）。
+  hive/sqflite への置き換えも可能だが、コード生成不要で確実なJSON方式を採用。
 - **解析修正UI**：✅ 対応済み（`script_edit_screen.dart`。種別/話者/本文の修正・行削除・役追加）。
 - **クラウドTTS（任意）**：高品質音声を*オプトイン*で。学習非利用が保証されたAPIのみ・
   Zero Data Retention 設定で（仕様書 §3-8）。
