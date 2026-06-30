@@ -49,25 +49,45 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Future<void> _buy(Package package) async {
     setState(() => _busy = true);
-    final ok = await _service.buy(package);
+    var outcome = PurchaseOutcome.failed;
+    try {
+      outcome = await _service.buy(package);
+    } catch (_) {
+      outcome = PurchaseOutcome.failed;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (!mounted) return;
-    setState(() => _busy = false);
-    if (ok) {
-      Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('プロにアップグレードしました。ありがとうございます！')));
+    switch (outcome) {
+      case PurchaseOutcome.success:
+        // 成功時は閉じる（戻り先がプロ状態で再描画される）。
+        Navigator.of(context).pop(true);
+      case PurchaseOutcome.cancelled:
+        break; // ユーザーキャンセルは無言。
+      case PurchaseOutcome.failed:
+      case PurchaseOutcome.unavailable:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('購入を完了できませんでした。時間をおいて再度お試しください。')),
+        );
     }
   }
 
   Future<void> _restore() async {
     setState(() => _busy = true);
-    final ok = await _service.restore();
+    bool ok = false;
+    try {
+      ok = await _service.restore();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (!mounted) return;
-    setState(() => _busy = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? '購入を復元しました。' : '復元できる購入がありませんでした。')),
-    );
-    if (ok) Navigator.of(context).pop(true);
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('復元できる購入がありませんでした。')),
+      );
+    }
   }
 
   @override

@@ -196,6 +196,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _jump(int delta) async {
     await _pause();
+    if (lines.isEmpty) return; // clamp(0, -1) を避ける
     setState(() => _index = (_index + delta).clamp(0, lines.length - 1));
   }
 

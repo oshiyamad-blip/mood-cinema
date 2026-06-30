@@ -232,11 +232,15 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
               // 未加入：ロック表示。タップでペイウォールへ。
               InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PaywallScreen(reason: '声モデルの選択はプロの機能です'),
-                  ),
-                ),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PaywallScreen(reason: '声モデルの選択はプロの機能です'),
+                    ),
+                  );
+                  // 購入後にロック解除を反映させるため再描画。
+                  if (mounted) setState(() {});
+                },
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.primary050,

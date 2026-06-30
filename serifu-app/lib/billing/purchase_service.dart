@@ -6,6 +6,9 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 import 'billing_config.dart';
 
+/// 購入の結果。UI のフィードバック出し分けに使う。
+enum PurchaseOutcome { success, cancelled, failed, unavailable }
+
 /// 課金（RevenueCat）の管理。
 ///
 /// 方針：APIキー未設定でも例外を投げず、**無料層としてアプリが正常動作**する。
@@ -76,17 +79,24 @@ class PurchaseService extends ChangeNotifier {
     }
   }
 
-  /// 購入。成功で true。ユーザーキャンセルや失敗で false。
-  Future<bool> buy(Package package) async {
-    if (!_available) return false;
+  /// 購入。成否判定は purchasePackage が返す CustomerInfo を直接用いる
+  /// （refresh() の getCustomerInfo 失敗による成功取りこぼしを避ける）。
+  /// どんな例外でも縮退し、結果を [PurchaseOutcome] で返す。
+  Future<PurchaseOutcome> buy(Package package) async {
+    if (!_available) return PurchaseOutcome.unavailable;
     try {
-      await Purchases.purchasePackage(package);
-      await refresh();
-      return isPro;
+      final info = await Purchases.purchasePackage(package);
+      _onInfo(info); // 戻り値から直接 _isPro を更新
+      final unlocked = info.entitlements.active.containsKey(BillingConfig.entitlementId);
+      return unlocked ? PurchaseOutcome.success : PurchaseOutcome.failed;
     } on PlatformException catch (e) {
       final code = PurchasesErrorHelper.getErrorCode(e);
-      if (code == PurchasesErrorCode.purchaseCancelledError) return false;
-      return false;
+      if (code == PurchasesErrorCode.purchaseCancelledError) {
+        return PurchaseOutcome.cancelled;
+      }
+      return PurchaseOutcome.failed;
+    } catch (_) {
+      return PurchaseOutcome.failed;
     }
   }
 
