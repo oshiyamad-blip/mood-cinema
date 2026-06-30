@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/script_repository.dart';
 import '../models/script.dart';
 import 'rehearsal_screen.dart';
+import 'script_edit_screen.dart';
 import 'voice_settings_screen.dart';
 
 /// 台本詳細：自分の役の選択、ト書きON/OFF、声設定、練習開始。
@@ -20,7 +21,21 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(s.title)),
+      appBar: AppBar(
+        title: Text(s.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            tooltip: '解析結果を修正',
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ScriptEditScreen(script: s)),
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

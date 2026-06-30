@@ -27,6 +27,7 @@ lib/
   screens/
     home_screen.dart              … 一覧 + 取り込み
     script_detail_screen.dart     … 役選択 / ト書きON-OFF / 声設定への導線
+    script_edit_screen.dart       … 解析結果の確認・修正（種別/話者/本文/削除）
     voice_settings_screen.dart    … 役ごとの 性別・テンポ + 試聴
     rehearsal_screen.dart         … 再生（自分の番はポーズ、相手はTTS、ハイライト）
 test/
@@ -82,7 +83,7 @@ flutter run
   画像PDFはテキスト抽出に失敗したとき自動でOCRへフォールバック。
   ※ OCR/PDFラスタライズは実機依存のため本環境では未検証。
 - **永続化**：MVPはメモリ内。`sqflite`/`hive` で端末ローカル保存に（次のステップ）。
-- **解析修正UI**：役の取り違え・ト書き誤判定を直す画面（仕様書 §3-3）。
+- **解析修正UI**：✅ 対応済み（`script_edit_screen.dart`。種別/話者/本文の修正・行削除・役追加）。
 - **クラウドTTS（任意）**：高品質音声を*オプトイン*で。学習非利用が保証されたAPIのみ・
   Zero Data Retention 設定で（仕様書 §3-8）。
 - **音声認識**：セリフ終わりの自動検知でハンズフリー進行。

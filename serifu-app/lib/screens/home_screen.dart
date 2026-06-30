@@ -8,6 +8,7 @@ import '../models/script.dart';
 import '../parser/rule_based_parser.dart';
 import '../services/text_extractor.dart';
 import 'script_detail_screen.dart';
+import 'script_edit_screen.dart';
 
 /// ホーム：取り込み済み台本の一覧と取り込み導線。
 class HomeScreen extends StatefulWidget {
@@ -53,9 +54,15 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       _repo.add(script);
       if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ScriptDetailScreen(script: script)),
+        // 取り込み直後に解析結果の確認・修正 → 詳細へ。
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ScriptEditScreen(script: script)),
         );
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ScriptDetailScreen(script: script)),
+          );
+        }
       }
     } on UnsupportedError catch (e) {
       _snack(e.message ?? '未対応の形式です。');
