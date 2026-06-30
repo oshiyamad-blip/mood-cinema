@@ -15,18 +15,15 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
-subprojects {
-    project.evaluationDependsOn(":app")
-}
 
-// 一部プラグイン(file_picker 等)が古い compileSdk でビルドされ、
-// 依存する flutter_plugin_android_lifecycle が要求する compileSdk 36 を満たさず
-// AAR metadata チェックで失敗する。全プラグインモジュールの compileSdk を 36 に
-// 強制してこれを解消する（AGP 型をルートに持ち込まないよう reflection を使用）。
+// 一部プラグイン(file_picker 等)が古い compileSdk でビルドされ、依存する
+// flutter_plugin_android_lifecycle が要求する compileSdk 36 を満たさず
+// AAR metadata チェックで失敗する。全プラグインモジュールの compileSdk を 36 に揃える。
+// 注意: afterEvaluate の登録は下の evaluationDependsOn(":app") より前で行う
+// （後だと一部プロジェクトが評価済みになり「already evaluated」で失敗する）。
 subprojects {
     afterEvaluate {
         val androidExtension = extensions.findByName("android") ?: return@afterEvaluate
-        // 新API(setCompileSdk(Integer)) / 旧API(compileSdkVersion(int)) の順に試す。
         val ok = runCatching {
             androidExtension.javaClass
                 .getMethod("setCompileSdk", Integer::class.java)
@@ -40,6 +37,10 @@ subprojects {
             }
         }
     }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register<Delete>("clean") {
