@@ -20,7 +20,13 @@
 - `docs/03-monetization.md` … 課金モデルの検討と実装要件
 - `docs/04-release-runbook.md` … App Store / Google Play 公開までの手順
 - `docs/05-security-review.md` … セキュリティレビューと対応
+- `docs/06-device-review.md` … 実機レビューの手順（CIのAPK / 自前ビルド / TestFlight）
 - `design/` … Claude Design 取込用のUIデザイン一式（HTMLプレビュー）
+
+## 実機レビュー
+GitHub Actions（`.github/workflows/serifu-app.yml`）が push/手動実行で
+**サイドロード可能な Android デバッグAPK**を生成（Artifacts）。iOSはコンパイル検証。
+手順は `docs/06-device-review.md` を参照。
 
 ## この雛形に含まれるもの（MVPコア）
 ```

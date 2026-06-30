@@ -1,0 +1,58 @@
+name: serifu-app build
+
+# 実機レビュー用ビルド。push か手動実行で、サイドロード可能な Android デバッグ APK を
+# 生成しアーティファクトとして配布する。iOS はコンパイル検証（署名なし）。
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/actor-dialogue-practice-app-t6wxsn
+    paths:
+      - 'serifu-app/**'
+      - '.github/workflows/serifu-app.yml'
+
+jobs:
+  android:
+    name: Test + Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Build debug APK（サイドロード用）
+        run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serifu-app-debug-apk
+          path: serifu-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS compile (no codesign)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS（署名なしのコンパイル検証）
+        run: flutter build ios --no-codesign
