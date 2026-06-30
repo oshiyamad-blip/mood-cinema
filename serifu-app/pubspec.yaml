@@ -1,0 +1,30 @@
+name: serifu_app
+description: "日本語の俳優セリフ練習・オーディション練習アプリ（完全オンデバイス）"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 端末内蔵TTS（無料・オフライン・男女ボイス・速度/ピッチ調整）
+  flutter_tts: ^4.2.0
+
+  # ファイル取り込み（PDF / docx / 画像）
+  file_picker: ^8.1.6
+
+  # PDFテキスト抽出（テキスト埋込PDF用、無料のCommunity版）
+  syncfusion_flutter_pdf: ^27.2.5
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
