@@ -143,6 +143,13 @@ flutter run
   **未設定でも無料層として正常動作**（購入導線は「準備中」表示）。
 - エンタイトルメント識別子は `pro`（RevenueCatダッシュボードと一致させる）。
 
+## クラウド高品質音声（オプトイン・Pro）
+- 端末TTSが既定。Pro かつ 設定ONで、リハーサルの相手役を**クラウドTTSで事前合成**して再生。
+- **鍵はクライアントに置かない**：アプリは自前の「TTSプロキシ」だけを呼ぶ。
+  - 参照実装：`server/tts-proxy.example.mjs`（Google Cloud TTS 例。ElevenLabs にも差し替え可）
+  - 注入：`--dart-define=CLOUD_TTS_ENDPOINT=https://<host>/api/tts --dart-define=CLOUD_TTS_TOKEN=<token>`
+- 未設定なら自動的に端末TTSへ縮退（機能は壊れない）。学習非利用・最小送信の方針は `docs/05` 参照。
+
 ## 検証状況
 - ✅ `flutter pub get` 成功（Flutter 3.44 / Dart 3.10 で確認）
 - ✅ `flutter analyze` … **No issues found!**（エラー・警告・infoなし）

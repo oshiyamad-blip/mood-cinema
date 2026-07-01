@@ -35,6 +35,9 @@ dependencies:
   # アプリ内課金（サブスク）。RevenueCat のラッパー
   purchases_flutter: ^8.0.0
 
+  # クラウドTTSプロキシ呼び出し（オプトイン）
+  http: ^1.2.0
+
   # 画像PDFのページをラスタライズしてOCRへ渡す
   pdfx: ^2.6.0
   path_provider: ^2.1.5

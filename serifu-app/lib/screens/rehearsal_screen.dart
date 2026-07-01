@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import '../billing/features.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
+import '../speech/cloud_line_audio_preparer.dart';
+import '../speech/cloud_tts_client.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/line_audio_preparer.dart';
 import '../speech/speech_engine.dart';
@@ -32,6 +34,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   final SpeechEngine _engine = DeviceSpeechEngine();
   final SpeechRecognizer _recognizer = SpeechRecognizer();
   final LineAudioPreparer _preparer = LineAudioPreparer();
+  final CloudLineAudioPreparer _cloudPreparer = CloudLineAudioPreparer();
   final AudioPlayer _player = AudioPlayer();
   final _narrator = VoiceProfile(gender: Gender.female, rate: 1.0);
 
@@ -64,6 +67,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _engine.dispose();
     _recognizer.dispose();
     _preparer.dispose();
+    _cloudPreparer.dispose();
     _player.dispose();
     _autoAdvanceTimer?.cancel();
     _cleanupPreparedFiles();
@@ -96,21 +100,36 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       _prepDone = 0;
       _prepTotal = 0;
     });
+    // クラウド音声を使うか（Pro かつ 設定ON かつ エンドポイント設定済み）。
+    final useCloud = SettingsStore.instance.settings.useCloudVoices &&
+        Features.cloudVoices &&
+        CloudTtsConfig.configured;
+    void onProgress(int done, int total) {
+      if (!mounted) return;
+      setState(() {
+        _prepDone = done;
+        _prepTotal = total;
+      });
+    }
+
     try {
-      _prepared = await _preparer.prepare(
-        lines,
-        myCharacter: s.myCharacter,
-        readDirections: s.readDirections,
-        voiceFor: s.voiceFor,
-        narrator: _narrator,
-        onProgress: (done, total) {
-          if (!mounted) return;
-          setState(() {
-            _prepDone = done;
-            _prepTotal = total;
-          });
-        },
-      );
+      _prepared = useCloud
+          ? await _cloudPreparer.prepare(
+              lines,
+              myCharacter: s.myCharacter,
+              readDirections: s.readDirections,
+              voiceFor: s.voiceFor,
+              narrator: _narrator,
+              onProgress: onProgress,
+            )
+          : await _preparer.prepare(
+              lines,
+              myCharacter: s.myCharacter,
+              readDirections: s.readDirections,
+              voiceFor: s.voiceFor,
+              narrator: _narrator,
+              onProgress: onProgress,
+            );
     } catch (_) {
       _prepared = null; // ライブ合成にフォールバック
     }
