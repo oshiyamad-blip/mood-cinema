@@ -21,6 +21,7 @@
 - `docs/04-release-runbook.md` … App Store / Google Play 公開までの手順
 - `docs/05-security-review.md` … セキュリティレビューと対応
 - `docs/06-device-review.md` … 実機レビューの手順（CIのAPK / 自前ビルド / TestFlight）
+- `docs/07-ios-testflight.md` … iOS TestFlight 自動配布のセットアップ（CI・Secrets）
 - `design/` … Claude Design 取込用のUIデザイン一式（HTMLプレビュー）
 
 ## 実機レビュー

@@ -1,0 +1,74 @@
+name: serifu-app TestFlight
+
+# iOS を TestFlight に配布する（手動実行 or serifu-v* タグ）。
+# 署名情報・App Store Connect API キーは GitHub Secrets に設定すること
+# （設定方法は serifu-app/docs/07-ios-testflight.md）。
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'serifu-v*'
+
+jobs:
+  testflight:
+    name: Build IPA + Upload to TestFlight
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 必要な Secrets を確認
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          missing=0
+          for v in BUILD_CERTIFICATE_BASE64 P12_PASSWORD PROVISIONING_PROFILE_BASE64 \
+                   APPSTORE_ISSUER_ID APPSTORE_KEY_ID APPSTORE_PRIVATE_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Secret $v が未設定です"; missing=1; fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "docs/07-ios-testflight.md に従って Secrets を設定してください。"
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - name: 署名証明書を取り込む
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.P12_PASSWORD }}
+
+      - name: プロビジョニングプロファイルを設置
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/serifu.mobileprovision
+
+      - run: flutter pub get
+
+      - name: IPA をビルド（署名あり）
+        run: flutter build ipa --export-options-plist ios/ExportOptions.plist
+
+      - name: IPA のパスを取得
+        id: ipa
+        run: echo "path=$(ls build/ios/ipa/*.ipa | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - name: TestFlight へアップロード
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: serifu-app/${{ steps.ipa.outputs.path }}
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
