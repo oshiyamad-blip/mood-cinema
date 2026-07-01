@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../billing/features.dart';
 import '../billing/purchase_service.dart';
 import '../data/script_repository.dart';
+import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../parser/rule_based_parser.dart';
 import '../services/text_extractor.dart';
@@ -13,6 +14,7 @@ import '../theme/app_theme.dart';
 import 'paywall_screen.dart';
 import 'script_detail_screen.dart';
 import 'script_edit_screen.dart';
+import 'settings_screen.dart';
 
 /// ホーム：取り込み済み台本の一覧と取り込み導線。
 class HomeScreen extends StatefulWidget {
@@ -60,12 +62,19 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final title = result!.files.single.name.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final settings = SettingsStore.instance.settings;
       final script = Script(
         id: 's${DateTime.now().microsecondsSinceEpoch}',
         title: title,
         characters: parsed.characters,
         lines: parsed.lines,
         importedAt: DateTime.now(),
+        readDirections: settings.defaultReadDirections,
+        // 既定の声を各役に適用（あとで個別変更可）。
+        voiceByCharacter: {
+          for (final c in parsed.characters)
+            c: VoiceProfile(gender: settings.defaultGender, rate: settings.defaultRate),
+        },
       );
       _repo.add(script);
       if (mounted) {
@@ -118,6 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: '設定',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
           ),
         ],
       ),

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../billing/features.dart';
+import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/line_audio_preparer.dart';
@@ -42,6 +44,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   bool _running = false;
   bool _waitingForUser = false;
   bool _handsFree = false;
+  Timer? _autoAdvanceTimer;
   bool _showScript = true; // false = 暗記モード
   bool _peek = false; // 暗記モードでのチラ見
   String _heard = '';
@@ -62,8 +65,19 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _recognizer.dispose();
     _preparer.dispose();
     _player.dispose();
+    _autoAdvanceTimer?.cancel();
     _cleanupPreparedFiles();
     super.dispose();
+  }
+
+  /// 自分の番：設定の自動進行秒数が正なら、その後に自動で次へ。
+  void _maybeStartAutoAdvance() {
+    final secs = SettingsStore.instance.settings.autoAdvanceSeconds;
+    if (secs <= 0) return;
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = Timer(Duration(seconds: secs), () {
+      if (mounted && _waitingForUser && !_handsFree) _advanceMine();
+    });
   }
 
   /// 台本内容を含む事前合成ファイルを破棄する（端末内に残さない）。
@@ -120,7 +134,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           _waitingForUser = true;
           _heard = '';
         });
-        if (_handsFree) _listenForMyLine();
+        if (_handsFree) {
+          _listenForMyLine();
+        } else {
+          _maybeStartAutoAdvance();
+        }
         return;
       }
 
@@ -177,6 +195,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _pause() async {
     _running = false;
+    _autoAdvanceTimer?.cancel();
     await _engine.stop();
     await _player.stop();
     await _recognizer.stop();
@@ -184,6 +203,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   void _advanceMine() {
+    _autoAdvanceTimer?.cancel();
     _recognizer.stop();
     if (_index < lines.length) _index++;
     _run();
