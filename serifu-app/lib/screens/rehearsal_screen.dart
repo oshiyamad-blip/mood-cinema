@@ -98,6 +98,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   late final RehearsalController _c;
 
+  /// 事前合成の結果。バックグラウンドで1行ずつ埋まり、
+  /// 準備が済んだ行から即座に使われる（未準備の行はライブ合成）。
+  final Map<String, String> _preparedMap = {};
   PreparedAudio? _prepared;
   bool _preparing = true;
   int _prepDone = 0;
@@ -129,6 +132,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       ),
     );
     _c.addListener(_onProgress);
+    _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う
     _prepareAudio();
   }
 
@@ -243,8 +247,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       });
     }
 
+    // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
+    void onLineReady(String lineId, String path) => _preparedMap[lineId] = path;
+
     try {
-      _prepared = useCloud
+      final result = useCloud
           ? await _cloudPreparer.prepare(
               s.lines,
               myCharacter: s.myCharacter,
@@ -252,6 +259,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               voiceFor: s.voiceFor,
               narrator: _narrator,
               onProgress: onProgress,
+              onLineReady: onLineReady,
             )
           : await _preparer.prepare(
               s.lines,
@@ -260,9 +268,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               voiceFor: s.voiceFor,
               narrator: _narrator,
               onProgress: onProgress,
+              onLineReady: onLineReady,
             );
+      _preparedMap.addAll(result.pathByLineId);
     } catch (_) {
-      _prepared = null; // ライブ合成にフォールバック
+      // 失敗した分はライブ合成で賄う（準備済みの行はそのまま使える）。
     }
     if (mounted) setState(() => _preparing = false);
   }
@@ -345,23 +355,19 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           IconButton(icon: const Icon(Icons.replay), onPressed: _restart, tooltip: '頭出し'),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              LinearProgressIndicator(
-                value: s.lines.isEmpty
-                    ? 0
-                    : (_c.index.clamp(0, s.lines.length)) / s.lines.length,
-              ),
-              _buildModeSwitch(),
-              Expanded(child: _showScript ? _buildScriptView() : _buildMemorizeView()),
-              if (waiting) _buildYourTurnBanner(),
-              if (atEnd) _buildEndBanner(),
-              _buildControls(atEnd),
-            ],
+          LinearProgressIndicator(
+            value: s.lines.isEmpty
+                ? 0
+                : (_c.index.clamp(0, s.lines.length)) / s.lines.length,
           ),
-          if (_preparing) _buildPreparingOverlay(),
+          _buildModeSwitch(),
+          if (_preparing) _buildPreparingBanner(),
+          Expanded(child: _showScript ? _buildScriptView() : _buildMemorizeView()),
+          if (waiting) _buildYourTurnBanner(),
+          if (atEnd) _buildEndBanner(),
+          _buildControls(atEnd),
         ],
       ),
     );
@@ -384,42 +390,34 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     );
   }
 
-  Widget _buildPreparingOverlay() {
-    final pct = _prepTotal == 0 ? 0.0 : _prepDone / _prepTotal;
-    return Container(
-      color: AppColors.stage900.withValues(alpha: 0.6),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.all(AppSpacing.xl),
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: AppShadows.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.graphic_eq, color: AppColors.primary, size: 32),
-              const SizedBox(height: AppSpacing.md),
-              Text('音声を準備中…',
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text('本番の待ち時間をなくすため、先に合成しています',
-                  style: AppText.caption, textAlign: TextAlign.center),
-              const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                width: 200,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: LinearProgressIndicator(
-                      value: _prepTotal == 0 ? null : pct, minHeight: 8),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(_prepTotal == 0 ? '' : '$_prepDone / $_prepTotal', style: AppText.caption),
-            ],
-          ),
+  /// 事前合成の進捗バナー（非ブロッキング。準備中でも開始できる）。
+  Widget _buildPreparingBanner() {
+    final label = _prepTotal == 0
+        ? '音声を準備中…（このまま開始できます）'
+        : '音声を準備中 $_prepDone / $_prepTotal（このまま開始できます）';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.primary050,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.primary100),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(label,
+                  style: AppText.caption.copyWith(color: AppColors.primary700)),
+            ),
+          ],
         ),
       ),
     );
@@ -651,7 +649,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               )
             else
               FilledButton.icon(
-                onPressed: (atEnd || _preparing) ? null : _c.run,
+                onPressed: atEnd ? null : _c.run,
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('再生'),
               ),

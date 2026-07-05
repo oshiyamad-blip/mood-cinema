@@ -33,8 +33,12 @@ class LineAudioPreparer {
     required VoiceProfile Function(String character) voiceFor,
     required VoiceProfile narrator,
     void Function(int done, int total)? onProgress,
+    void Function(String lineId, String path)? onLineReady,
   }) async {
     await _tts.setLanguage(languageCode);
+    // 合成完了まで await する（未設定だとファイルが書き終わる前に戻り、
+    // 空/不完全ファイルを掴む恐れがある）。
+    await _tts.awaitSynthCompletion(true);
 
     // 合成対象＝自分以外のセリフ ＋（読み上げ設定なら）ト書き。
     final targets = lines.where((l) {
@@ -61,6 +65,8 @@ class LineAudioPreparer {
         final result = await _tts.synthesizeToFile(line.text, fullPath, true);
         if (result == 1 && await File(fullPath).exists()) {
           map[line.id] = fullPath;
+          // 準備完了した行から順次使えるように通知（バックグラウンド準備用）。
+          onLineReady?.call(line.id, fullPath);
         }
       } catch (_) {
         // 未対応プラットフォーム → 再生側でライブ合成にフォールバック。

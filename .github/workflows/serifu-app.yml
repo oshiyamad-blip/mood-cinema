@@ -39,6 +39,14 @@ jobs:
           name: serifu-app-debug-apk
           path: serifu-app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+      # 実機レビュー向きの軽量ビルド（現状は debug 鍵で署名。ストア配布は不可）
+      - name: Build release APK（軽量・実機レビュー用）
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serifu-app-release-apk
+          path: serifu-app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
 
   ios:
     name: iOS compile (no codesign)

@@ -23,6 +23,7 @@ class CloudLineAudioPreparer {
     required VoiceProfile Function(String character) voiceFor,
     required VoiceProfile narrator,
     void Function(int done, int total)? onProgress,
+    void Function(String lineId, String path)? onLineReady,
   }) async {
     final targets = lines.where((l) {
       if (l.type == LineType.direction) return readDirections;
@@ -45,6 +46,7 @@ class CloudLineAudioPreparer {
         final file = File('${dir.path}/cloud_${line.id}.mp3');
         await file.writeAsBytes(bytes, flush: true);
         map[line.id] = file.path;
+        onLineReady?.call(line.id, file.path);
       }
       done++;
       onProgress?.call(done, targets.length);
