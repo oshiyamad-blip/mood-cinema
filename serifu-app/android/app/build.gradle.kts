@@ -32,8 +32,19 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
+}
+
+dependencies {
+    // 日本語OCR。google_mlkit_text_recognition はスクリプト別の認識ライブラリを
+    // 同梱しないため、日本語モデルはアプリ側で依存追加が必要
+    // （無いと日本語OCRの初期化が実行時に落ちる）。
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
 }
 
 kotlin {
