@@ -56,11 +56,26 @@ lib/
     voice_settings_screen.dart    … 役ごとの 性別・テンポ + 試聴
     rehearsal_screen.dart         … 再生（台本表示/暗記の2モード、ハンズフリー、事前合成再生）
     paywall_screen.dart           … アップグレード（ペイウォール）
+  rehearsal/rehearsal_controller.dart … リハーサル進行のステートマシン（純Dart・テスト可能）
+  theme/role_colors.dart          … 役バッジ配色（インデックスでパレット循環）
 test/
   rule_based_parser_test.dart     … 解析器の単体テスト
   docx_text_extractor_test.dart   … docx抽出の単体テスト
   script_serialization_test.dart  … 保存/読込のラウンドトリップテスト
+  app_settings_test.dart          … 設定のラウンドトリップテスト
+  rehearsal_controller_test.dart  … 進行ロジックのテスト（フェイク読み上げ器で
+                                     停止/再開/ト書き/ジャンプ/連続自分セリフ等を検証）
+  widget_smoke_test.dart          … ホーム画面のビルド検証
 ```
+
+## テストの実行
+```bash
+flutter test            # 全テスト（進行ロジック含む・端末不要）
+flutter analyze         # 静的解析
+```
+リハーサルの進行は `RehearsalController` に分離してあり、読み上げは
+`RehearsalLineSpeaker` 抽象を差し替えることで**実機なしで**進行の振る舞いを
+テストできる（`test/rehearsal_controller_test.dart` がフェイク実装の例）。
 
 ## セットアップと実行
 > この雛形は `lib/` などのソースのみを含みます。プラットフォームフォルダ

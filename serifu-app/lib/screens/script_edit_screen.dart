@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/script.dart';
 import '../theme/app_theme.dart';
+import '../theme/role_colors.dart';
 
 /// 解析結果の確認・修正画面。
 ///
@@ -179,15 +180,6 @@ class _SectionHeading extends StatelessWidget {
   }
 }
 
-/// 話者バッジの配色を役名から決める。
-/// 太郎系はインディゴ、その他はピンク系。
-({Color bg, Color fg}) _speakerColors(String? speaker) {
-  if (speaker != null && speaker.contains('太郎')) {
-    return (bg: AppColors.roleTaroBg, fg: AppColors.roleTaroFg);
-  }
-  return (bg: AppColors.roleHanakoBg, fg: AppColors.roleHanakoFg);
-}
-
 class _LineEditor extends StatelessWidget {
   const _LineEditor({
     super.key,
@@ -209,23 +201,10 @@ class _LineEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDialogue = line.type == LineType.dialogue;
-    final isHighlight = isDialogue && (line.speaker?.contains('花子') ?? false);
 
-    // 行の背景：ハイライト＝accent050＋左4pxのaccentボーダー、
-    // ト書き＝bg、通常セリフ＝surface。
-    final Color rowBg = isHighlight
-        ? AppColors.accent050
-        : (isDialogue ? AppColors.surface : AppColors.bg);
-
+    // 行の背景：ト書き＝bg、セリフ＝surface。
     return Container(
-      decoration: BoxDecoration(
-        color: rowBg,
-        border: isHighlight
-            ? const Border(
-                left: BorderSide(color: AppColors.accent, width: 4),
-              )
-            : null,
-      ),
+      color: isDialogue ? AppColors.surface : AppColors.bg,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.md,
@@ -282,9 +261,7 @@ class _LineEditor extends StatelessWidget {
                             line.text,
                             style: isDialogue
                                 ? AppText.body.copyWith(
-                                    fontWeight: isHighlight
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
+                                    fontWeight: FontWeight.w500,
                                     color: AppColors.ink900,
                                   )
                                 : AppText.body.copyWith(
@@ -325,7 +302,8 @@ class _SpeakerSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _speakerColors(speaker);
+    // 役の色は characters 内のインデックスでパレットを循環（役名に依存しない）。
+    final colors = roleColors(speaker == null ? 0 : characters.indexOf(speaker!));
     final value = characters.contains(speaker) ? speaker : null;
     return Container(
       padding: const EdgeInsets.symmetric(

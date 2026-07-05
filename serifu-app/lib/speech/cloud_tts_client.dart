@@ -19,12 +19,13 @@ class CloudTtsConfig {
 }
 
 /// 声プロファイル → クラウド音声名の対応。
+///
+/// 注意: [VoiceProfile.voiceId] は**端末TTSのボイス名**でありクラウドでは無意味
+/// なため使わない。クラウド側の具体的なボイス選択はプロキシがこの論理名から行う。
 class CloudVoices {
   CloudVoices._();
-  static String forProfile(VoiceProfile p) {
-    if (p.voiceId != null && p.voiceId!.isNotEmpty) return p.voiceId!;
-    return p.gender == Gender.male ? 'ja-JP-Male' : 'ja-JP-Female';
-  }
+  static String forProfile(VoiceProfile p) =>
+      p.gender == Gender.male ? 'ja-JP-Male' : 'ja-JP-Female';
 }
 
 /// TTSプロキシへ合成を依頼し、音声(mp3)バイト列を得るクライアント。

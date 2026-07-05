@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../billing/features.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
+import '../rehearsal/rehearsal_controller.dart';
 import '../speech/cloud_line_audio_preparer.dart';
 import '../speech/cloud_tts_client.dart';
 import '../speech/device_speech_engine.dart';
@@ -14,14 +15,16 @@ import '../speech/line_audio_preparer.dart';
 import '../speech/speech_engine.dart';
 import '../speech/speech_recognizer.dart';
 import '../theme/app_theme.dart';
+import '../theme/role_colors.dart';
 import 'paywall_screen.dart';
 
 /// リハーサル（再生）画面。
 ///
+/// 進行ロジックは [RehearsalController]（純Dart・テスト済み）に分離し、
+/// この画面は「読み上げの実装」「ハンズフリー/自動進行」「表示」を担当する。
 /// - 相手役のセリフ：練習開始時に**事前合成**した音声を再生（本番の処理待ちゼロ）。
 ///   事前合成できない環境ではライブ合成にフォールバック。
-/// - 自分のセリフ：読み上げず一時停止。ハンズフリーON時は音声認識で自動進行。
-/// - 表示モード：台本表示（読み上げ追従）/ 暗記（台本を隠して練習）の2種。
+/// - 表示モード：台本表示（現在行に自動スクロール）/ 暗記（台本を隠す）の2種。
 class RehearsalScreen extends StatefulWidget {
   const RehearsalScreen({super.key, required this.script});
   final Script script;
@@ -30,49 +33,175 @@ class RehearsalScreen extends StatefulWidget {
   State<RehearsalScreen> createState() => _RehearsalScreenState();
 }
 
+/// 事前合成済みの音声を再生する読み上げ器。
+/// 合成が無い行は端末TTSでライブ合成する。
+/// 再生完了は audioplayers の状態イベントで待つ（ポーリングしない）。
+class _PreparedLineSpeaker implements RehearsalLineSpeaker {
+  _PreparedLineSpeaker({
+    required this.player,
+    required this.engine,
+    required this.narrator,
+    required this.voiceFor,
+    required this.preparedGetter,
+  });
+
+  final AudioPlayer player;
+  final SpeechEngine engine;
+  final VoiceProfile narrator;
+  final VoiceProfile Function(String character) voiceFor;
+  final PreparedAudio? Function() preparedGetter;
+
+  @override
+  Future<void> speakLine(Line line) async {
+    final path = preparedGetter()?.pathFor(line.id);
+    if (path != null) {
+      await _playFile(path);
+    } else {
+      final profile =
+          line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
+      await engine.speak(line.text, profile);
+    }
+  }
+
+  Future<void> _playFile(String path) async {
+    final done = Completer<void>();
+    // completed（再生終了）または stopped（stop()による中断）で解決する。
+    // 進行は逐次実行なので、前の再生の残留イベントを拾う心配はない。
+    final sub = player.onPlayerStateChanged.listen((st) {
+      if (st == PlayerState.completed || st == PlayerState.stopped) {
+        if (!done.isCompleted) done.complete();
+      }
+    });
+    try {
+      await player.play(DeviceFileSource(path));
+      await done.future;
+    } finally {
+      await sub.cancel();
+    }
+  }
+
+  @override
+  Future<void> stop() async {
+    await player.stop(); // stopped イベントで _playFile が解決する
+    await engine.stop();
+  }
+}
+
 class _RehearsalScreenState extends State<RehearsalScreen> {
   final SpeechEngine _engine = DeviceSpeechEngine();
   final SpeechRecognizer _recognizer = SpeechRecognizer();
   final LineAudioPreparer _preparer = LineAudioPreparer();
   final CloudLineAudioPreparer _cloudPreparer = CloudLineAudioPreparer();
   final AudioPlayer _player = AudioPlayer();
+  final ScrollController _scroll = ScrollController();
   final _narrator = VoiceProfile(gender: Gender.female, rate: 1.0);
+
+  late final RehearsalController _c;
 
   PreparedAudio? _prepared;
   bool _preparing = true;
   int _prepDone = 0;
   int _prepTotal = 0;
 
-  int _index = 0;
-  bool _running = false;
-  bool _waitingForUser = false;
   bool _handsFree = false;
   Timer? _autoAdvanceTimer;
   bool _showScript = true; // false = 暗記モード
   bool _peek = false; // 暗記モードでのチラ見
   String _heard = '';
+  RehearsalPhase _lastPhase = RehearsalPhase.idle;
+  int _lastIndex = 0;
 
   Script get s => widget.script;
-  List<Line> get lines => s.lines;
 
   @override
   void initState() {
     super.initState();
+    _c = RehearsalController(
+      lines: s.lines,
+      myCharacter: s.myCharacter,
+      readDirections: s.readDirections,
+      speaker: _PreparedLineSpeaker(
+        player: _player,
+        engine: _engine,
+        narrator: _narrator,
+        voiceFor: s.voiceFor,
+        preparedGetter: () => _prepared,
+      ),
+    );
+    _c.addListener(_onProgress);
     _prepareAudio();
   }
 
   @override
   void dispose() {
-    _running = false;
+    _c.removeListener(_onProgress);
+    _c.dispose();
     _engine.dispose();
     _recognizer.dispose();
     _preparer.dispose();
     _cloudPreparer.dispose();
     _player.dispose();
+    _scroll.dispose();
     _autoAdvanceTimer?.cancel();
     _cleanupPreparedFiles();
     super.dispose();
   }
+
+  /// コントローラの変化に応じてUI側の副作用（ハンズフリー・自動進行・スクロール）を行う。
+  void _onProgress() {
+    if (!mounted) return;
+    final phase = _c.phase;
+
+    // 自分の番に入った瞬間：聞き取り or 自動進行タイマーを開始。
+    if (phase == RehearsalPhase.waitingForUser && _lastPhase != phase) {
+      _heard = '';
+      if (_handsFree) {
+        _listenForMyLine();
+      } else {
+        _maybeStartAutoAdvance();
+      }
+    }
+    if (phase != RehearsalPhase.waitingForUser) {
+      _autoAdvanceTimer?.cancel();
+    }
+    if (_c.index != _lastIndex) {
+      _peek = false; // 行が進んだらチラ見は閉じる
+      _scrollToCurrent();
+    }
+    _lastPhase = phase;
+    _lastIndex = _c.index;
+    setState(() {});
+  }
+
+  /// 台本表示モードで現在行へ自動スクロール（テレプロンプター追従）。
+  void _scrollToCurrent() {
+    if (!_showScript) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final ctx = _lineKey(_c.index).currentContext;
+      if (ctx != null) {
+        // 画面内（近傍）に居る → 上から3割の位置へスムーズに。
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.3,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      } else {
+        // 画面外 → 推定オフセットへ（ビルドされていない行はcontextが無い）。
+        const estimatedExtent = 84.0;
+        final target = (_c.index * estimatedExtent - 160)
+            .clamp(0.0, _scroll.position.maxScrollExtent);
+        _scroll.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  GlobalObjectKey _lineKey(int i) => GlobalObjectKey('${identityHashCode(this)}_line_$i');
 
   /// 自分の番：設定の自動進行秒数が正なら、その後に自動で次へ。
   void _maybeStartAutoAdvance() {
@@ -80,7 +209,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (secs <= 0) return;
     _autoAdvanceTimer?.cancel();
     _autoAdvanceTimer = Timer(Duration(seconds: secs), () {
-      if (mounted && _waitingForUser && !_handsFree) _advanceMine();
+      if (mounted && _c.phase == RehearsalPhase.waitingForUser && !_handsFree) {
+        _advanceMine();
+      }
     });
   }
 
@@ -115,7 +246,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     try {
       _prepared = useCloud
           ? await _cloudPreparer.prepare(
-              lines,
+              s.lines,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -123,7 +254,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onProgress: onProgress,
             )
           : await _preparer.prepare(
-              lines,
+              s.lines,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -136,65 +267,6 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (mounted) setState(() => _preparing = false);
   }
 
-  bool _isMine(Line l) => l.type == LineType.dialogue && l.speaker == s.myCharacter;
-
-  Future<void> _run() async {
-    if (_running || _preparing) return;
-    _running = true;
-    setState(() => _waitingForUser = false);
-
-    while (_running && _index < lines.length) {
-      final line = lines[_index];
-      setState(() => _peek = false);
-
-      if (_isMine(line)) {
-        _running = false;
-        setState(() {
-          _waitingForUser = true;
-          _heard = '';
-        });
-        if (_handsFree) {
-          _listenForMyLine();
-        } else {
-          _maybeStartAutoAdvance();
-        }
-        return;
-      }
-
-      if (line.type == LineType.direction && !s.readDirections) {
-        await Future.delayed(const Duration(milliseconds: 500));
-      } else {
-        await _speakLine(line);
-      }
-
-      if (!_running) return;
-      _index++;
-    }
-    _running = false;
-    setState(() {});
-  }
-
-  /// 事前合成済みなら即再生（処理待ちゼロ）。無ければライブ合成。
-  Future<void> _speakLine(Line line) async {
-    final path = _prepared?.pathFor(line.id);
-    if (path != null) {
-      await _playFile(path);
-    } else {
-      final profile =
-          line.type == LineType.direction ? _narrator : s.voiceFor(line.speaker ?? '');
-      await _engine.speak(line.text, profile);
-    }
-  }
-
-  Future<void> _playFile(String path) async {
-    await _player.stop();
-    await _player.play(DeviceFileSource(path));
-    // 再生完了 または 中断(_running=false) まで待つ。
-    while (_running && _player.state == PlayerState.playing) {
-      await Future.delayed(const Duration(milliseconds: 80));
-    }
-  }
-
   Future<void> _listenForMyLine() async {
     final ok = await _recognizer.init();
     if (!ok) {
@@ -203,7 +275,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     }
     await _recognizer.start(
       onResult: (text, isFinal) {
-        if (!mounted || !_waitingForUser || !_handsFree) return;
+        if (!mounted || _c.phase != RehearsalPhase.waitingForUser || !_handsFree) return;
         setState(() => _heard = text);
         if (isFinal && text.trim().isNotEmpty) {
           _advanceMine();
@@ -213,19 +285,15 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   Future<void> _pause() async {
-    _running = false;
     _autoAdvanceTimer?.cancel();
-    await _engine.stop();
-    await _player.stop();
     await _recognizer.stop();
-    setState(() => _waitingForUser = false);
+    await _c.pause();
   }
 
   void _advanceMine() {
     _autoAdvanceTimer?.cancel();
     _recognizer.stop();
-    if (_index < lines.length) _index++;
-    _run();
+    _c.advanceMine();
   }
 
   void _snack(String msg) {
@@ -234,19 +302,21 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   Future<void> _jump(int delta) async {
-    await _pause();
-    if (lines.isEmpty) return; // clamp(0, -1) を避ける
-    setState(() => _index = (_index + delta).clamp(0, lines.length - 1));
+    _autoAdvanceTimer?.cancel();
+    await _recognizer.stop();
+    await _c.jump(delta);
   }
 
   Future<void> _restart() async {
-    await _pause();
-    setState(() => _index = 0);
+    _autoAdvanceTimer?.cancel();
+    await _recognizer.stop();
+    await _c.restart();
   }
 
   @override
   Widget build(BuildContext context) {
-    final atEnd = _index >= lines.length;
+    final atEnd = _c.atEnd;
+    final waiting = _c.phase == RehearsalPhase.waitingForUser;
     return Scaffold(
       appBar: AppBar(
         title: Text(s.title),
@@ -265,7 +335,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                 if (!mounted || upgraded != true) return;
               }
               setState(() => _handsFree = !_handsFree);
-              if (_handsFree && _waitingForUser) {
+              if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
                 _listenForMyLine();
               } else if (!_handsFree) {
                 _recognizer.stop();
@@ -280,11 +350,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           Column(
             children: [
               LinearProgressIndicator(
-                value: lines.isEmpty ? 0 : (_index.clamp(0, lines.length)) / lines.length,
+                value: s.lines.isEmpty
+                    ? 0
+                    : (_c.index.clamp(0, s.lines.length)) / s.lines.length,
               ),
               _buildModeSwitch(),
               Expanded(child: _showScript ? _buildScriptView() : _buildMemorizeView()),
-              if (_waitingForUser) _buildYourTurnBanner(),
+              if (waiting) _buildYourTurnBanner(),
               if (atEnd) _buildEndBanner(),
               _buildControls(atEnd),
             ],
@@ -304,7 +376,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           ButtonSegment(value: false, label: Text('暗記'), icon: Icon(Icons.visibility_off, size: 18)),
         ],
         selected: {_showScript},
-        onSelectionChanged: (set) => setState(() => _showScript = set.first),
+        onSelectionChanged: (set) {
+          setState(() => _showScript = set.first);
+          if (set.first) _scrollToCurrent();
+        },
       ),
     );
   }
@@ -352,15 +427,17 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Widget _buildScriptView() {
     return ListView.builder(
+      controller: _scroll,
       padding: const EdgeInsets.all(16),
-      itemCount: lines.length,
+      itemCount: s.lines.length,
       itemBuilder: (context, i) {
-        final l = lines[i];
-        final current = i == _index;
-        final mine = _isMine(l);
+        final l = s.lines[i];
+        final current = i == _c.index;
+        final mine = _c.isMine(l);
         final isDirection = l.type == LineType.direction;
 
         return Container(
+          key: current ? _lineKey(i) : null,
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
@@ -403,32 +480,26 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     );
   }
 
-  /// 話者バッジ（pill）。自分の役はアンバー、相手はインディゴ/ピンク系。
+  /// 話者バッジ（pill）。自分の役はアンバー、相手は役インデックスでパレットを循環。
   Widget _speakerBadge(String speaker, bool mine) {
-    final bg = mine
-        ? AppColors.accent050
-        : (speaker.isNotEmpty && speaker.hashCode.isEven
-            ? AppColors.roleHanakoBg
-            : AppColors.roleTaroBg);
-    final fg = mine
-        ? AppColors.accent600
-        : (speaker.isNotEmpty && speaker.hashCode.isEven
-            ? AppColors.roleHanakoFg
-            : AppColors.roleTaroFg);
+    final colors = mine
+        ? (bg: AppColors.accent050, fg: AppColors.accent600)
+        : roleColors(s.characters.indexOf(speaker));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
+      decoration:
+          BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
       child: Text(
         '$speaker${mine ? '（あなた）' : ''}',
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: fg),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.fg),
       ),
     );
   }
 
   /// 暗記モード：台本本文を隠し、相手の音声と最小限の手がかりだけ表示（舞台ダーク）。
   Widget _buildMemorizeView() {
-    final line = (_index < lines.length) ? lines[_index] : null;
-    final mine = line != null && _isMine(line);
+    final line = _c.currentLine;
+    final mine = line != null && _c.isMine(line);
     final isDirection = line?.type == LineType.direction;
 
     final cue = line == null
@@ -447,7 +518,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${_index.clamp(0, lines.length)} / ${lines.length}',
+              Text('${_c.index.clamp(0, s.lines.length)} / ${s.lines.length}',
                   style: const TextStyle(color: AppColors.stageMuted, fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.xl),
               Container(
@@ -490,7 +561,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   Widget _buildYourTurnBanner() {
-    final line = (_index < lines.length) ? lines[_index] : null;
+    final line = _c.currentLine;
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -572,7 +643,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(icon: const Icon(Icons.skip_previous), onPressed: () => _jump(-1)),
-            if (_running)
+            if (_c.running)
               FilledButton.icon(
                 onPressed: _pause,
                 icon: const Icon(Icons.pause),
@@ -580,7 +651,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               )
             else
               FilledButton.icon(
-                onPressed: (atEnd || _preparing) ? null : _run,
+                onPressed: (atEnd || _preparing) ? null : _c.run,
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('再生'),
               ),
