@@ -63,4 +63,11 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Build iOS（署名なしのコンパイル検証）
-        run: flutter build ios --no-codesign
+        # CocoaPods CDN が 429(Too Many Requests) を返すことがあるためリトライする
+        run: |
+          for i in 1 2 3; do
+            if flutter build ios --no-codesign; then exit 0; fi
+            echo "attempt $i failed (CocoaPods CDN等の一時障害の可能性)。60秒後に再試行します"
+            sleep 60
+          done
+          exit 1
