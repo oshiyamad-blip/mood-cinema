@@ -12,6 +12,7 @@ void main() {
       defaultReadDirections: false,
       autoAdvanceSeconds: 5,
       useCloudVoices: true,
+      highAccuracyRecognition: true,
     );
 
     final restored =
@@ -22,6 +23,7 @@ void main() {
     expect(restored.defaultReadDirections, false);
     expect(restored.autoAdvanceSeconds, 5);
     expect(restored.useCloudVoices, true);
+    expect(restored.highAccuracyRecognition, true);
   });
 
   test('欠損キーは既定値にフォールバックする', () {
@@ -31,5 +33,6 @@ void main() {
     expect(restored.defaultReadDirections, true);
     expect(restored.autoAdvanceSeconds, 0);
     expect(restored.useCloudVoices, false);
+    expect(restored.highAccuracyRecognition, false);
   });
 }

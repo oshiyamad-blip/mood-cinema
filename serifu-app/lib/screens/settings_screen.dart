@@ -37,6 +37,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.md),
             _autoAdvanceSection(),
             const SizedBox(height: AppSpacing.md),
+            _recognitionSection(),
+            const SizedBox(height: AppSpacing.md),
             _cloudVoiceSection(),
             const SizedBox(height: AppSpacing.md),
             _planSection(),
@@ -156,6 +158,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Text('10秒'),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recognitionSection() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading('音声認識（ハンズフリー）'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('高精度認識を使う'),
+            subtitle: Text(
+              'OSのクラウド音声認識を許可して認識精度を上げます。'
+              'ONにするとセリフの音声が端末外の認識サービスへ送信される場合があります。'
+              'OFF（推奨）では可能な限り端末内で認識します。',
+              style: AppText.caption,
+            ),
+            value: s.highAccuracyRecognition,
+            onChanged: (v) => _save(s.copyWith(highAccuracyRecognition: v)),
           ),
         ],
       ),

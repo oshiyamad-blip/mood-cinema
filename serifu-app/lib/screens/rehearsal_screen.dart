@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../billing/features.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
+import '../rehearsal/line_matcher.dart';
 import '../rehearsal/rehearsal_controller.dart';
 import '../speech/cloud_line_audio_preparer.dart';
 import '../speech/cloud_tts_client.dart';
@@ -114,6 +115,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   RehearsalPhase _lastPhase = RehearsalPhase.idle;
   int _lastIndex = 0;
 
+  /// 認識テキストと台本セリフの照合（誤進行を防ぎ、言い終わりで即進む）。
+  final LineMatcher _matcher = LineMatcher();
+
+  /// 自分の番あたりの聞き取り自動再開の回数（無限再開を防ぐ）。
+  int _listenRestarts = 0;
+  static const _maxListenRestarts = 5;
+
   Script get s => widget.script;
 
   @override
@@ -159,6 +167,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     // 自分の番に入った瞬間：聞き取り or 自動進行タイマーを開始。
     if (phase == RehearsalPhase.waitingForUser && _lastPhase != phase) {
       _heard = '';
+      _listenRestarts = 0;
       if (_handsFree) {
         _listenForMyLine();
       } else {
@@ -283,11 +292,37 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       _snack('音声認識を利用できません。手動で進めてください。');
       return;
     }
+    // OSの認識セッションは自動終了するため、自分の番が続く間は再開する
+    // （台本と一致しないまま確定した場合も聞き直す）。
+    _recognizer.onStatus = (status) {
+      if (!mounted || !_handsFree || _c.phase != RehearsalPhase.waitingForUser) return;
+      final ended = status == 'done' || status == 'notListening' || status == 'error';
+      if (ended && _listenRestarts < _maxListenRestarts) {
+        _listenRestarts++;
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted &&
+              _handsFree &&
+              _c.phase == RehearsalPhase.waitingForUser &&
+              !_recognizer.isListening) {
+            _startListening();
+          }
+        });
+      }
+    };
+    await _startListening();
+  }
+
+  Future<void> _startListening() async {
+    final expected = _c.currentLine?.text ?? '';
     await _recognizer.start(
+      // 既定はオンデバイス認識（プライバシー優先）。設定で高精度(クラウド)を許可。
+      preferOnDevice: !SettingsStore.instance.settings.highAccuracyRecognition,
       onResult: (text, isFinal) {
         if (!mounted || _c.phase != RehearsalPhase.waitingForUser || !_handsFree) return;
         setState(() => _heard = text);
-        if (isFinal && text.trim().isNotEmpty) {
+        // 台本セリフと照合：語尾一致なら部分結果でも即進む。
+        // 一致が弱いままの確定（雑音・言い直し）は進まず聞き直す。
+        if (_matcher.shouldAdvance(expected: expected, recognized: text, isFinal: isFinal)) {
           _advanceMine();
         }
       },
