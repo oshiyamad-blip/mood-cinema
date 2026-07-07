@@ -7,6 +7,7 @@ class AppSettings {
     this.defaultRate = 1.0,
     this.defaultReadDirections = true,
     this.autoAdvanceSeconds = 0, // 0 = 手動（自分の番で止まる）
+    this.replyPauseMillis = 0, // 自分のセリフ後、相手が返すまでの間（ms）
     this.useCloudVoices = false, // クラウド高品質音声（Pro・要設定）
     this.highAccuracyRecognition = false, // 音声認識にクラウドを許可（精度優先）
   });
@@ -21,6 +22,10 @@ class AppSettings {
   /// 自分の番の自動進行秒数（0なら手動）。
   int autoAdvanceSeconds;
 
+  /// 自分のセリフを言い終えてから相手が返すまでの間（ミリ秒、0=即レス）。
+  /// 芝居の「間」を作るための調整。
+  int replyPauseMillis;
+
   /// クラウド高品質音声を使うか（Pro かつ エンドポイント設定時のみ有効）。
   bool useCloudVoices;
 
@@ -33,6 +38,7 @@ class AppSettings {
     double? defaultRate,
     bool? defaultReadDirections,
     int? autoAdvanceSeconds,
+    int? replyPauseMillis,
     bool? useCloudVoices,
     bool? highAccuracyRecognition,
   }) {
@@ -41,6 +47,7 @@ class AppSettings {
       defaultRate: defaultRate ?? this.defaultRate,
       defaultReadDirections: defaultReadDirections ?? this.defaultReadDirections,
       autoAdvanceSeconds: autoAdvanceSeconds ?? this.autoAdvanceSeconds,
+      replyPauseMillis: replyPauseMillis ?? this.replyPauseMillis,
       useCloudVoices: useCloudVoices ?? this.useCloudVoices,
       highAccuracyRecognition: highAccuracyRecognition ?? this.highAccuracyRecognition,
     );
@@ -51,6 +58,7 @@ class AppSettings {
         'defaultRate': defaultRate,
         'defaultReadDirections': defaultReadDirections,
         'autoAdvanceSeconds': autoAdvanceSeconds,
+        'replyPauseMillis': replyPauseMillis,
         'useCloudVoices': useCloudVoices,
         'highAccuracyRecognition': highAccuracyRecognition,
       };
@@ -60,6 +68,7 @@ class AppSettings {
         defaultRate: (json['defaultRate'] as num?)?.toDouble() ?? 1.0,
         defaultReadDirections: (json['defaultReadDirections'] as bool?) ?? true,
         autoAdvanceSeconds: (json['autoAdvanceSeconds'] as num?)?.toInt() ?? 0,
+        replyPauseMillis: (json['replyPauseMillis'] as num?)?.toInt() ?? 0,
         useCloudVoices: (json['useCloudVoices'] as bool?) ?? false,
         highAccuracyRecognition: (json['highAccuracyRecognition'] as bool?) ?? false,
       );

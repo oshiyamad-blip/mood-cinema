@@ -11,6 +11,7 @@ void main() {
       defaultRate: 1.3,
       defaultReadDirections: false,
       autoAdvanceSeconds: 5,
+      replyPauseMillis: 800,
       useCloudVoices: true,
       highAccuracyRecognition: true,
     );
@@ -22,6 +23,7 @@ void main() {
     expect(restored.defaultRate, 1.3);
     expect(restored.defaultReadDirections, false);
     expect(restored.autoAdvanceSeconds, 5);
+    expect(restored.replyPauseMillis, 800);
     expect(restored.useCloudVoices, true);
     expect(restored.highAccuracyRecognition, true);
   });
@@ -32,6 +34,7 @@ void main() {
     expect(restored.defaultRate, 1.0);
     expect(restored.defaultReadDirections, true);
     expect(restored.autoAdvanceSeconds, 0);
+    expect(restored.replyPauseMillis, 0);
     expect(restored.useCloudVoices, false);
     expect(restored.highAccuracyRecognition, false);
   });

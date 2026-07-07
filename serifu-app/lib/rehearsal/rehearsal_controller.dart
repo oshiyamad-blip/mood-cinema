@@ -35,8 +35,10 @@ class RehearsalController extends ChangeNotifier {
     required this.readDirections,
     required RehearsalLineSpeaker speaker,
     this.directionPause = const Duration(milliseconds: 500),
+    Duration Function()? replyPauseProvider,
   })  : _lines = lines,
-        _speaker = speaker;
+        _speaker = speaker,
+        _replyPauseProvider = replyPauseProvider;
 
   final List<Line> _lines;
   final String? myCharacter;
@@ -46,10 +48,17 @@ class RehearsalController extends ChangeNotifier {
   /// ト書きを読まない設定のときに置く間。
   final Duration directionPause;
 
+  /// 自分のセリフの後、相手が返すまでの「間」を返すプロバイダ
+  /// （設定変更を即時反映できるよう毎回読む）。null なら間なし。
+  final Duration Function()? _replyPauseProvider;
+
   int _index = 0;
   RehearsalPhase _phase = RehearsalPhase.idle;
   bool _running = false;
   bool _disposed = false;
+
+  /// advanceMine 直後の再開時に「返しの間」を置くためのフラグ。
+  bool _pendingReplyPause = false;
 
   List<Line> get lines => List.unmodifiable(_lines);
   int get index => _index;
@@ -83,8 +92,22 @@ class RehearsalController extends ChangeNotifier {
       if (isMine(line)) {
         // 自分の番：停止してユーザーを待つ。
         _running = false;
+        _pendingReplyPause = false;
         _setPhase(RehearsalPhase.waitingForUser);
         return;
+      }
+
+      // 自分のセリフ直後の相手の行には「返しの間」を置く（0なら即レス）。
+      if (_pendingReplyPause) {
+        _pendingReplyPause = false;
+        final pause = _replyPauseProvider?.call() ?? Duration.zero;
+        if (pause > Duration.zero) {
+          await Future<void>.delayed(pause);
+        }
+        if (!_running) {
+          _setPhase(RehearsalPhase.idle); // 間の途中で一時停止された
+          return;
+        }
       }
 
       if (line.type == LineType.direction && !readDirections) {
@@ -108,6 +131,7 @@ class RehearsalController extends ChangeNotifier {
   /// 一時停止。進行中の読み上げも止める。
   Future<void> pause() async {
     _running = false;
+    _pendingReplyPause = false;
     await _speaker.stop();
     if (_phase != RehearsalPhase.finished) {
       _setPhase(RehearsalPhase.idle);
@@ -115,9 +139,10 @@ class RehearsalController extends ChangeNotifier {
     _notify();
   }
 
-  /// 自分のセリフを言い終えた（またはスキップ）→ 次の行から再開。
+  /// 自分のセリフを言い終えた（またはスキップ）→「返しの間」を置いて次の行から再開。
   Future<void> advanceMine() async {
     if (_index < _lines.length) _index++;
+    _pendingReplyPause = true;
     _notify();
     await run();
   }

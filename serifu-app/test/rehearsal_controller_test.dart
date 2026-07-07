@@ -214,6 +214,69 @@ void main() {
     expect(c.phase, RehearsalPhase.finished);
   });
 
+  group('返しの間（replyPause）', () {
+    test('advanceMine の後、間を置いてから相手が返す', () async {
+      final sp = FakeSpeaker();
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '太郎', 'A'), // 自分
+          dialogue('l1', '花子', 'B'), // 相手
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        replyPauseProvider: () => const Duration(milliseconds: 40),
+      );
+
+      await c.run(); // 自分の番で停止
+      final sw = Stopwatch()..start();
+      await c.advanceMine(); // 間(40ms) → l1 を読む
+      sw.stop();
+
+      expect(sp.spokenIds, ['l1']);
+      expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(35));
+      expect(c.phase, RehearsalPhase.finished);
+    });
+
+    test('間の途中で pause すると相手は話さない（中断可能）', () async {
+      final sp = FakeSpeaker();
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '太郎', 'A'),
+          dialogue('l1', '花子', 'B'),
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        replyPauseProvider: () => const Duration(milliseconds: 200),
+      );
+
+      await c.run();
+      final advancing = c.advanceMine(); // 200ms の間に入る
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await c.pause(); // 間の途中で停止
+      await advancing;
+
+      expect(sp.spokenIds, isEmpty); // l1 は話されていない
+      expect(c.phase, RehearsalPhase.idle);
+      expect(c.index, 1); // 位置は相手の行のまま（再開すれば l1 から）
+    });
+
+    test('プロバイダ未指定なら従来どおり即レス', () async {
+      final sp = FakeSpeaker();
+      final c = controller([
+        dialogue('l0', '太郎', 'A'),
+        dialogue('l1', '花子', 'B'),
+      ], sp);
+
+      await c.run();
+      await c.advanceMine();
+      expect(sp.spokenIds, ['l1']);
+    });
+  });
+
   test('phase の変化が通知される（UI副作用のフック地点）', () async {
     final sp = FakeSpeaker();
     final c = controller([

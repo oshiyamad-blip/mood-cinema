@@ -138,6 +138,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         voiceFor: s.voiceFor,
         preparedGetter: () => _prepared,
       ),
+      // 「返しの間」は設定から毎回読む（変更を即時反映）。
+      replyPauseProvider: () => Duration(
+        milliseconds: SettingsStore.instance.settings.replyPauseMillis,
+      ),
     );
     _c.addListener(_onProgress);
     _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う

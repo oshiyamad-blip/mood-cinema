@@ -37,6 +37,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppSpacing.md),
             _autoAdvanceSection(),
             const SizedBox(height: AppSpacing.md),
+            _replyPauseSection(),
+            const SizedBox(height: AppSpacing.md),
             _recognitionSection(),
             const SizedBox(height: AppSpacing.md),
             _cloudVoiceSection(),
@@ -157,6 +159,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const Text('10秒'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _replyPauseSection() {
+    final millis = s.replyPauseMillis;
+    final sec = millis / 1000;
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading('返しの間（相手が返すまで）'),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            millis == 0
+                ? 'すぐに返す（間なし）'
+                : 'あなたのセリフの後、${sec.toStringAsFixed(1)}秒おいて相手が返します',
+            style: AppText.caption,
+          ),
+          Row(
+            children: [
+              const Text('すぐ'),
+              Expanded(
+                child: Slider(
+                  min: 0,
+                  max: 3000,
+                  divisions: 30, // 0.1秒刻み
+                  label: millis == 0 ? 'すぐ' : '${sec.toStringAsFixed(1)}秒',
+                  value: millis.toDouble(),
+                  onChanged: (v) =>
+                      _save(s.copyWith(replyPauseMillis: (v / 100).round() * 100)),
+                ),
+              ),
+              const Text('3秒'),
             ],
           ),
         ],
