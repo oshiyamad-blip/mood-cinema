@@ -11,6 +11,10 @@ on:
       - 'serifu-app/**'
       - '.github/workflows/serifu-app.yml'
 
+# GitHub Release (serifu-latest) へのAPK公開に必要
+permissions:
+  contents: write
+
 jobs:
   android:
     name: Test + Android APK
@@ -47,6 +51,25 @@ jobs:
           name: serifu-app-release-apk
           path: serifu-app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+      # スマホから1タップでDLできるよう、固定タグ serifu-latest のリリースにAPKを公開する
+      # （Actionsアーティファクトと違いGitHubログイン不要・zip展開不要）
+      - name: リリースAPKを GitHub Release (serifu-latest) に公開
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk serifu-app-latest.apk
+          NOTES="実機レビュー用の最新APK（debug鍵署名・ストア配布不可）。CIが自動更新。commit: ${GITHUB_SHA::7}"
+          if gh release view serifu-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload serifu-latest serifu-app-latest.apk --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit serifu-latest --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create serifu-latest serifu-app-latest.apk \
+              --prerelease \
+              --title "セリフ稽古 最新ビルド" \
+              --notes "$NOTES" \
+              --target "$GITHUB_SHA" \
+              --repo "$GITHUB_REPOSITORY"
+          fi
 
   ios:
     name: iOS compile (no codesign)
