@@ -6,6 +6,7 @@ import '../data/settings_store.dart';
 import '../models/app_settings.dart';
 import '../models/script.dart';
 import '../theme/app_theme.dart';
+import 'legal_screen.dart';
 import 'paywall_screen.dart';
 
 /// 設定画面：既定の声・ト書き・自動進行・クラウド音声・プラン・データ取り扱い。
@@ -320,6 +321,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'クラウド高品質音声を有効にした場合のみ、対象のセリフが音声合成の'
             'ために送信されます（学習非利用のサービスを使用）。',
             style: AppText.caption,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LegalScreen()),
+            ),
+            icon: const Icon(Icons.gavel_outlined, size: 18),
+            label: const Text('プライバシーポリシー・利用規約'),
           ),
         ],
       ),

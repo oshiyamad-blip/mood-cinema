@@ -23,6 +23,10 @@
 - `docs/05-security-review.md` … セキュリティレビューと対応
 - `docs/06-device-review.md` … 実機レビューの手順（CIのAPK / 自前ビルド / TestFlight）
 - `docs/07-ios-testflight.md` … iOS TestFlight 自動配布のセットアップ（CI・Secrets）
+- `docs/08-repo-migration.md` … 専用リポジトリへの切り出し手順
+- `docs/09-commercial-roadmap.md` … 商用化ロードマップ（フェーズ・担当・KPI）
+- `docs/10-store-listing.md` … ストア掲載文（日/英）・スクショ計画・審査注意
+- `legal/` … プライバシーポリシー・利用規約（アプリ内 設定→法的情報 にも表示）
 - `design/` … Claude Design 取込用のUIデザイン一式（HTMLプレビュー）
 
 ## 実機レビュー
