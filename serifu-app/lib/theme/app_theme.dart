@@ -83,18 +83,24 @@ class AppShadows {
 /// 台本本文・手がかり用のテキストスタイル。
 class AppText {
   AppText._();
+
+  /// 同梱フォント。ウィジェットテーマの明示的な TextStyle は
+  /// 既定スタイルを継承しないため、必ずこれを指定する
+  /// （未指定だとフォールバックのWebフォント取得に依存し、
+  /// オフライン環境で文字が描画されないことがある）。
+  static const family = 'NotoSansJP';
   static const display =
-      TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.ink900);
+      TextStyle(fontFamily: AppText.family, fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.ink900);
   static const h1 =
-      TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.ink900);
+      TextStyle(fontFamily: AppText.family, fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.ink900);
   static const h2 =
-      TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink700);
+      TextStyle(fontFamily: AppText.family, fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink700);
   static const script =
-      TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.7, color: AppColors.ink900);
+      TextStyle(fontFamily: AppText.family, fontSize: 20, fontWeight: FontWeight.w600, height: 1.7, color: AppColors.ink900);
   static const body =
-      TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.ink900);
+      TextStyle(fontFamily: AppText.family, fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.ink900);
   static const caption =
-      TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink500);
+      TextStyle(fontFamily: AppText.family, fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink500);
 }
 
 /// アプリ全体のテーマ。
@@ -130,7 +136,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle:
-            TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink900),
+            TextStyle(fontFamily: AppText.family, fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink900),
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
@@ -145,7 +151,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: AppText.family, fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -155,7 +161,7 @@ class AppTheme {
           elevation: 0,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: AppText.family, fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -164,7 +170,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.primary400, width: 1.5),
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: AppText.family, fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -178,8 +184,8 @@ class AppTheme {
         backgroundColor: AppColors.surface,
         selectedColor: AppColors.primary,
         side: const BorderSide(color: AppColors.line, width: 1.5),
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink700),
-        secondaryLabelStyle: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+        labelStyle: const TextStyle(fontFamily: AppText.family, fontWeight: FontWeight.w700, color: AppColors.ink700),
+        secondaryLabelStyle: const TextStyle(fontFamily: AppText.family, fontWeight: FontWeight.w700, color: Colors.white),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       ),
@@ -218,7 +224,7 @@ class AppTheme {
       ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: AppColors.ink900,
-        contentTextStyle: TextStyle(color: Colors.white),
+        contentTextStyle: TextStyle(fontFamily: AppText.family, color: Colors.white),
         behavior: SnackBarBehavior.floating,
       ),
     );

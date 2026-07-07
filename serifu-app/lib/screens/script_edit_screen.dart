@@ -291,6 +291,7 @@ class _ScriptEditScreenState extends State<ScriptEditScreen> {
                     label: Text(label),
                     selected: _filter == type,
                     labelStyle: TextStyle(
+                      fontFamily: AppText.family,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: _filter == type ? Colors.white : AppColors.ink700,
