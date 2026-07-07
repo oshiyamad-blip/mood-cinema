@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/app_settings.dart';
 
 /// アプリ設定の保管庫。端末ローカル（JSON）に永続化する。
+/// Web版（PC確認用）は永続化せず、メモリのみで動作する。
 class SettingsStore extends ChangeNotifier {
   SettingsStore._();
   static final SettingsStore instance = SettingsStore._();
@@ -23,6 +24,12 @@ class SettingsStore extends ChangeNotifier {
 
   Future<void> init() async {
     if (_loaded) return;
+    if (kIsWeb) {
+      // Webは永続化なし：既定値のまま開始する。
+      _loaded = true;
+      notifyListeners();
+      return;
+    }
     try {
       final file = await _file();
       if (await file.exists()) {
@@ -47,6 +54,7 @@ class SettingsStore extends ChangeNotifier {
   }
 
   void _persist() {
+    if (kIsWeb) return; // Webは保存をスキップ（メモリのみ）
     _file().then((f) => f.writeAsString(jsonEncode(_settings.toJson()))).catchError((_) {
       return File('');
     });

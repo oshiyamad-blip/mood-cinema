@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import 'docx_text_extractor.dart';
@@ -33,17 +35,41 @@ class TextExtractor {
     throw UnsupportedError('未対応の形式です: .$ext');
   }
 
+  /// Web用：バイト列から抽出する（Webの file_picker はパスではなく bytes を返す）。
+  ///
+  /// OCRが必要な形式（画像・画像PDF）は ML Kit がWeb未対応のため、
+  /// [UnsupportedError] で「Web版では未対応」と明示する（モバイル版では対応）。
+  Future<String> extractFromBytes(Uint8List bytes, String fileName) async {
+    final ext = fileName.toLowerCase().split('.').last;
+    if (ext == 'pdf') {
+      final text = _extractPdfText(bytes);
+      if (text.trim().isNotEmpty) return text;
+      throw UnsupportedError(
+          '画像PDFのOCRはWeb版では未対応です。テキスト埋込PDF / docx / TXT をお試しください。');
+    }
+    if (ext == 'docx') return _docx.extractFromBytes(bytes);
+    if (ext == 'txt') return utf8.decode(bytes, allowMalformed: true);
+    if (imageExtensions.contains(ext)) {
+      throw UnsupportedError('画像・写真のOCRはWeb版では未対応です（モバイル版をご利用ください）。');
+    }
+    throw UnsupportedError('未対応の形式です: .$ext');
+  }
+
   Future<String> _extractPdf(File file) async {
     final bytes = await file.readAsBytes();
-    final document = PdfDocument(inputBytes: bytes);
-    String text;
-    try {
-      text = PdfTextExtractor(document).extractText();
-    } finally {
-      document.dispose();
-    }
+    final text = _extractPdfText(bytes);
     // テキストが取れなければ画像PDFとみなしてOCRへ。
     if (text.trim().isNotEmpty) return text;
     return _ocr.recognizePdf(file);
+  }
+
+  /// テキスト埋込PDFからの抽出（純Dart・全プラットフォーム共通）。
+  String _extractPdfText(Uint8List bytes) {
+    final document = PdfDocument(inputBytes: bytes);
+    try {
+      return PdfTextExtractor(document).extractText();
+    } finally {
+      document.dispose();
+    }
   }
 }

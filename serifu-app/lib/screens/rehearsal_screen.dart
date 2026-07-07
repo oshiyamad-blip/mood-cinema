@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../billing/features.dart';
@@ -234,6 +235,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   /// 台本内容を含む事前合成ファイルを破棄する（端末内に残さない）。
   void _cleanupPreparedFiles() {
+    if (kIsWeb) return; // Webは事前合成なし＝ファイルも作られない
     final prepared = _prepared;
     if (prepared == null) return;
     for (final path in prepared.pathByLineId.values) {

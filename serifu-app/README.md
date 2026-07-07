@@ -34,6 +34,25 @@ GitHub Actions（`.github/workflows/serifu-app.yml`）が push/手動実行で
 **サイドロード可能な Android デバッグAPK**を生成（Artifacts）。iOSはコンパイル検証。
 手順は `docs/06-device-review.md` を参照。
 
+## Web版（PC確認用）
+PCのブラウザでURLを開くだけでアプリを確認できます。
+
+- **URL**: https://oshiyamad-blip.github.io/mood-cinema/
+- GitHub Actions（`.github/workflows/serifu-web.yml`）が push/手動実行で
+  Flutter Web をビルドし **GitHub Pages** へ自動デプロイします。
+- **初回のみ**: リポジトリの Settings → Pages → 「Build and deployment」の
+  Source を **GitHub Actions** に変更してください（未設定だとデプロイが失敗します）。
+
+Web版はあくまで**動作確認用**で、モバイル版と以下の違いがあります。
+
+| 項目 | Web版の挙動 |
+|------|------------|
+| 取り込み | PDF（テキスト埋込）/ docx / TXT のみ。**画像・写真、画像PDFのOCRは未対応**（ML KitがWeb非対応） |
+| 読み上げ | 事前合成（ゼロ遅延）は行わず、常に**ライブ合成**（ブラウザの SpeechSynthesis）で読む |
+| 課金 | 無効。確認しやすいよう**全機能を解放**（`--dart-define=UNLOCK_ALL=true` でビルド） |
+| 永続化 | なし（メモリのみ）。**リロードすると台本・設定は消えます** |
+| 音声認識 | ブラウザ依存（Chrome推奨）。利用不可の場合は手動進行に縮退 |
+
 ## この雛形に含まれるもの（MVPコア）
 ```
 lib/

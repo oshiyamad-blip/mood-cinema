@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -27,6 +25,11 @@ class PurchaseService extends ChangeNotifier {
   bool get isPro => BillingConfig.debugUnlockAll || _isPro;
 
   Future<void> init() async {
+    if (kIsWeb) {
+      // Web版（PC確認用）は課金なし。機能ゲートは Features 側でWeb全解放にする。
+      _available = false;
+      return;
+    }
     final key = _platformKey();
     if (key == null || key.isEmpty) {
       _available = false; // 未設定 → 課金無効・無料層で動作
@@ -44,9 +47,16 @@ class PurchaseService extends ChangeNotifier {
   }
 
   String? _platformKey() {
-    if (Platform.isIOS || Platform.isMacOS) return BillingConfig.iosApiKey;
-    if (Platform.isAndroid) return BillingConfig.androidApiKey;
-    return null;
+    // dart:io の Platform はWebで使えないため defaultTargetPlatform で判定する。
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return BillingConfig.iosApiKey;
+      case TargetPlatform.android:
+        return BillingConfig.androidApiKey;
+      default:
+        return null;
+    }
   }
 
   void _onInfo(CustomerInfo info) {

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'purchase_service.dart';
 
 /// 無料/有料の機能ゲート（docs/03-monetization.md の線引きに対応）。
@@ -10,7 +12,8 @@ class Features {
   /// 無料で保存できる台本の上限。
   static const freeScriptLimit = 3;
 
-  static bool get isPro => PurchaseService.instance.isPro;
+  /// Web版はPC確認用のため全機能を解放する（課金はモバイルのみ）。
+  static bool get isPro => kIsWeb || PurchaseService.instance.isPro;
 
   static bool get unlimitedScripts => isPro;
   static bool get handsFree => isPro;

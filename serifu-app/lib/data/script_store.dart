@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/script.dart';
@@ -9,6 +10,7 @@ import '../models/script.dart';
 ///
 /// hive/sqflite でも置き換え可能だが、コード生成不要で確実なJSONファイル方式を採用。
 /// 保存先はアプリ専用領域（getApplicationDocumentsDirectory）。
+/// Web版（PC確認用）はファイル永続化を行わず、メモリのみで動作する。
 class ScriptStore {
   ScriptStore({this.fileName = 'scripts.json'});
   final String fileName;
@@ -19,6 +21,7 @@ class ScriptStore {
   }
 
   Future<List<Script>> load() async {
+    if (kIsWeb) return []; // Webは永続化なし（リロードで消える）
     try {
       final file = await _file();
       if (!await file.exists()) return [];
@@ -32,6 +35,7 @@ class ScriptStore {
   }
 
   Future<void> save(List<Script> scripts) async {
+    if (kIsWeb) return; // Webは保存をスキップ（メモリのみ）
     final file = await _file();
     await file.writeAsString(encode(scripts), flush: true);
   }

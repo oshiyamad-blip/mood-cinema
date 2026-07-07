@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -35,6 +36,9 @@ class LineAudioPreparer {
     void Function(int done, int total)? onProgress,
     void Function(String lineId, String path)? onLineReady,
   }) async {
+    // Webは synthesizeToFile / 一時ファイルが使えないため事前合成しない。
+    // 再生側が常時ライブ合成（SpeechSynthesis）にフォールバックする。
+    if (kIsWeb) return PreparedAudio(const {});
     await _tts.setLanguage(languageCode);
     // 合成完了まで await する（未設定だとファイルが書き終わる前に戻り、
     // 空/不完全ファイルを掴む恐れがある）。

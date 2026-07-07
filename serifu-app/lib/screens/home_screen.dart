@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../billing/features.dart';
@@ -49,11 +50,22 @@ class _HomeScreenState extends State<HomeScreen> {
         allowedExtensions: const [
           'pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'bmp',
         ],
+        // Webはファイルパスを持たないため bytes で受け取る（モバイルは従来通りパス）。
+        withData: kIsWeb,
       );
-      final path = result?.files.single.path;
-      if (path == null) return;
+      final picked = result?.files.single;
+      if (picked == null) return;
 
-      final raw = await _extractor.extract(File(path));
+      final String raw;
+      if (kIsWeb) {
+        final bytes = picked.bytes;
+        if (bytes == null) return;
+        raw = await _extractor.extractFromBytes(bytes, picked.name);
+      } else {
+        final path = picked.path;
+        if (path == null) return;
+        raw = await _extractor.extract(File(path));
+      }
       final parsed = _parser.parse(raw);
 
       if (parsed.lines.isEmpty) {
@@ -61,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final title = result!.files.single.name.replaceAll(RegExp(r'\.[^.]+$'), '');
+      final title = picked.name.replaceAll(RegExp(r'\.[^.]+$'), '');
       final settings = SettingsStore.instance.settings;
       final script = Script(
         id: 's${DateTime.now().microsecondsSinceEpoch}',
@@ -403,7 +415,9 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'PDF / Word(docx) / 画像・写真 / TXT に対応\n（台本は端末内でのみ処理されます）',
+                kIsWeb
+                    ? 'Web版：PDF（テキスト埋込）/ Word(docx) / TXT に対応\n（画像・写真のOCRと保存はモバイル版のみ）'
+                    : 'PDF / Word(docx) / 画像・写真 / TXT に対応\n（台本は端末内でのみ処理されます）',
                 style: AppText.caption,
                 textAlign: TextAlign.center,
               ),

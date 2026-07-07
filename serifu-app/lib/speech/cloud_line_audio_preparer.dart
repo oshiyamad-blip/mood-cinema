@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/script.dart';
@@ -25,6 +26,9 @@ class CloudLineAudioPreparer {
     void Function(int done, int total)? onProgress,
     void Function(String lineId, String path)? onLineReady,
   }) async {
+    // Webは一時ファイルへのキャッシュができないため事前合成しない
+    // （再生側が端末TTSのライブ合成へ縮退する）。
+    if (kIsWeb) return PreparedAudio(const {});
     final targets = lines.where((l) {
       if (l.type == LineType.direction) return readDirections;
       return l.speaker != myCharacter;
