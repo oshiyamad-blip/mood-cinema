@@ -317,6 +317,21 @@ class _ScriptEditScreenState extends State<ScriptEditScreen> {
           ),
         ],
       ),
+      // 確認が済んだら次のステップ（役選択・練習開始）へ進む大きな導線。
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.md),
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('確認完了 — 役を選んで練習へ'),
+          ),
+        ),
+      ),
     );
   }
 

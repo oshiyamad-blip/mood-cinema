@@ -37,7 +37,7 @@ dependencies:
   purchases_flutter: ^8.0.0
 
   # バナー広告（完全無料＋広告モデル。ホーム画面下部の1枠のみ）
-  google_mobile_ads: ^5.2.0
+  google_mobile_ads: ^9.0.0
 
   # クラウドTTSプロキシ呼び出し（オプトイン）
   http: ^1.2.0

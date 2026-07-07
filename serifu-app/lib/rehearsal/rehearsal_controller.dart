@@ -45,7 +45,10 @@ class RehearsalController extends ChangeNotifier {
 
   final List<Line> _lines;
   final String? myCharacter;
-  final bool readDirections;
+
+  /// ト書きを読み上げるか。練習中のクイック調整で切り替えられるよう可変
+  /// （次のト書き行から反映される）。
+  bool readDirections;
 
   /// 聞き流しモード：自分のセリフも読み上げ、ユーザー待ちにしない。
   /// 練習中に切り替えられるよう可変（次の判定から反映される）。

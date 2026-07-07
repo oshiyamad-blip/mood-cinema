@@ -127,6 +127,15 @@ void main() {
       expect(r.lines[5].type, LineType.dialogue);
     });
 
+    test('タイトルだけの薄い表紙も、登場人物見出しの前なら表紙になる', () {
+      final r = parser.parse('入道雲（仮）\n作：山田太郎\n\n'
+          '登場人物表\n太郎（２８）\n\n'
+          '○駅前・朝\n太郎「やあ」');
+      expect(r.lines[0].type, LineType.meta); // タイトル
+      expect(r.lines[1].type, LineType.meta); // 作：
+      expect(r.lines[2].type, LineType.meta); // 登場人物表
+    });
+
     test('表紙らしい項目語が無ければ冒頭のト書きを表紙扱いしない', () {
       final r = parser.parse('静かな夜。雨が降っている。\n\n太郎「まだ降ってるな」');
       expect(r.lines[0].type, LineType.direction);

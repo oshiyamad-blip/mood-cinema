@@ -75,9 +75,12 @@ class RuleBasedParser {
     // 文書先頭から「本編の開始」までをメタ情報（読み上げ対象外）にする。
     // 本編の開始 = 登場人物見出し / 柱（〇… 第N場）/ 役名「セリフ」 /
     //              項目語でないコロン行（役名：セリフ 等）。
-    // 誤判定防止のため、区間内に表紙らしい項目語（タイトル・氏名・作：…
-    // あらすじ等）が2つ以上あるときだけ表紙として確定する
-    // （表紙なしで冒頭からト書きが始まる台本はそのまま本編扱い）。
+    // 確定条件：
+    //   - 登場人物見出しで終わる先頭ブロックは**無条件で表紙**
+    //     （人物表の前は台本の構造上すべて前付け。タイトルだけの表紙も拾う）
+    //   - それ以外（柱・セリフで本編が始まる）は、区間内に表紙らしい項目語
+    //     （タイトル・氏名・作：…・あらすじ等）が2つ以上あるときだけ表紙
+    //     （表紙なしで冒頭からト書きが始まる台本を誤判定しないため）。
     var coverUntil = 0; // rawLines のこのインデックスより前が表紙
     {
       var keywordHits = 0;
@@ -85,14 +88,17 @@ class RuleBasedParser {
       for (var i = 0; i < rawLines.length; i++) {
         final t = rawLines[i].trim();
         if (t.isEmpty || _pageNumber.hasMatch(t)) continue;
+        if (_castHeader.hasMatch(t)) {
+          if (i > 0) coverUntil = i;
+          break;
+        }
         final isFrontMatter =
             _credit.hasMatch(t) || _frontMatterWord.hasMatch(t);
         final isStructural = !isFrontMatter &&
-            (_castHeader.hasMatch(t) ||
-                _pillar.hasMatch(t) ||
+            (_pillar.hasMatch(t) ||
                 _bracketForm.hasMatch(t) ||
                 _colonForm.hasMatch(t));
-        if (_castHeader.hasMatch(t) || _pillar.hasMatch(t) || isStructural) {
+        if (isStructural) {
           if (i > 0 && keywordHits >= 2) coverUntil = i;
           break;
         }

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../billing/features.dart';
+import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../rehearsal/line_matcher.dart';
@@ -364,6 +365,85 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     await _c.restart();
   }
 
+  /// クイック調整シート：練習を止めずに「間」などをその場で微調整する。
+  /// 値は次の行の再生から即反映される。
+  Future<void> _showQuickTune() async {
+    final store = SettingsStore.instance;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final settings = store.settings;
+          final replySec = settings.replyPauseMillis / 1000;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('クイック調整', style: AppText.h2),
+                const SizedBox(height: AppSpacing.sm),
+                Text('練習中でもその場で変えられます（次の行から反映）',
+                    style: AppText.caption.copyWith(color: AppColors.ink500)),
+                const SizedBox(height: AppSpacing.md),
+                // 返しの間（自分のセリフ後に相手が返すまで）
+                Text('返しの間：${replySec.toStringAsFixed(1)}秒',
+                    style: AppText.body),
+                Slider(
+                  min: 0,
+                  max: 3000,
+                  divisions: 30,
+                  value: settings.replyPauseMillis.toDouble(),
+                  onChanged: (v) {
+                    store.update(
+                        settings.copyWith(replyPauseMillis: v.round()));
+                    setSheet(() {});
+                  },
+                ),
+                // 自動進行（手動モードで自分の番を自動で送る）
+                Text(
+                  settings.autoAdvanceSeconds == 0
+                      ? '自動進行：オフ（タップで進める）'
+                      : '自動進行：${settings.autoAdvanceSeconds}秒後に次へ',
+                  style: AppText.body,
+                ),
+                Slider(
+                  min: 0,
+                  max: 10,
+                  divisions: 10,
+                  value: settings.autoAdvanceSeconds.toDouble(),
+                  onChanged: (v) {
+                    store.update(
+                        settings.copyWith(autoAdvanceSeconds: v.round()));
+                    setSheet(() {});
+                  },
+                ),
+                // ト書きの読み上げ（この台本の設定を切替・保存）
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('ト書きを読み上げる'),
+                  value: _c.readDirections,
+                  onChanged: (v) {
+                    _c.readDirections = v;
+                    s.readDirections = v;
+                    ScriptRepository.instance.touch();
+                    setSheet(() {});
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final atEnd = _c.atEnd;
@@ -372,6 +452,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       appBar: AppBar(
         title: Text(s.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'クイック調整（間・ト書き・自動進行）',
+            onPressed: _showQuickTune,
+          ),
           IconButton(
             icon: Icon(
                 _c.listenMode ? Icons.headphones : Icons.headphones_outlined),
