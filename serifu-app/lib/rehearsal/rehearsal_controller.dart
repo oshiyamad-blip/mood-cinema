@@ -89,6 +89,12 @@ class RehearsalController extends ChangeNotifier {
       final line = _lines[_index];
       _notify(); // 現在行の更新をUIへ
 
+      // メタ情報（表紙・登場人物表など）は読まずに飛ばす。
+      if (line.type == LineType.meta) {
+        _index++;
+        continue;
+      }
+
       if (isMine(line)) {
         // 自分の番：停止してユーザーを待つ。
         _running = false;

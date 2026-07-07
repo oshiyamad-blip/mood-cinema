@@ -39,9 +39,12 @@ void main() {
     expect(r.lines[0].text, contains('出かけよう'));
   });
 
-  test('登場人物ブロックから役名辞書を拾う', () {
-    final r = parser.parse('登場人物\n太郎\n花子\n\n太郎「やあ」');
+  test('登場人物ブロックから役名辞書を拾う（発言のない名前は一覧に出さない）', () {
+    final r = parser.parse('登場人物\n太郎\n花子\n\n太郎「やあ」\n花子「どうも」');
     expect(r.characters, containsAll(['太郎', '花子']));
+
+    final r2 = parser.parse('登場人物\n太郎\n花子\n\n太郎「やあ」');
+    expect(r2.characters, ['太郎']); // 花子は一度も話さない → 候補から除外
   });
 
   group('行単位判定（1行にセリフとト書きは同居しない）', () {
@@ -96,11 +99,77 @@ void main() {
       final r = parser.parse('登場人物\n太郎\n花子\n\n'
           '太郎\n　おはよう、花子。\n　今日はいい天気だね。\n'
           '花子\n　ほんとだね。');
-      expect(r.lines.length, 2);
-      expect(r.lines[0].speaker, '太郎');
-      expect(r.lines[0].text, 'おはよう、花子。今日はいい天気だね。');
-      expect(r.lines[1].speaker, '花子');
-      expect(r.lines[1].text, 'ほんとだね。');
+      final dialogue =
+          r.lines.where((l) => l.type == LineType.dialogue).toList();
+      expect(dialogue.length, 2);
+      expect(dialogue[0].speaker, '太郎');
+      expect(dialogue[0].text, 'おはよう、花子。今日はいい天気だね。');
+      expect(dialogue[1].speaker, '花子');
+      expect(dialogue[1].text, 'ほんとだね。');
+    });
+  });
+
+  group('メタ情報（表紙・登場人物表）の除外', () {
+    test('表紙（タイトル・クレジット・応募情報）はメタになる', () {
+      final r = parser.parse('入道雲\n'
+          '作：山田太郎\n'
+          '氏名(ＰＮ)\n'
+          '山田太郎\n'
+          '\n'
+          '○駅前・朝\n'
+          '太郎「やあ」');
+      expect(r.lines[0].type, LineType.meta);
+      expect(r.lines[0].text, '入道雲');
+      expect(r.lines[1].type, LineType.meta);
+      expect(r.lines[2].type, LineType.meta);
+      expect(r.lines[3].type, LineType.meta);
+      expect(r.lines[4].type, LineType.direction); // ○駅前・朝
+      expect(r.lines[5].type, LineType.dialogue);
+    });
+
+    test('表紙らしい項目語が無ければ冒頭のト書きを表紙扱いしない', () {
+      final r = parser.parse('静かな夜。雨が降っている。\n\n太郎「まだ降ってるな」');
+      expect(r.lines[0].type, LineType.direction);
+      expect(r.lines[1].type, LineType.dialogue);
+    });
+
+    test('登場人物表（説明付き）はメタになり、名前だけ辞書に入る', () {
+      final r = parser.parse('登場人物表\n'
+          '田中一郎（２８）　売れない役者。主人公。\n'
+          '佐藤花子(２６)　一郎の幼なじみ\n'
+          '\n'
+          '○公園・昼\n'
+          '田中一郎「よお」\n'
+          '佐藤花子「久しぶり」');
+      expect(r.lines[0].type, LineType.meta); // 登場人物表
+      expect(r.lines[1].type, LineType.meta);
+      expect(r.lines[2].type, LineType.meta);
+      expect(r.characters, containsAll(['田中一郎', '佐藤花子']));
+      final dialogue =
+          r.lines.where((l) => l.type == LineType.dialogue).toList();
+      expect(dialogue.length, 2);
+    });
+
+    test('〇（漢数字ゼロ）で書かれた柱もト書きになる', () {
+      final r = parser.parse('〇スーパー（夕）\n夕方六時すぎ。\n太郎「やあ」');
+      expect(r.lines[0].type, LineType.direction);
+      expect(r.lines[0].text, '〇スーパー（夕）');
+      expect(r.lines[1].type, LineType.direction);
+      expect(r.lines[1].text, '夕方六時すぎ。');
+    });
+
+    test('記号だけの飾り行はメタになる', () {
+      final r = parser.parse('太郎「やあ」\n………………\n花子「どうも」');
+      expect(r.lines[1].type, LineType.meta);
+      expect(r.lines[0].type, LineType.dialogue);
+      expect(r.lines[2].type, LineType.dialogue);
+    });
+
+    test('あらすじ内の「〜で、『…』」をセリフと誤検出しない', () {
+      final r = parser.parse('太郎「やあ」\n'
+          '街を案内する中で、「写真は残すためのものではない」という言葉に触れる。');
+      expect(r.lines[1].type, LineType.direction);
+      expect(r.characters, ['太郎']);
     });
   });
 }

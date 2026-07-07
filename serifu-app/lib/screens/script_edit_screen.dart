@@ -25,11 +25,11 @@ class _ScriptEditScreenState extends State<ScriptEditScreen> {
   void _setType(Line line, LineType type) {
     setState(() {
       line.type = type;
-      if (type == LineType.direction) {
-        line.speaker = null;
-      } else {
+      if (type == LineType.dialogue) {
         line.speaker ??= s.characters.isNotEmpty ? s.characters.first : '役1';
         _ensureCharacter(line.speaker!);
+      } else {
+        line.speaker = null;
       }
     });
   }
@@ -201,8 +201,9 @@ class _LineEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDialogue = line.type == LineType.dialogue;
+    final isMeta = line.type == LineType.meta;
 
-    // 行の背景：ト書き＝bg、セリフ＝surface。
+    // 行の背景：ト書き・メタ＝bg、セリフ＝surface。
     return Container(
       color: isDialogue ? AppColors.surface : AppColors.bg,
       padding: const EdgeInsets.symmetric(
@@ -218,17 +219,19 @@ class _LineEditor extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    // 種別トグル（セリフ ⇄ ト書き）。
-                    SegmentedButton<bool>(
+                    // 種別トグル（セリフ / ト書き / 読まない）。
+                    SegmentedButton<LineType>(
                       segments: const [
-                        ButtonSegment(value: true, label: Text('セリフ')),
-                        ButtonSegment(value: false, label: Text('ト書き')),
+                        ButtonSegment(
+                            value: LineType.dialogue, label: Text('セリフ')),
+                        ButtonSegment(
+                            value: LineType.direction, label: Text('ト書き')),
+                        ButtonSegment(
+                            value: LineType.meta, label: Text('読まない')),
                       ],
-                      selected: {isDialogue},
+                      selected: {line.type},
                       showSelectedIcon: false,
-                      onSelectionChanged: (sel) => onTypeChanged(
-                        sel.first ? LineType.dialogue : LineType.direction,
-                      ),
+                      onSelectionChanged: (sel) => onTypeChanged(sel.first),
                       style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         textStyle: WidgetStatePropertyAll(
@@ -264,10 +267,14 @@ class _LineEditor extends StatelessWidget {
                                     fontWeight: FontWeight.w500,
                                     color: AppColors.ink900,
                                   )
-                                : AppText.body.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                    color: AppColors.ink500,
-                                  ),
+                                : isMeta
+                                    ? AppText.body.copyWith(
+                                        color: AppColors.ink300,
+                                      )
+                                    : AppText.body.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        color: AppColors.ink500,
+                                      ),
                           ),
                   ),
                 ),

@@ -30,6 +30,7 @@ class CloudLineAudioPreparer {
     // （再生側が端末TTSのライブ合成へ縮退する）。
     if (kIsWeb) return PreparedAudio(const {});
     final targets = lines.where((l) {
+      if (l.type == LineType.meta) return false;
       if (l.type == LineType.direction) return readDirections;
       return l.speaker != myCharacter;
     }).where((l) => l.text.trim().isNotEmpty).toList();

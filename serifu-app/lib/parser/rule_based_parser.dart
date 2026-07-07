@@ -25,31 +25,82 @@ class ParsedScript {
 /// 解析は完璧にならない前提のため、結果は必ず確認・修正UIを通すこと。
 class RuleBasedParser {
   /// 役名＋カギカッコ。例: 太郎「おはよう」 / 太郎『…』
+  /// 役名に句読点は含まれない（あらすじ等の「〜で、『…』」を誤検出しない）。
   static final RegExp _bracketForm =
-      RegExp(r'^[\s　]*([^\s　「『（(）)：:]{1,10})[\s　]*([「『])(.*)$');
+      RegExp(r'^[\s　]*([^\s　「『（(）)：:、。，．]{1,10})[\s　]*([「『])(.*)$');
 
   /// 役名＋コロン。例: 太郎：おはよう / 太郎: おはよう
   static final RegExp _colonForm =
-      RegExp(r'^[\s　]*([^\s　「『（(）)：:]{1,10})[\s　]*[：:][\s　]*(.+)$');
+      RegExp(r'^[\s　]*([^\s　「『（(）)：:、。，．]{1,10})[\s　]*[：:][\s　]*(.+)$');
 
   /// カッコのみで完結する行＝ト書き。例:（ため息をつく）
   static final RegExp _fullParen = RegExp(r'^[\s　]*[（(].*[)）][\s　]*$');
 
-  /// 柱・見出し。例: ○駅前・朝 / 第2場
+  /// 柱・見出し。例: ○駅前・朝 / 〇スーパー（夕） / 第2場
+  /// 「〇」（漢数字ゼロ）で書かれる台本も多い。
   static final RegExp _pillar = RegExp(
-      r'^[\s　]*(?:[○◯●◎□■△▲☆★×※]|第[0-9０-９一二三四五六七八九十]+[場幕景])');
+      r'^[\s　]*(?:[○◯〇●◎□■△▲☆★×※]|第[0-9０-９一二三四五六七八九十]+[場幕景])');
+
+  /// 記号・罫線だけの飾り行（ページ区切りの点線など）→ メタ情報。
+  static final RegExp _decoration =
+      RegExp(r'^[\s　、。，．・･…‥：:；;―—–\-ー~〜＝=＊*※☆★○●◎□■◇◆△▲▽▼／/＼\\｜|]+$');
 
   /// ページ番号だけの行。例: 12 / - 3 -
   static final RegExp _pageNumber =
       RegExp(r'^[\s　]*[-‐–—―ー]?[\s　]*[0-9０-９]{1,4}[\s　]*[-‐–—―ー]?[\s　]*$');
 
-  /// 「登場人物」見出し。
-  static final RegExp _castHeader =
-      RegExp(r'^[\s　]*(登場人物|配役|キャスト)[:：]?[\s　]*$');
+  /// 「登場人物」見出し。飾り（点線など）付き・「登場人物表」も許容。
+  static final RegExp _castHeader = RegExp(
+      r'^[\s　・．.…‥＊*―—－\-]*(登場人物|配役|キャスト)表?[:：]?[\s　]*$');
+
+  /// 表紙のクレジット行。例: 作：山田太郎 / 脚本 山田太郎
+  static final RegExp _credit = RegExp(
+      r'^[\s　]*(作・演出|作|脚本|演出|原作|翻訳|潤色|構成|著)[\s　:：]');
+
+  /// 表紙・応募用紙・あらすじページに現れる項目語。
+  /// 表紙（フロントマター）判定のシグナルとして数える。
+  static final RegExp _frontMatterWord = RegExp(
+      r'応募|タイトル|題名|氏名|ペンネーム|ＰＮ|住所|年齢|電話|メール|原稿|'
+      r'あらすじ|梗概|表紙|連絡先|字×|枚数');
+
+  /// 表紙とみなす行数の上限（安全弁）。応募用紙＋あらすじページ程度を想定。
+  static const _maxCoverLines = 150;
 
   ParsedScript parse(String raw) {
     final rawLines =
         raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+
+    // ---- パス0: 表紙（フロントマター）の範囲を決める ----
+    //
+    // 文書先頭から「本編の開始」までをメタ情報（読み上げ対象外）にする。
+    // 本編の開始 = 登場人物見出し / 柱（〇… 第N場）/ 役名「セリフ」 /
+    //              項目語でないコロン行（役名：セリフ 等）。
+    // 誤判定防止のため、区間内に表紙らしい項目語（タイトル・氏名・作：…
+    // あらすじ等）が2つ以上あるときだけ表紙として確定する
+    // （表紙なしで冒頭からト書きが始まる台本はそのまま本編扱い）。
+    var coverUntil = 0; // rawLines のこのインデックスより前が表紙
+    {
+      var keywordHits = 0;
+      var scanned = 0;
+      for (var i = 0; i < rawLines.length; i++) {
+        final t = rawLines[i].trim();
+        if (t.isEmpty || _pageNumber.hasMatch(t)) continue;
+        final isFrontMatter =
+            _credit.hasMatch(t) || _frontMatterWord.hasMatch(t);
+        final isStructural = !isFrontMatter &&
+            (_castHeader.hasMatch(t) ||
+                _pillar.hasMatch(t) ||
+                _bracketForm.hasMatch(t) ||
+                _colonForm.hasMatch(t));
+        if (_castHeader.hasMatch(t) || _pillar.hasMatch(t) || isStructural) {
+          if (i > 0 && keywordHits >= 2) coverUntil = i;
+          break;
+        }
+        if (isFrontMatter) keywordHits++;
+        scanned++;
+        if (scanned > _maxCoverLines) break; // 長すぎる → 表紙判定を諦める
+      }
+    }
 
     // ---- パス1: 役名辞書を作る ----
     final characters = <String>[];
@@ -61,8 +112,8 @@ class RuleBasedParser {
 
     final colonCounts = <String, int>{};
     var inCast = false;
-    for (final rawLine in rawLines) {
-      final t = rawLine.trim();
+    for (var i = coverUntil; i < rawLines.length; i++) {
+      final t = rawLines[i].trim();
       if (t.isEmpty) {
         inCast = false;
         continue;
@@ -72,8 +123,11 @@ class RuleBasedParser {
         continue;
       }
       if (inCast) {
-        if (t.length <= 12 && !_bracketForm.hasMatch(t) && !_pillar.hasMatch(t)) {
-          addName(t);
+        // 人物表の1行（説明付きも可：「田中一郎（28）　主人公。」）から
+        // 先頭の名前だけを登録する。空行または構造行までを人物表とみなす。
+        if (!_bracketForm.hasMatch(t) && !_pillar.hasMatch(t)) {
+          final name = _castEntryName(t);
+          if (name != null) addName(name);
           continue;
         }
         inCast = false;
@@ -116,8 +170,16 @@ class RuleBasedParser {
       blockLine = null;
     }
 
-    for (final rawLine in rawLines) {
-      final t = rawLine.trim();
+    for (var i = 0; i < rawLines.length; i++) {
+      final t = rawLines[i].trim();
+
+      // 表紙（フロントマター）→ メタ情報（読み上げ対象外・表示のみ）。
+      if (i < coverUntil) {
+        if (t.isNotEmpty && !_pageNumber.hasMatch(t)) {
+          lines.add(Line(id: nextId(), type: LineType.meta, text: t));
+        }
+        continue;
+      }
 
       // 空行：未クローズのセリフ・戯曲ブロック・登場人物ブロック・ト書き連結を閉じる。
       if (t.isEmpty) {
@@ -129,6 +191,14 @@ class RuleBasedParser {
       }
       // ページ番号は無視。
       if (_pageNumber.hasMatch(t)) continue;
+
+      // 記号だけの飾り行 → メタ情報（段落区切りとして扱い、連結も切る）。
+      if (openDialogue == null && _decoration.hasMatch(t)) {
+        proseDirection = null;
+        closeBlock();
+        lines.add(Line(id: nextId(), type: LineType.meta, text: t));
+        continue;
+      }
 
       // 閉じていない「…」の続き（唯一の複数行連結）。
       if (openDialogue != null) {
@@ -143,15 +213,19 @@ class RuleBasedParser {
         }
       }
 
-      // 登場人物ブロック（行自体は出力しない）。
+      // 登場人物ブロック → メタ情報（読み上げ対象外・表示のみ）。
+      // 役名の登録自体はパス1で済んでいる。
       if (_castHeader.hasMatch(t)) {
         inCast = true;
         closeBlock();
+        proseDirection = null;
+        lines.add(Line(id: nextId(), type: LineType.meta, text: t));
         continue;
       }
       if (inCast) {
-        if (t.length <= 12 && !_bracketForm.hasMatch(t) && !_pillar.hasMatch(t)) {
-          continue; // 役名は パス1 で登録済み
+        if (!_bracketForm.hasMatch(t) && !_pillar.hasMatch(t)) {
+          lines.add(Line(id: nextId(), type: LineType.meta, text: t));
+          continue;
         }
         inCast = false;
       }
@@ -253,11 +327,27 @@ class RuleBasedParser {
       }
     }
 
-    return ParsedScript(characters: characters, lines: lines);
+    // 実際にセリフを話した役だけを一覧にする（人物表のフルネームなど、
+    // 発言のない名前は役選択の候補から外す）。1人も話者がいなければ全員残す。
+    final speakers =
+        lines.where((l) => l.type == LineType.dialogue).map((l) => l.speaker).toSet();
+    final speaking = characters.where(speakers.contains).toList();
+
+    return ParsedScript(
+        characters: speaking.isEmpty ? characters : speaking, lines: lines);
   }
 
   String _cleanName(String s) =>
       s.replaceAll(RegExp(r'[（(].*[)）]'), '').trim();
+
+  /// 人物表の1行から役名を取り出す。
+  /// 例:「田中一郎（28）　売れない役者。主人公。」→「田中一郎」
+  String? _castEntryName(String t) {
+    final cleaned = _cleanName(t);
+    final m = RegExp(r'^[^\s　、。，．・:：…‥「」『』]{1,10}').firstMatch(cleaned);
+    final name = m?.group(0)?.trim();
+    return (name == null || name.isEmpty) ? null : name;
+  }
 
   String _stripParens(String s) {
     final t = s.trim();

@@ -45,7 +45,9 @@ class LineAudioPreparer {
     await _tts.awaitSynthCompletion(true);
 
     // 合成対象＝自分以外のセリフ ＋（読み上げ設定なら）ト書き。
+    // メタ情報（表紙・登場人物表など）は対象外。
     final targets = lines.where((l) {
+      if (l.type == LineType.meta) return false;
       if (l.type == LineType.direction) return readDirections;
       return l.speaker != myCharacter;
     }).where((l) => l.text.trim().isNotEmpty).toList();

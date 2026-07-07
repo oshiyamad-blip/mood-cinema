@@ -7,6 +7,7 @@ library;
 enum LineType {
   dialogue, // セリフ
   direction, // ト書き（場面・動作の説明）
+  meta, // メタ情報（表紙・登場人物表など）。読み上げ・進行の対象外。
 }
 
 /// 声の性別。内蔵TTSのボイス選択にマップする。

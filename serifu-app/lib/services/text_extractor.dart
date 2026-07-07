@@ -6,6 +6,7 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import 'docx_text_extractor.dart';
 import 'ocr_service.dart';
+import 'pdf_layout_text.dart';
 
 /// ファイルから生テキストを抽出する（すべて端末内処理）。
 ///
@@ -64,9 +65,35 @@ class TextExtractor {
   }
 
   /// テキスト埋込PDFからの抽出（純Dart・全プラットフォーム共通）。
+  ///
+  /// 縦書き台本のPDFは素朴な抽出だと1文字ずつバラバラになるため、
+  /// レイアウト（座標）情報から視覚上の行を復元する。
+  /// レイアウト抽出に失敗した場合のみ素朴な抽出へフォールバック。
   String _extractPdfText(Uint8List bytes) {
     final document = PdfDocument(inputBytes: bytes);
     try {
+      final extractor = PdfTextExtractor(document);
+      try {
+        final pages = <List<GlyphRun>>[];
+        for (var p = 0; p < document.pages.count; p++) {
+          final textLines =
+              extractor.extractTextLines(startPageIndex: p, endPageIndex: p);
+          pages.add([
+            for (final l in textLines)
+              GlyphRun(
+                x: l.bounds.left,
+                y: l.bounds.top,
+                width: l.bounds.width,
+                height: l.bounds.height,
+                text: l.text,
+              ),
+          ]);
+        }
+        final text = PdfLayoutText.reconstruct(pages);
+        if (text.trim().isNotEmpty) return text;
+      } catch (_) {
+        // レイアウト抽出に失敗 → 素朴な抽出へ。
+      }
       return PdfTextExtractor(document).extractText();
     } finally {
       document.dispose();

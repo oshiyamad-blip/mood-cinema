@@ -474,6 +474,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         final current = i == _c.index;
         final mine = _c.isMine(l);
         final isDirection = l.type == LineType.direction;
+        final isMeta = l.type == LineType.meta;
 
         return Container(
           key: current ? _lineKey(i) : null,
@@ -497,20 +498,22 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!isDirection)
+              if (!isDirection && !isMeta)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: _speakerBadge(l.speaker ?? '', mine),
                 ),
               Text(
                 l.text,
-                style: isDirection
-                    ? AppText.body.copyWith(
-                        fontStyle: FontStyle.italic, color: AppColors.ink500, fontSize: 14)
-                    : AppText.body.copyWith(
-                        fontSize: current ? 18 : 15,
-                        fontWeight: current ? FontWeight.w700 : FontWeight.w500,
-                      ),
+                style: isMeta
+                    ? AppText.body.copyWith(color: AppColors.ink300, fontSize: 12)
+                    : isDirection
+                        ? AppText.body.copyWith(
+                            fontStyle: FontStyle.italic, color: AppColors.ink500, fontSize: 14)
+                        : AppText.body.copyWith(
+                            fontSize: current ? 18 : 15,
+                            fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                          ),
               ),
             ],
           ),

@@ -31,6 +31,8 @@ Line dialogue(String id, String speaker, String text) =>
     Line(id: id, type: LineType.dialogue, speaker: speaker, text: text);
 Line direction(String id, String text) =>
     Line(id: id, type: LineType.direction, text: text);
+Line meta(String id, String text) =>
+    Line(id: id, type: LineType.meta, text: text);
 
 RehearsalController controller(
   List<Line> lines,
@@ -47,6 +49,22 @@ RehearsalController controller(
     );
 
 void main() {
+  test('メタ情報（表紙・登場人物表）は読み上げずに飛ばす', () async {
+    final sp = FakeSpeaker();
+    final c = controller([
+      meta('m0', 'タイトル'),
+      meta('m1', '登場人物表'),
+      dialogue('l0', '花子', 'おはよう'),
+      dialogue('l1', '太郎', 'おはよう、花子'),
+    ], sp);
+
+    await c.run();
+
+    expect(sp.spokenIds, ['l0']); // メタは speakLine されない
+    expect(c.phase, RehearsalPhase.waitingForUser);
+    expect(c.index, 3);
+  });
+
   test('相手のセリフを読み、自分の番で waitingForUser になる', () async {
     final sp = FakeSpeaker();
     final c = controller([
