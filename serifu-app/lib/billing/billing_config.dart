@@ -13,6 +13,7 @@ class BillingConfig {
   /// 有料アクセスを表すエンタイトルメント識別子（RevenueCat ダッシュボードと一致させる）。
   static const entitlementId = 'pro';
 
-  /// 開発時に全機能を解放するフラグ（リリースでは必ず false）。
-  static const debugUnlockAll = false;
+  /// 全機能を解放するフラグ。実機レビュー用ビルドでのみ
+  /// `--dart-define=UNLOCK_ALL=true` を渡して有効化する（ストア用は必ず未指定=false）。
+  static const debugUnlockAll = bool.fromEnvironment('UNLOCK_ALL');
 }

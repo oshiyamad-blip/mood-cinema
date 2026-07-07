@@ -7,17 +7,17 @@
 <title>Components — セリフ稽古</title>
 <style>
   :root{
-    --indigo-700:#4B3FB0;--indigo-600:#5B4ECC;--indigo-500:#6C5CE7;--indigo-400:#8B7DF0;
-    --indigo-100:#E9E6FB;--indigo-050:#F4F2FE;
+    --indigo-700:#1E40AF;--indigo-600:#1D4ED8;--indigo-500:#2563EB;--indigo-400:#60A5FA;
+    --indigo-100:#DBEAFE;--indigo-050:#EFF6FF;
     --amber-600:#D98A12;--amber-500:#F5A623;--amber-200:#FCE3B4;--amber-050:#FFF7E9;
-    --stage-900:#14121F;--stage-800:#1E1B2E;--stage-text:#EDEBF7;--stage-muted:#9A93C4;
-    --ink-900:#1A1830;--ink-700:#3A3650;--ink-500:#6B6880;--ink-300:#A7A3BC;
-    --line:#E6E3F0;--surface:#FFFFFF;--bg:#F6F5FB;--green-500:#2BB673;
+    --stage-900:#0F172A;--stage-800:#1E293B;--stage-text:#E2E8F0;--stage-muted:#94A3B8;
+    --ink-900:#172033;--ink-700:#334155;--ink-500:#64748B;--ink-300:#94A3B8;
+    --line:#E2E8F0;--surface:#FFFFFF;--bg:#F4F7FB;--green-500:#2BB673;
     --r-sm:10px;--r-md:16px;--r-lg:24px;--r-pill:999px;
-    --shadow-sm:0 2px 8px rgba(28,24,60,.08);--shadow-md:0 8px 24px rgba(28,24,60,.12);
+    --shadow-sm:0 2px 8px rgba(15,33,70,.08);--shadow-md:0 8px 24px rgba(15,33,70,.12);
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#33304a;display:flex;justify-content:center;padding:24px;color:var(--ink-900);}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#2A3550;display:flex;justify-content:center;padding:24px;color:var(--ink-900);}
   .phone{width:390px;min-height:844px;background:var(--bg);border-radius:40px;box-shadow:0 16px 40px rgba(0,0,0,.4);overflow:hidden;position:relative;}
   .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:700;}
   .content{padding:8px 20px 40px;}
@@ -31,7 +31,7 @@
 
   /* Buttons */
   .btn{border:none;font-family:inherit;font-weight:700;font-size:15px;border-radius:var(--r-pill);padding:13px 22px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
-  .btn-primary{background:var(--indigo-500);color:#fff;box-shadow:0 6px 16px rgba(108,92,231,.35);}
+  .btn-primary{background:var(--indigo-500);color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.35);}
   .btn-secondary{background:var(--indigo-100);color:var(--indigo-700);}
   .btn-ghost{background:transparent;color:var(--indigo-600);border:1.5px solid var(--indigo-400);}
   .btn-accent{background:var(--amber-500);color:#3a2a00;box-shadow:0 6px 16px rgba(245,166,35,.4);}
@@ -40,7 +40,7 @@
   /* role chips */
   .chip{border:1.5px solid var(--line);background:#fff;color:var(--ink-700);border-radius:var(--r-pill);padding:8px 16px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;}
   .chip .dot{width:10px;height:10px;border-radius:50%;background:var(--ink-300);}
-  .chip.selected{background:var(--indigo-500);color:#fff;border-color:var(--indigo-500);box-shadow:0 4px 12px rgba(108,92,231,.3);}
+  .chip.selected{background:var(--indigo-500);color:#fff;border-color:var(--indigo-500);box-shadow:0 4px 12px rgba(37,99,235,.3);}
   .chip.selected .dot{background:#fff;}
   .chip.role-taro .dot{background:var(--indigo-500);}
   .chip.role-hanako .dot{background:#E5709B;}

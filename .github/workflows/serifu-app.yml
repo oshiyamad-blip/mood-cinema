@@ -36,16 +36,16 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build debug APK（サイドロード用）
-        run: flutter build apk --debug
+      - name: Build debug APK（サイドロード用・全機能解放）
+        run: flutter build apk --debug --dart-define=UNLOCK_ALL=true
       - uses: actions/upload-artifact@v4
         with:
           name: serifu-app-debug-apk
           path: serifu-app/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
       # 実機レビュー向きの軽量ビルド（現状は debug 鍵で署名。ストア配布は不可）
-      - name: Build release APK（軽量・実機レビュー用）
-        run: flutter build apk --release
+      - name: Build release APK（軽量・実機レビュー用・全機能解放）
+        run: flutter build apk --release --dart-define=UNLOCK_ALL=true
       - uses: actions/upload-artifact@v4
         with:
           name: serifu-app-release-apk
@@ -58,7 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk serifu-app-latest.apk
-          NOTES="実機レビュー用の最新APK（debug鍵署名・ストア配布不可）。CIが自動更新。commit: ${GITHUB_SHA::7}"
+          NOTES="実機レビュー用の最新APK（全機能解放・debug鍵署名・ストア配布不可）。CIが自動更新。commit: ${GITHUB_SHA::7}"
           if gh release view serifu-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload serifu-latest serifu-app-latest.apk --clobber --repo "$GITHUB_REPOSITORY"
             gh release edit serifu-latest --notes "$NOTES" --repo "$GITHUB_REPOSITORY"

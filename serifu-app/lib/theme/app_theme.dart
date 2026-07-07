@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Brand (indigo)
-  static const primary = Color(0xFF6C5CE7); // 500
-  static const primary600 = Color(0xFF5B4ECC);
-  static const primary700 = Color(0xFF4B3FB0);
-  static const primary400 = Color(0xFF8B7DF0);
-  static const primary100 = Color(0xFFE9E6FB);
-  static const primary050 = Color(0xFFF4F2FE);
+  // Brand (blue)
+  static const primary = Color(0xFF2563EB); // 500
+  static const primary600 = Color(0xFF1D4ED8);
+  static const primary700 = Color(0xFF1E40AF);
+  static const primary400 = Color(0xFF60A5FA);
+  static const primary100 = Color(0xFFDBEAFE);
+  static const primary050 = Color(0xFFEFF6FF);
 
   // Accent (あなたの番 / amber)
   static const accent = Color(0xFFF5A623); // 500
@@ -19,27 +19,27 @@ class AppColors {
   static const accent050 = Color(0xFFFFF7E9);
   static const onAccent = Color(0xFF3A2A00);
 
-  // Stage (dark rehearsal)
-  static const stage900 = Color(0xFF14121F);
-  static const stage800 = Color(0xFF1E1B2E);
-  static const stage700 = Color(0xFF2A2640);
-  static const stageText = Color(0xFFEDEBF7);
-  static const stageMuted = Color(0xFF9A93C4);
+  // Stage (dark rehearsal / blue-slate)
+  static const stage900 = Color(0xFF0F172A);
+  static const stage800 = Color(0xFF1E293B);
+  static const stage700 = Color(0xFF334155);
+  static const stageText = Color(0xFFE2E8F0);
+  static const stageMuted = Color(0xFF94A3B8);
 
-  // Neutral (light)
-  static const ink900 = Color(0xFF1A1830);
-  static const ink700 = Color(0xFF3A3650);
-  static const ink500 = Color(0xFF6B6880);
-  static const ink300 = Color(0xFFA7A3BC);
-  static const line = Color(0xFFE6E3F0);
+  // Neutral (light / blue-slate)
+  static const ink900 = Color(0xFF172033);
+  static const ink700 = Color(0xFF334155);
+  static const ink500 = Color(0xFF64748B);
+  static const ink300 = Color(0xFF94A3B8);
+  static const line = Color(0xFFE2E8F0);
   static const surface = Color(0xFFFFFFFF);
-  static const bg = Color(0xFFF6F5FB);
+  static const bg = Color(0xFFF4F7FB);
 
   // States
   static const success = Color(0xFF2BB673);
   static const danger = Color(0xFFE5484D);
 
-  // Role accents
+  // Role accents（1番目=ブルー、2番目=ピンク。role_colors.dart で循環）
   static const roleTaroBg = primary100;
   static const roleTaroFg = primary700;
   static const roleHanakoBg = Color(0xFFFCE4EE);
@@ -119,6 +119,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      // 同梱の日本語フォント（w600/w800 は 500/700 に丸められて描画される）
+      fontFamily: 'NotoSansJP',
       scaffoldBackgroundColor: AppColors.bg,
       splashFactory: InkRipple.splashFactory,
       appBarTheme: const AppBarTheme(

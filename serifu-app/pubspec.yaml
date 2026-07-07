@@ -51,3 +51,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # 日本語フォントを同梱（端末差による中華風グリフ/フォールバック崩れを防ぐ）
+  # Noto Sans JP (SIL OFL 1.1, assets/fonts/OFL.txt)
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansJP-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansJP-Bold.ttf
+          weight: 700
