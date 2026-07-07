@@ -65,6 +65,51 @@ void main() {
     expect(c.index, 3);
   });
 
+  test('聞き流しモード：自分のセリフも読み上げ、止まらず最後まで進む', () async {
+    final sp = FakeSpeaker();
+    final c = RehearsalController(
+      lines: [
+        dialogue('l0', '花子', 'おはよう'),
+        dialogue('l1', '太郎', 'おはよう、花子'),
+        direction('l2', '二人、歩き出す。'),
+        dialogue('l3', '花子', '今日は早いね'),
+      ],
+      myCharacter: '太郎',
+      readDirections: true,
+      speaker: sp,
+      listenMode: true,
+      directionPause: Duration.zero,
+    );
+
+    await c.run();
+
+    expect(sp.spokenIds, ['l0', 'l1', 'l2', 'l3']); // 自分のl1も読まれる
+    expect(c.phase, RehearsalPhase.finished);
+  });
+
+  test('聞き流しモードを途中でOFFにすると次の自分の番で止まる', () async {
+    final sp = FakeSpeaker();
+    final c = RehearsalController(
+      lines: [
+        dialogue('l0', '太郎', 'A'),
+        dialogue('l1', '花子', 'B'),
+        dialogue('l2', '太郎', 'C'),
+      ],
+      myCharacter: '太郎',
+      readDirections: true,
+      speaker: sp,
+      listenMode: true,
+      directionPause: Duration.zero,
+    );
+
+    // l0（自分）を読んだ直後にOFFへ切り替わるケースを模す。
+    c.listenMode = false;
+    await c.run();
+
+    expect(sp.spokenIds, isEmpty); // l0は自分の番として停止
+    expect(c.phase, RehearsalPhase.waitingForUser);
+  });
+
   test('相手のセリフを読み、自分の番で waitingForUser になる', () async {
     final sp = FakeSpeaker();
     final c = controller([

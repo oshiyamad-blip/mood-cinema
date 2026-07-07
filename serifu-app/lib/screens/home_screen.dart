@@ -118,7 +118,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('セリフ稽古'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/logo/mark.png', width: 26, height: 26),
+            const SizedBox(width: AppSpacing.sm),
+            const Text('ホンヨミ'),
+          ],
+        ),
         actions: [
           AnimatedBuilder(
             animation: PurchaseService.instance,

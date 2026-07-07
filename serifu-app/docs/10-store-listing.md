@@ -7,7 +7,7 @@
 
 | 項目 | 日本語 | English |
 |---|---|---|
-| アプリ名 | セリフ稽古 | Serifu Keiko – Line Rehearsal |
+| アプリ名 | ホンヨミ | HonYomi – Line Rehearsal |
 | サブタイトル(iOS 30字) | 台本を読み込んで、AIが相手役に | Practice lines with an AI scene partner |
 | 短い説明(Play 80字) | 台本を読み込むと相手役をアプリが読み上げ。ひとりでセリフ稽古・オーディション対策 | Import your script and rehearse — the app reads every other role aloud. |
 

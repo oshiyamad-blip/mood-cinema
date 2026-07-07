@@ -141,7 +141,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         children: [
           const Icon(Icons.workspace_premium, color: Colors.white, size: 32),
           const SizedBox(height: AppSpacing.sm),
-          const Text('セリフ稽古 プロ',
+          const Text('ホンヨミ プロ',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
           const SizedBox(height: AppSpacing.xs),
           Text(

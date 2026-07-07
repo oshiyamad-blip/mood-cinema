@@ -48,9 +48,29 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  # アプリアイコン生成（assets/logo/app_icon*.png から各OSのアイコンを生成）
+  flutter_launcher_icons: ^0.14.3
+
+# アイコン再生成: dart run flutter_launcher_icons
+# （元画像の再生成は test/tools/logo_generator_test.dart を参照）
+flutter_launcher_icons:
+  image_path: "assets/logo/app_icon.png"
+  android: true
+  adaptive_icon_background: "#2563EB"
+  adaptive_icon_foreground: "assets/logo/app_icon_foreground.png"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/logo/app_icon.png"
+    background_color: "#2563EB"
+    theme_color: "#2563EB"
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/logo/
 
   # 日本語フォントを同梱（端末差による中華風グリフ/フォールバック崩れを防ぐ）
   # Noto Sans JP (SIL OFL 1.1, assets/fonts/OFL.txt)

@@ -17,7 +17,7 @@
 3. zip を展開して `app-debug.apk` を Android 端末へ。
    - 端末で「提供元不明のアプリ」を一時許可してインストール、または
    - `adb install app-debug.apk`
-4. アプリ「セリフ稽古」を起動してレビュー。
+4. アプリ「ホンヨミ」を起動してレビュー。
 
 > デバッグAPKは debug 署名済みでそのまま起動できる（ストア配布は不可）。
 > 配布を広げるなら **Firebase App Distribution** にこのAPKを上げると、招待した

@@ -25,6 +25,8 @@ abstract class RehearsalLineSpeaker {
 /// - 相手役・ト書き：[RehearsalLineSpeaker] で読み上げて次へ。
 /// - ト書きは [readDirections] が false のとき読み上げず [directionPause] だけ置く。
 /// - 自分のセリフ：[RehearsalPhase.waitingForUser] で停止し、[advanceMine] を待つ。
+/// - [listenMode]（聞き流し）では自分のセリフでも止まらず全て読み上げる
+///   （耳で覚える用途。ト書きを含めるかは [readDirections] に従う）。
 ///
 /// UI（ハンズフリー・自動進行タイマー・スクロール）は phase/index の変化を
 /// listen して側で行う。ロジック自体はここで単体テストできる。
@@ -34,6 +36,7 @@ class RehearsalController extends ChangeNotifier {
     required this.myCharacter,
     required this.readDirections,
     required RehearsalLineSpeaker speaker,
+    this.listenMode = false,
     this.directionPause = const Duration(milliseconds: 500),
     Duration Function()? replyPauseProvider,
   })  : _lines = lines,
@@ -43,6 +46,11 @@ class RehearsalController extends ChangeNotifier {
   final List<Line> _lines;
   final String? myCharacter;
   final bool readDirections;
+
+  /// 聞き流しモード：自分のセリフも読み上げ、ユーザー待ちにしない。
+  /// 練習中に切り替えられるよう可変（次の判定から反映される）。
+  bool listenMode;
+
   final RehearsalLineSpeaker _speaker;
 
   /// ト書きを読まない設定のときに置く間。
@@ -95,7 +103,7 @@ class RehearsalController extends ChangeNotifier {
         continue;
       }
 
-      if (isMine(line)) {
+      if (!listenMode && isMine(line)) {
         // 自分の番：停止してユーザーを待つ。
         _running = false;
         _pendingReplyPause = false;

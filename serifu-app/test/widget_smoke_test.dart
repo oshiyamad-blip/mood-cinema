@@ -11,7 +11,7 @@ void main() {
     await tester.pump();
 
     // AppBar タイトルとアップグレード導線、空状態メッセージが描画される。
-    expect(find.text('セリフ稽古'), findsOneWidget);
+    expect(find.text('ホンヨミ'), findsOneWidget);
     expect(find.text('台本を取り込んで練習を始めましょう'), findsOneWidget);
     expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
   });

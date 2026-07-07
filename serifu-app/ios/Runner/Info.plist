@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>セリフ稽古</string>
+	<string>ホンヨミ</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>セリフ練習でのハンズフリー進行に音声を使用します。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

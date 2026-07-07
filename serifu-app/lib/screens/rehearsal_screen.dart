@@ -373,6 +373,26 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         title: Text(s.title),
         actions: [
           IconButton(
+            icon: Icon(
+                _c.listenMode ? Icons.headphones : Icons.headphones_outlined),
+            tooltip: _c.listenMode
+                ? '聞き流し: ON（自分のセリフも読み上げ）'
+                : '聞き流し: OFF',
+            onPressed: () async {
+              final turningOn = !_c.listenMode;
+              setState(() => _c.listenMode = turningOn);
+              if (turningOn) {
+                _autoAdvanceTimer?.cancel();
+                await _recognizer.stop();
+                _snack('聞き流しモード：自分のセリフも含めて自動で読み上げます'
+                    '（ト書きを含めるかは台本のト書き設定に従います）');
+                if (_c.phase == RehearsalPhase.waitingForUser) _c.run();
+              } else {
+                _snack('稽古モード：自分の番で停止します');
+              }
+            },
+          ),
+          IconButton(
             icon: Icon(_handsFree ? Icons.mic : Icons.mic_off),
             tooltip: _handsFree ? 'ハンズフリー: ON' : 'ハンズフリー: OFF（プロ）',
             onPressed: () async {
