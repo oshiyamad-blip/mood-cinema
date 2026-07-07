@@ -33,7 +33,11 @@ dependencies:
   audioplayers: ^6.1.0
 
   # アプリ内課金（サブスク）。RevenueCat のラッパー
+  # （現在は完全無料＋広告モデルのため未使用。再導入に備えて残置）
   purchases_flutter: ^8.0.0
+
+  # バナー広告（完全無料＋広告モデル。ホーム画面下部の1枠のみ）
+  google_mobile_ads: ^5.2.0
 
   # クラウドTTSプロキシ呼び出し（オプトイン）
   http: ^1.2.0

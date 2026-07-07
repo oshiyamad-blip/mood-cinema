@@ -8,6 +8,12 @@
         android:label="ホンヨミ"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- AdMob アプリID。現在はGoogle公式のテスト用ID。
+             本番リリース前に AdMob 管理画面で発行した本物のIDへ差し替えること
+             （docs/03-monetization.md 参照）。 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

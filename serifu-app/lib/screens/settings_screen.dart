@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../billing/features.dart';
-import '../billing/purchase_service.dart';
 import '../data/settings_store.dart';
 import '../models/app_settings.dart';
 import '../models/script.dart';
+import '../speech/cloud_tts_client.dart';
 import '../theme/app_theme.dart';
 import 'legal_screen.dart';
-import 'paywall_screen.dart';
 
-/// 設定画面：既定の声・ト書き・自動進行・クラウド音声・プラン・データ取り扱い。
+/// 設定画面：既定の声・ト書き・自動進行・データ取り扱い。
+/// （完全無料＋広告モデルのため、プラン/課金の項目は表示しない。
+///   クラウド高品質音声はエンドポイント設定済みビルドでのみ表示。）
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -27,28 +27,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('設定')),
-      body: AnimatedBuilder(
-        animation: PurchaseService.instance,
-        builder: (context, _) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          children: [
-            _defaultVoiceSection(),
-            const SizedBox(height: AppSpacing.md),
-            _directionsSection(),
-            const SizedBox(height: AppSpacing.md),
-            _autoAdvanceSection(),
-            const SizedBox(height: AppSpacing.md),
-            _replyPauseSection(),
-            const SizedBox(height: AppSpacing.md),
-            _recognitionSection(),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        children: [
+          _defaultVoiceSection(),
+          const SizedBox(height: AppSpacing.md),
+          _directionsSection(),
+          const SizedBox(height: AppSpacing.md),
+          _autoAdvanceSection(),
+          const SizedBox(height: AppSpacing.md),
+          _replyPauseSection(),
+          const SizedBox(height: AppSpacing.md),
+          _recognitionSection(),
+          // クラウド音声は自前エンドポイントを設定したビルドでのみ表示
+          // （通常ビルドでは費用のかかる外部APIは一切使わない）。
+          if (CloudTtsConfig.configured) ...[
             const SizedBox(height: AppSpacing.md),
             _cloudVoiceSection(),
-            const SizedBox(height: AppSpacing.md),
-            _planSection(),
-            const SizedBox(height: AppSpacing.md),
-            _privacySection(),
           ],
-        ),
+          const SizedBox(height: AppSpacing.md),
+          _privacySection(),
+        ],
       ),
     );
   }
@@ -228,79 +227,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _cloudVoiceSection() {
-    final pro = Features.cloudVoices;
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('クラウド高品質音声', trailing: pro ? null : _proBadge()),
+          _heading('クラウド高品質音声'),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('より自然な音声を使う'),
             subtitle: Text(
-              pro
-                  ? 'エンドポイント設定時に有効（未設定なら端末音声）'
-                  : 'プロにアップグレードすると使えます',
+              'このビルドに設定されたエンドポイントで合成します（台本は学習に使われません）',
               style: AppText.caption,
             ),
-            value: s.useCloudVoices && pro,
-            onChanged: (v) async {
-              if (!pro) {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PaywallScreen(reason: 'クラウド高品質音声はプロの機能です'),
-                  ),
-                );
-                if (mounted) setState(() {});
-                return;
-              }
-              _save(s.copyWith(useCloudVoices: v));
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _planSection() {
-    final pro = Features.isPro;
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _heading('プラン'),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Icon(pro ? Icons.workspace_premium : Icons.workspace_premium_outlined,
-                  color: pro ? AppColors.accent600 : AppColors.primary600),
-              const SizedBox(width: AppSpacing.sm),
-              Text(pro ? 'プロ利用中' : '無料プラン', style: AppText.body),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (!pro)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                  );
-                  if (mounted) setState(() {});
-                },
-                child: const Text('プロにアップグレード'),
-              ),
-            ),
-          TextButton(
-            onPressed: () async {
-              final ok = await PurchaseService.instance.restore();
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ok ? '購入を復元しました。' : '復元できる購入がありませんでした。')),
-              );
-            },
-            child: const Text('購入を復元'),
+            value: s.useCloudVoices,
+            onChanged: (v) => _save(s.copyWith(useCloudVoices: v)),
           ),
         ],
       ),
@@ -336,13 +276,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _proBadge() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.accent050,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-        child: const Text('プロ',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.accent600)),
-      );
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'ads/ads.dart';
+import 'billing/features.dart';
 import 'billing/purchase_service.dart';
 import 'data/script_repository.dart';
 import 'data/settings_store.dart';
@@ -11,8 +13,13 @@ Future<void> main() async {
   // 保存済みの台本・設定を端末ローカルから読み込む。
   await ScriptRepository.instance.init();
   await SettingsStore.instance.init();
-  // 課金（未設定なら無料層で動作）。起動をブロックしない。
-  await PurchaseService.instance.init();
+  if (Features.freeWithAds) {
+    // 完全無料＋広告モード：広告SDKだけ初期化（awaitせず起動をブロックしない）。
+    AdsService.init();
+  } else {
+    // 課金（未設定なら無料層で動作）。
+    await PurchaseService.instance.init();
+  }
   runApp(const SerifuApp());
 }
 

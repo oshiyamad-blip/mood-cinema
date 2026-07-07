@@ -4,15 +4,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-import '../billing/features.dart';
-import '../billing/purchase_service.dart';
+import '../ads/ads.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../parser/rule_based_parser.dart';
 import '../services/text_extractor.dart';
 import '../theme/app_theme.dart';
-import 'paywall_screen.dart';
 import 'script_detail_screen.dart';
 import 'script_edit_screen.dart';
 import 'settings_screen.dart';
@@ -32,17 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _busy = false;
 
   Future<void> _import() async {
-    // 無料層は台本 [Features.freeScriptLimit] 件まで。超過時はペイウォールへ。
-    if (!Features.unlimitedScripts && _repo.scripts.length >= Features.freeScriptLimit) {
-      await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => const PaywallScreen(reason: '台本の保存は無料で3件まで。プロで無制限に。'),
-        ),
-      );
-      if (!Features.unlimitedScripts && _repo.scripts.length >= Features.freeScriptLimit) {
-        return;
-      }
-    }
+    // 完全無料＋広告モデル：台本数の制限なし。
     setState(() => _busy = true);
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -127,26 +115,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          AnimatedBuilder(
-            animation: PurchaseService.instance,
-            builder: (context, _) {
-              final pro = Features.isPro;
-              return Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.sm),
-                child: TextButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                  ),
-                  icon: Icon(pro ? Icons.workspace_premium : Icons.workspace_premium_outlined,
-                      size: 18, color: pro ? AppColors.accent600 : AppColors.primary600),
-                  label: Text(pro ? 'プロ' : 'アップグレード',
-                      style: TextStyle(
-                          color: pro ? AppColors.accent600 : AppColors.primary600,
-                          fontWeight: FontWeight.w700)),
-                ),
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: '設定',
@@ -191,6 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
+      // 広告はホーム下部の小さなバナー1枠のみ（練習画面には出さない）。
+      // 未読込・読込失敗時は高さ0でレイアウトに影響しない。
+      bottomNavigationBar: const AdBanner(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _busy ? null : _import,
         icon: _busy
