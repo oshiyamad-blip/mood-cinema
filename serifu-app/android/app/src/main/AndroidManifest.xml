@@ -4,10 +4,13 @@
     <!-- 課金(RevenueCat)・TTSボイスの追加DL等に使用 -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- 台本を端末の外に出さない方針のため、OSバックアップ（Googleバックアップ/
+         端末間転送）へのアプリデータの含有を無効化する。 -->
     <application
         android:label="ホンヨミ"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <!-- AdMob アプリID。現在はGoogle公式のテスト用ID。
              本番リリース前に AdMob 管理画面で発行した本物のIDへ差し替えること
              （docs/03-monetization.md 参照）。 -->

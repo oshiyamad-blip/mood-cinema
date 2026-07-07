@@ -15,7 +15,9 @@ class CloudTtsConfig {
   CloudTtsConfig._();
   static const endpoint = String.fromEnvironment('CLOUD_TTS_ENDPOINT');
   static const appToken = String.fromEnvironment('CLOUD_TTS_TOKEN');
-  static bool get configured => endpoint.isNotEmpty;
+
+  /// セリフ本文を送るため、平文（http）のエンドポイントは受け付けない。
+  static bool get configured => endpoint.startsWith('https://');
 }
 
 /// 声プロファイル → クラウド音声名の対応。
