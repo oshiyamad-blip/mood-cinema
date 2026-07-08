@@ -1,4 +1,4 @@
-package com.serifu.serifu_app
+package jp.honyomi.app
 
 import io.flutter.embedding.android.FlutterActivity
 

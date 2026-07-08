@@ -17,7 +17,7 @@
   <string>manual</string>
   <key>provisioningProfiles</key>
   <dict>
-    <key>com.serifu.serifu_app</key>
+    <key>jp.honyomi.app</key>
     <string>REPLACE_WITH_PROVISIONING_PROFILE_NAME</string>
   </dict>
   <key>uploadSymbols</key>

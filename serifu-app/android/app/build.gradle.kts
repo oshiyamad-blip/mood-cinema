@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.serifu.serifu_app"
+    namespace = "jp.honyomi.app"
     // file_picker / flutter_plugin_android_lifecycle が compileSdk 36 を要求するため固定。
     compileSdk = maxOf(36, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.serifu.serifu_app"
+        applicationId = "jp.honyomi.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // ML Kit / audioplayers / purchases_flutter 等のため最低 24。

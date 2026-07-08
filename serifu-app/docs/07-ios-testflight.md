@@ -6,11 +6,11 @@
 
 ## 0. 前提
 - Apple Developer Program（年 $99）
-- bundle id：`com.serifu.serifu_app`（変更する場合は android/ios とワークフローも合わせる）
+- bundle id：`jp.honyomi.app`（変更する場合は android/ios とワークフローも合わせる）
 
 ## 1. App ID とアプリ登録
 1. Apple Developer → Certificates, IDs & Profiles → **Identifiers** で
-   `com.serifu.serifu_app` を登録。
+   `jp.honyomi.app` を登録。
 2. App Store Connect → **My Apps → ＋ → New App** でアプリを作成（bundle を選択）。
 
 ## 2. 署名証明書（.p12）
