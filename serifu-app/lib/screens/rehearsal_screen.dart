@@ -20,6 +20,7 @@ import '../speech/speech_recognizer.dart';
 import '../theme/app_theme.dart';
 import '../theme/role_colors.dart';
 import 'paywall_screen.dart';
+import 'result_screen.dart';
 
 /// リハーサル（再生）画面。
 ///
@@ -126,9 +127,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Script get s => widget.script;
 
+  /// リザルト表示用：練習の開始時刻と遷移済みフラグ。
+  late final DateTime _startedAt;
+  bool _navigatedToResult = false;
+
   @override
   void initState() {
     super.initState();
+    _startedAt = DateTime.now();
     _c = RehearsalController(
       lines: s.lines,
       myCharacter: s.myCharacter,
@@ -182,6 +188,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     }
     if (phase != RehearsalPhase.waitingForUser) {
       _autoAdvanceTimer?.cancel();
+    }
+    // 最後まで通せたらリザルト画面へ（広告は練習が終わったこの後だけ）。
+    if (phase == RehearsalPhase.finished && !_navigatedToResult) {
+      _navigatedToResult = true;
+      _goToResult();
     }
     if (_c.index != _lastIndex) {
       _peek = false; // 行が進んだらチラ見は閉じる
@@ -363,6 +374,23 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _autoAdvanceTimer?.cancel();
     await _recognizer.stop();
     await _c.restart();
+  }
+
+  /// 練習完了 → リザルト画面へ差し替え遷移（戻るで台本詳細に戻れる）。
+  Future<void> _goToResult() async {
+    await _recognizer.stop();
+    // 最後のセリフの余韻をひと呼吸だけ待つ。
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => ResultScreen(
+          script: s,
+          duration: DateTime.now().difference(_startedAt),
+          listenMode: _c.listenMode,
+        ),
+      ),
+    );
   }
 
   /// クイック調整シート：練習を止めずに「間」などをその場で微調整する。

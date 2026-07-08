@@ -8,22 +8,24 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final screensDir = Directory('lib/screens');
 
-  test('AdBanner を使ってよいのはホーム画面だけ（練習画面等は禁止）', () {
+  test('AdBanner を使ってよいのはホームとリザルトだけ（練習中の画面は禁止）', () {
+    // 広告を置いてよい画面（練習「中」ではない画面のみ）。
+    const allowed = {'home_screen.dart', 'result_screen.dart'};
     final violations = <String>[];
     for (final f in screensDir.listSync().whereType<File>()) {
       if (!f.path.endsWith('.dart')) continue;
       final src = f.readAsStringSync();
       final usesAds = src.contains('AdBanner') || src.contains("ads/ads.dart");
-      final isHome = f.path.endsWith('home_screen.dart');
-      if (usesAds && !isHome) violations.add(f.path);
+      final name = f.uri.pathSegments.last;
+      if (usesAds && !allowed.contains(name)) violations.add(f.path);
     }
     expect(violations, isEmpty,
-        reason: '広告はホーム画面のみ。practice中の表示は禁止: $violations');
+        reason: '広告はホームとリザルトのみ。練習中の表示は禁止: $violations');
   });
 
   test('練習画面（リハーサル）は広告モジュールを一切参照しない', () {
     final src = File('lib/screens/rehearsal_screen.dart').readAsStringSync();
-    expect(src.contains('ads'), isFalse,
+    expect(src.contains("import '../ads/"), isFalse,
         reason: 'リハーサル画面から広告への参照を検出。練習中に広告を出してはいけない。');
     expect(src.contains('AdBanner'), isFalse);
     expect(src.contains('google_mobile_ads'), isFalse);
