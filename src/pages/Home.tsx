@@ -49,6 +49,14 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="section">
+        <h2>{t.home.toolsHeading}</h2>
+        <Link to={`${prefix}/hako`} className="shortcut-item">
+          <span className="shortcut-item__emoji">📝</span>
+          <span>{t.hako.heading}<small className="shortcut-item__sub">{t.hako.sub}</small></span>
+        </Link>
+      </section>
+
       {history.length > 0 && (
         <section className="section">
           <h2>{t.home.historyHeading}</h2>

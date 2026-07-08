@@ -2,6 +2,7 @@ import { Routes, Route, Link, NavLink, useLocation, Navigate } from 'react-route
 import { useEffect } from 'react';
 import Home from './pages/Home';
 import Mood from './pages/Mood';
+import Hako from './pages/Hako';
 import Result from './pages/Result';
 import SceneLanding from './pages/SceneLanding';
 import Article from './pages/Article';
@@ -49,6 +50,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           <nav className="site-nav">
             <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
             <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
+            <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
             <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
             <LangSwitcher lang={lang} prefix={prefix} />
           </nav>
@@ -59,6 +61,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/mood" element={<Mood />} />
+          <Route path="/hako" element={<Hako />} />
           <Route path="/quiz" element={<Navigate to={`${prefix}/mood`} replace />} />
           <Route path="/result" element={<Result />} />
           <Route path="/scene/:slug" element={<SceneLanding />} />
