@@ -394,7 +394,7 @@ class _EmptyState extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 kIsWeb
-                    ? 'Web版：PDF（テキスト埋込）/ Word(docx) / TXT に対応\n（画像・写真のOCRと保存はモバイル版のみ）'
+                    ? 'Web版：PDF（テキスト埋込）/ Word(docx) / TXT に対応\n台本はこのブラウザに保存されます（写真のOCRはモバイル版のみ）'
                     : 'PDF / Word(docx) / 画像・写真 / TXT に対応\n（台本は端末内でのみ処理されます）',
                 style: AppText.caption,
                 textAlign: TextAlign.center,

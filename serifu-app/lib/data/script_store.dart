@@ -5,15 +5,19 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/script.dart';
+import 'web_kv.dart';
 
 /// 台本を端末ローカルのJSONファイルへ保存/読込する（サーバ送信なし）。
 ///
 /// hive/sqflite でも置き換え可能だが、コード生成不要で確実なJSONファイル方式を採用。
 /// 保存先はアプリ専用領域（getApplicationDocumentsDirectory）。
-/// Web版（PC確認用）はファイル永続化を行わず、メモリのみで動作する。
+/// Web版（お試し版）はブラウザの localStorage に保存する
+/// （そのブラウザ内のみ・サーバ送信なし。閲覧データ削除で消える）。
 class ScriptStore {
   ScriptStore({this.fileName = 'scripts.json'});
   final String fileName;
+
+  String get _webKey => 'honyomi:$fileName';
 
   Future<File> _file() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -21,11 +25,15 @@ class ScriptStore {
   }
 
   Future<List<Script>> load() async {
-    if (kIsWeb) return []; // Webは永続化なし（リロードで消える）
     try {
-      final file = await _file();
-      if (!await file.exists()) return [];
-      final raw = await file.readAsString();
+      final String raw;
+      if (kIsWeb) {
+        raw = WebKv.read(_webKey) ?? '';
+      } else {
+        final file = await _file();
+        if (!await file.exists()) return [];
+        raw = await file.readAsString();
+      }
       if (raw.trim().isEmpty) return [];
       return decode(raw);
     } catch (_) {
@@ -35,7 +43,10 @@ class ScriptStore {
   }
 
   Future<void> save(List<Script> scripts) async {
-    if (kIsWeb) return; // Webは保存をスキップ（メモリのみ）
+    if (kIsWeb) {
+      WebKv.write(_webKey, encode(scripts));
+      return;
+    }
     final file = await _file();
     await file.writeAsString(encode(scripts), flush: true);
   }

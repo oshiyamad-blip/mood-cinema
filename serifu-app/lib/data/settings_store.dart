@@ -5,12 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/app_settings.dart';
+import 'web_kv.dart';
 
 /// アプリ設定の保管庫。端末ローカル（JSON）に永続化する。
-/// Web版（PC確認用）は永続化せず、メモリのみで動作する。
+/// Web版（お試し版）はブラウザの localStorage に保存する。
 class SettingsStore extends ChangeNotifier {
   SettingsStore._();
   static final SettingsStore instance = SettingsStore._();
+
+  static const _webKey = 'honyomi:settings.json';
 
   AppSettings _settings = AppSettings();
   bool _loaded = false;
@@ -24,21 +27,18 @@ class SettingsStore extends ChangeNotifier {
 
   Future<void> init() async {
     if (_loaded) return;
-    if (kIsWeb) {
-      // Webは永続化なし：既定値のまま開始する。
-      _loaded = true;
-      notifyListeners();
-      return;
-    }
     try {
-      final file = await _file();
-      if (await file.exists()) {
-        final raw = await file.readAsString();
-        if (raw.trim().isNotEmpty) {
-          _settings = AppSettings.fromJson(
-            Map<String, dynamic>.from(jsonDecode(raw) as Map),
-          );
-        }
+      final String raw;
+      if (kIsWeb) {
+        raw = WebKv.read(_webKey) ?? '';
+      } else {
+        final file = await _file();
+        raw = await file.exists() ? await file.readAsString() : '';
+      }
+      if (raw.trim().isNotEmpty) {
+        _settings = AppSettings.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map),
+        );
       }
     } catch (_) {
       _settings = AppSettings();
@@ -54,7 +54,10 @@ class SettingsStore extends ChangeNotifier {
   }
 
   void _persist() {
-    if (kIsWeb) return; // Webは保存をスキップ（メモリのみ）
+    if (kIsWeb) {
+      WebKv.write(_webKey, jsonEncode(_settings.toJson()));
+      return;
+    }
     _file().then((f) => f.writeAsString(jsonEncode(_settings.toJson()))).catchError((_) {
       return File('');
     });

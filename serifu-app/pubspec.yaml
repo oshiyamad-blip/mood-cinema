@@ -42,6 +42,9 @@ dependencies:
   # クラウドTTSプロキシ呼び出し（オプトイン）
   http: ^1.2.0
 
+  # Web版のブラウザ保存（localStorage。lib/data/web_kv_web.dart）
+  web: ^1.1.0
+
   # 画像PDFのページをラスタライズしてOCRへ渡す
   pdfx: ^2.6.0
   path_provider: ^2.1.5
