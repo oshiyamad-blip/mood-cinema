@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../audio/recording_store.dart';
 import '../billing/features.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
@@ -31,8 +32,12 @@ import 'result_screen.dart';
 ///   事前合成できない環境ではライブ合成にフォールバック。
 /// - 表示モード：台本表示（現在行に自動スクロール）/ 暗記（台本を隠す）の2種。
 class RehearsalScreen extends StatefulWidget {
-  const RehearsalScreen({super.key, required this.script});
+  const RehearsalScreen({super.key, required this.script, this.focusLines});
   final Script script;
+
+  /// 部分練習用：指定するとこの行だけで練習する（つまずいた行＋直前のキュー等）。
+  /// null なら台本全体。
+  final List<Line>? focusLines;
 
   @override
   State<RehearsalScreen> createState() => _RehearsalScreenState();
@@ -128,6 +133,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Script get s => widget.script;
 
+  /// この練習で使う行（部分練習なら focusLines、通常は台本全体）。
+  List<Line> get _lines => widget.focusLines ?? s.lines;
+
   /// リザルト表示用：練習の開始時刻と遷移済みフラグ。
   late final DateTime _startedAt;
 
@@ -140,7 +148,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     super.initState();
     _startedAt = DateTime.now();
     _c = RehearsalController(
-      lines: s.lines,
+      lines: _lines,
       myCharacter: s.myCharacter,
       readDirections: s.readDirections,
       speaker: _PreparedLineSpeaker(
@@ -257,6 +265,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     final prepared = _prepared;
     if (prepared == null) return;
     for (final path in prepared.pathByLineId.values) {
+      if (RecordingStore.isRecordingPath(path)) continue; // 録音は永続
       File(path).delete().catchError((_) => File(path));
     }
   }
@@ -280,13 +289,23 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       });
     }
 
-    // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
-    void onLineReady(String lineId, String path) => _preparedMap[lineId] = path;
+    // 本読み録音があればTTSより優先して使う（自分の行の録音は聞き流しで活きる）。
+    final recordings = await RecordingStore().loadAll(s.id);
+    _preparedMap.addAll(recordings);
 
+    // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
+    // 録音済みの行は上書きしない。
+    void onLineReady(String lineId, String path) {
+      if (!recordings.containsKey(lineId)) _preparedMap[lineId] = path;
+    }
+
+    // 録音済みの行は合成不要。
+    final toSynth =
+        _lines.where((l) => !recordings.containsKey(l.id)).toList();
     try {
       final result = useCloud
           ? await _cloudPreparer.prepare(
-              s.lines,
+              toSynth,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -295,7 +314,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onLineReady: onLineReady,
             )
           : await _preparer.prepare(
-              s.lines,
+              toSynth,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -303,7 +322,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onProgress: onProgress,
               onLineReady: onLineReady,
             );
-      _preparedMap.addAll(result.pathByLineId);
+      result.pathByLineId.forEach((id, path) {
+        if (!recordings.containsKey(id)) _preparedMap[id] = path;
+      });
     } catch (_) {
       // 失敗した分はライブ合成で賄う（準備済みの行はそのまま使える）。
     }
@@ -541,9 +562,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       body: Column(
         children: [
           LinearProgressIndicator(
-            value: s.lines.isEmpty
+            value: _lines.isEmpty
                 ? 0
-                : (_c.index.clamp(0, s.lines.length)) / s.lines.length,
+                : (_c.index.clamp(0, _lines.length)) / _lines.length,
           ),
           _buildModeSwitch(),
           if (_preparing) _buildPreparingBanner(),
@@ -610,9 +631,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.all(16),
-      itemCount: s.lines.length,
+      itemCount: _lines.length,
       itemBuilder: (context, i) {
-        final l = s.lines[i];
+        final l = _lines[i];
         final current = i == _c.index;
         final mine = _c.isMine(l);
         final isDirection = l.type == LineType.direction;
@@ -702,7 +723,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${_c.index.clamp(0, s.lines.length)} / ${s.lines.length}',
+              Text('${_c.index.clamp(0, _lines.length)} / ${_lines.length}',
                   style: const TextStyle(color: AppColors.stageMuted, fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.xl),
               Container(

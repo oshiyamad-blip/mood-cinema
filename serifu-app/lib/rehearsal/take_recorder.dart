@@ -105,3 +105,27 @@ class _Take {
   bool autoAdvanced = false;
   int? elapsedMs;
 }
+
+/// つまずいた行だけの部分練習用に、行リストを組み立てる。
+///
+/// 各つまずき行の直前の非メタ行を「キュー（きっかけ）」として含め、
+/// 台本の登場順を保ちつつ重複を除く。相手の一言→自分のセリフ、という
+/// 最小単位で反復できる形にする。
+List<Line> buildFocusLines(List<Line> scriptLines, List<StuckLine> stuck) {
+  final stuckIds = stuck.map((e) => e.line.id).toSet();
+  final picked = <String>{};
+  final result = <Line>[];
+  for (var i = 0; i < scriptLines.length; i++) {
+    final line = scriptLines[i];
+    if (!stuckIds.contains(line.id)) continue;
+    // 直前の非メタ行をキューとして拾う。
+    for (var j = i - 1; j >= 0; j--) {
+      final prev = scriptLines[j];
+      if (prev.type == LineType.meta) continue;
+      if (picked.add(prev.id)) result.add(prev);
+      break;
+    }
+    if (picked.add(line.id)) result.add(line);
+  }
+  return result;
+}
