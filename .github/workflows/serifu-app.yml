@@ -1,0 +1,96 @@
+name: serifu-app build
+
+# 実機レビュー用ビルド。push か手動実行で、サイドロード可能な Android デバッグ APK を
+# 生成しアーティファクトとして配布する。iOS はコンパイル検証（署名なし）。
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/actor-dialogue-practice-app-t6wxsn
+    paths:
+      - 'serifu-app/**'
+      - '.github/workflows/serifu-app.yml'
+
+# GitHub Release (serifu-latest) へのAPK公開に必要
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Test + Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Build debug APK（サイドロード用・全機能解放）
+        run: flutter build apk --debug --dart-define=UNLOCK_ALL=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serifu-app-debug-apk
+          path: serifu-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+      # 実機レビュー向きの軽量ビルド（現状は debug 鍵で署名。ストア配布は不可）
+      - name: Build release APK（軽量・実機レビュー用・全機能解放）
+        run: flutter build apk --release --dart-define=UNLOCK_ALL=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serifu-app-release-apk
+          path: serifu-app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+      # スマホから1タップでDLできるよう、固定タグ serifu-latest のリリースにAPKを公開する
+      # （Actionsアーティファクトと違いGitHubログイン不要・zip展開不要）
+      - name: リリースAPKを GitHub Release (serifu-latest) に公開
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk serifu-app-latest.apk
+          NOTES="実機レビュー用の最新APK（全機能解放・debug鍵署名・ストア配布不可）。CIが自動更新。commit: ${GITHUB_SHA::7}"
+          if gh release view serifu-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload serifu-latest serifu-app-latest.apk --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit serifu-latest --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create serifu-latest serifu-app-latest.apk \
+              --prerelease \
+              --title "セリフ稽古 最新ビルド" \
+              --notes "$NOTES" \
+              --target "$GITHUB_SHA" \
+              --repo "$GITHUB_REPOSITORY"
+          fi
+
+  ios:
+    name: iOS compile (no codesign)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS（署名なしのコンパイル検証）
+        # CocoaPods CDN が 429(Too Many Requests) を返すことがあるためリトライする
+        run: |
+          for i in 1 2 3; do
+            if flutter build ios --no-codesign; then exit 0; fi
+            echo "attempt $i failed (CocoaPods CDN等の一時障害の可能性)。60秒後に再試行します"
+            sleep 60
+          done
+          exit 1

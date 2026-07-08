@@ -1,0 +1,92 @@
+name: serifu_app
+description: "日本語の俳優セリフ練習・オーディション練習アプリ（完全オンデバイス）"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 端末内蔵TTS（無料・オフライン・男女ボイス・速度/ピッチ調整）
+  flutter_tts: ^4.2.0
+
+  # ファイル取り込み（PDF / docx / 画像）
+  file_picker: ^8.1.6
+
+  # PDFテキスト抽出（テキスト埋込PDF用、無料のCommunity版）
+  syncfusion_flutter_pdf: ^27.2.5
+
+  # docx 解析（zip解凍 + XMLパース、純Dart）
+  archive: ^3.6.1
+  xml: ^6.5.0
+
+  # OCR（オンデバイス・日本語対応。台本は端末外に出ない）
+  google_mlkit_text_recognition: ^0.13.1
+
+  # 音声認識（ハンズフリー進行。OS標準の音声認識を利用）
+  speech_to_text: ^7.0.0
+
+  # 事前合成した音声ファイルの再生（本番の処理待ちをゼロにするため）
+  audioplayers: ^6.1.0
+
+  # アプリ内課金（サブスク）。RevenueCat のラッパー
+  # （現在は完全無料＋広告モデルのため未使用。再導入に備えて残置）
+  purchases_flutter: ^8.0.0
+
+  # バナー広告（完全無料＋広告モデル。ホーム画面下部の1枠のみ）
+  google_mobile_ads: ^9.0.0
+
+  # クラウドTTSプロキシ呼び出し（オプトイン）
+  http: ^1.2.0
+
+  # Web版のブラウザ保存（localStorage。lib/data/web_kv_web.dart）
+  web: ^1.1.0
+
+  # 画像PDFのページをラスタライズしてOCRへ渡す
+  pdfx: ^2.6.0
+  path_provider: ^2.1.5
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  # アプリアイコン生成（assets/logo/app_icon*.png から各OSのアイコンを生成）
+  flutter_launcher_icons: ^0.14.3
+
+# アイコン再生成: dart run flutter_launcher_icons
+# （元画像の再生成は test/tools/logo_generator_test.dart を参照）
+flutter_launcher_icons:
+  image_path: "assets/logo/app_icon.png"
+  android: true
+  adaptive_icon_background: "#2563EB"
+  adaptive_icon_foreground: "assets/logo/app_icon_foreground.png"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/logo/app_icon.png"
+    background_color: "#2563EB"
+    theme_color: "#2563EB"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo/
+
+  # 日本語フォントを同梱（端末差による中華風グリフ/フォールバック崩れを防ぐ）
+  # Noto Sans JP (SIL OFL 1.1, assets/fonts/OFL.txt)
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansJP-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansJP-Bold.ttf
+          weight: 700

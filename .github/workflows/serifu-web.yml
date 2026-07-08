@@ -1,0 +1,49 @@
+name: serifu-app web deploy (GitHub Pages)
+
+# PC確認用のWeb版を GitHub Pages に自動デプロイする。
+# 公開URL: https://oshiyamad-blip.github.io/mood-cinema/
+# 初回のみ: リポジトリ Settings → Pages → Source を「GitHub Actions」に設定すること。
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/actor-dialogue-practice-app-t6wxsn
+    paths:
+      - 'serifu-app/**'
+      - '.github/workflows/serifu-web.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages デプロイは同時に1つだけ（後発を優先）
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build web + Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      - name: Build web（確認用・全機能解放）
+        run: flutter build web --release --base-href "/mood-cinema/" --dart-define=UNLOCK_ALL=true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: serifu-app/build/web
+      - id: deployment
+        uses: actions/deploy-pages@v4

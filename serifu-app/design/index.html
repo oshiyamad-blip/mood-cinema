@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>セリフ稽古 — デザイン概観</title>
+<style>
+  :root{
+    --indigo-500:#2563EB;--indigo-700:#1E40AF;--indigo-050:#EFF6FF;
+    --amber-500:#F5A623;--ink-900:#172033;--ink-500:#64748B;--line:#E2E8F0;
+    --r-md:16px;--r-lg:24px;--shadow-md:0 8px 24px rgba(15,33,70,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#F4F7FB;color:var(--ink-900);padding:40px 24px 80px;}
+  header{max-width:1100px;margin:0 auto 32px;}
+  .kicker{font-size:13px;font-weight:800;color:var(--indigo-500);letter-spacing:.12em;}
+  h1{font-size:34px;font-weight:800;margin-top:6px;}
+  .lead{font-size:15px;color:var(--ink-500);margin-top:10px;max-width:680px;line-height:1.7;}
+  .tokens{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .tk{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(15,33,70,.06);}
+  .tk .sw{width:16px;height:16px;border-radius:50%;}
+
+  .group{max-width:1100px;margin:0 auto 40px;}
+  .gtitle{font-size:14px;font-weight:800;color:var(--ink-500);letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+  .gtitle::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--indigo-500);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:24px;}
+  .thumb{background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-md);overflow:hidden;border:1px solid var(--line);text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;display:block;}
+  .thumb:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(15,33,70,.2);}
+  .frame{height:300px;background:#2A3550;overflow:hidden;position:relative;}
+  .frame iframe{width:390px;height:844px;border:0;transform:scale(.46);transform-origin:top left;position:absolute;top:14px;left:14px;pointer-events:none;}
+  .cap{padding:14px 16px;}
+  .cap .fn{font-size:11px;font-family:ui-monospace,monospace;color:var(--ink-500);}
+  .cap .nm{font-size:16px;font-weight:800;margin-top:3px;}
+  .cap .dс{font-size:12px;color:var(--ink-500);margin-top:4px;line-height:1.5;}
+</style>
+</head>
+<body>
+  <header>
+    <div class="kicker">SERIFU KEIKO / DESIGN SYSTEM</div>
+    <h1>セリフ稽古 — デザイン概観</h1>
+    <p class="lead">日本語の俳優セリフ練習・オーディション練習アプリのローカルデザイン一式。
+    インディゴ系プライマリとアンバーの「あなたの番」アクセント、明るい面とリハーサル用の暗い舞台バリアントで統一。実機モック幅390×844。</p>
+    <div class="tokens">
+      <span class="tk"><span class="sw" style="background:#2563EB"></span>Primary #2563EB</span>
+      <span class="tk"><span class="sw" style="background:#F5A623"></span>Accent #F5A623</span>
+      <span class="tk"><span class="sw" style="background:#0F172A"></span>Stage #0F172A</span>
+    </div>
+  </header>
+
+  <div class="group">
+    <div class="gtitle">FOUNDATION & COMPONENTS</div>
+    <div class="grid">
+      <a class="thumb" href="00-foundation.html"><div class="frame"><iframe src="00-foundation.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">00-foundation.html</div><div class="nm">デザイン基盤</div><div class="dс">カラー・タイプ・余白・角丸・影</div></div></a>
+      <a class="thumb" href="01-components.html"><div class="frame"><iframe src="01-components.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">01-components.html</div><div class="nm">コンポーネント</div><div class="dс">ボタン・チップ・トグル・スライダー・行・マイク</div></div></a>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="gtitle">SCREENS</div>
+    <div class="grid">
+      <a class="thumb" href="10-home.html"><div class="frame"><iframe src="10-home.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">10-home.html</div><div class="nm">ホーム</div><div class="dс">台本一覧・FAB・空状態</div></div></a>
+      <a class="thumb" href="11-detail.html"><div class="frame"><iframe src="11-detail.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">11-detail.html</div><div class="nm">台本詳細</div><div class="dс">役選択・ト書き・声設定導線・練習開始</div></div></a>
+      <a class="thumb" href="12-rehearsal-read.html"><div class="frame"><iframe src="12-rehearsal-read.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">12-rehearsal-read.html</div><div class="nm">リハーサル・台本表示</div><div class="dс">テレプロンプター・あなたの番・再生</div></div></a>
+      <a class="thumb" href="13-rehearsal-memorize.html"><div class="frame"><iframe src="13-rehearsal-memorize.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">13-rehearsal-memorize.html</div><div class="nm">リハーサル・暗記</div><div class="dс">本文非表示・手がかり・チラ見・暗い舞台</div></div></a>
+      <a class="thumb" href="14-voice-settings.html"><div class="frame"><iframe src="14-voice-settings.html" scrolling="no"></iframe></div><div class="cap"><div class="fn">14-voice-settings.html</div><div class="nm">声設定</div><div class="dс">性別セグメント・声モデル・テンポ・試聴</div></div></a>
+    </div>
+  </div>
+</body>
+</html>

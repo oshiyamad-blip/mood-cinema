@@ -1,0 +1,99 @@
+<!-- @dsCard group="Screens" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>リハーサル・暗記モード — セリフ稽古</title>
+<style>
+  :root{
+    --indigo-500:#2563EB;--indigo-400:#60A5FA;
+    --amber-600:#D98A12;--amber-500:#F5A623;--amber-200:#FCE3B4;
+    --stage-900:#0F172A;--stage-800:#1E293B;--stage-700:#334155;
+    --stage-text:#E2E8F0;--stage-muted:#94A3B8;
+    --r-sm:10px;--r-md:16px;--r-pill:999px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;background:#2A3550;display:flex;justify-content:center;padding:24px;}
+  .phone{width:390px;height:844px;background:radial-gradient(120% 70% at 50% 8%,#334155 0%,var(--stage-800) 45%,var(--stage-900) 100%);border-radius:40px;box-shadow:0 16px 40px rgba(0,0,0,.55);overflow:hidden;position:relative;display:flex;flex-direction:column;color:var(--stage-text);}
+  /* stage spotlight */
+  .phone::before{content:"";position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:320px;height:320px;background:radial-gradient(circle,rgba(37,99,235,.28),transparent 70%);pointer-events:none;}
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:700;flex:none;position:relative;z-index:2;}
+
+  .topbar{display:flex;align-items:center;gap:10px;padding:4px 18px 10px;flex:none;position:relative;z-index:2;}
+  .topbar .back{font-size:22px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:var(--stage-text);}
+  .topbar .ti{font-size:15px;font-weight:800;}
+  .topbar .prog{margin-left:auto;font-size:12px;font-weight:700;color:var(--stage-muted);}
+  .pbar{height:5px;background:rgba(255,255,255,.1);margin:0 18px;border-radius:3px;flex:none;position:relative;z-index:2;}
+  .pbar .pf{height:5px;width:42%;background:var(--amber-500);border-radius:3px;}
+
+  .modesw{display:flex;background:rgba(255,255,255,.08);border-radius:var(--r-pill);padding:4px;margin:12px 18px;flex:none;position:relative;z-index:2;}
+  .modesw button{flex:1;border:none;background:transparent;font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:var(--r-pill);color:var(--stage-muted);}
+  .modesw button.active{background:var(--stage-700);color:#fff;}
+
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 28px;text-align:center;position:relative;z-index:2;}
+
+  .partner{font-size:13px;font-weight:700;color:var(--stage-muted);letter-spacing:.08em;}
+  .partner b{color:#E5709B;}
+  .partner-line{font-size:18px;color:var(--stage-text);margin-top:10px;opacity:.85;line-height:1.5;max-width:280px;}
+
+  .divider-dot{width:6px;height:6px;border-radius:50%;background:var(--stage-muted);margin:30px 0;}
+
+  .cue{background:linear-gradient(135deg,var(--amber-500),var(--amber-600));color:#3a2a00;border-radius:24px;padding:14px 26px;font-size:15px;font-weight:800;box-shadow:0 12px 30px rgba(245,166,35,.4);display:inline-flex;align-items:center;gap:8px;}
+  .who{font-size:34px;font-weight:800;color:#fff;margin-top:26px;}
+  .who small{display:block;font-size:13px;font-weight:700;color:var(--stage-muted);margin-bottom:8px;letter-spacing:.1em;}
+  .hidden{margin-top:24px;width:280px;height:96px;border-radius:var(--r-md);border:2px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+  .hidden .lock{font-size:26px;opacity:.5;}
+  .hidden .ht{font-size:13px;color:var(--stage-muted);font-weight:700;}
+
+  .peek{margin-top:20px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;font-family:inherit;font-weight:700;font-size:14px;padding:11px 24px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:8px;}
+
+  .controls{flex:none;padding:14px 22px 24px;position:relative;z-index:2;}
+  .crow{display:flex;align-items:center;justify-content:center;gap:18px;}
+  .cbtn{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--stage-text);border:none;}
+  .next{flex:1;max-width:200px;height:56px;border-radius:var(--r-pill);background:var(--amber-500);color:#3a2a00;font-family:inherit;font-weight:800;font-size:16px;border:none;box-shadow:0 8px 22px rgba(245,166,35,.5);display:flex;align-items:center;justify-content:center;gap:8px;}
+  .mic{width:50px;height:50px;border-radius:50%;background:var(--amber-500);color:#3a2a00;display:flex;align-items:center;justify-content:center;font-size:20px;border:none;box-shadow:0 0 0 6px rgba(245,166,35,.25);}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>暗記モード</span><span>●●● ▮</span></div>
+    <div class="topbar">
+      <div class="back">‹</div>
+      <div class="ti">桜の季節・第一幕</div>
+      <div class="prog">20 / 48</div>
+    </div>
+    <div class="pbar"><div class="pf"></div></div>
+
+    <div class="modesw">
+      <button>台本表示</button>
+      <button class="active">暗記</button>
+    </div>
+
+    <div class="stage">
+      <div class="partner">相手：<b>花子</b></div>
+      <div class="partner-line">「おはよう。今日は早いね。」</div>
+
+      <div class="divider-dot"></div>
+
+      <div class="cue">★ あなたの番</div>
+      <div class="who"><small>あなたの役</small>太郎</div>
+
+      <div class="hidden">
+        <div class="lock">🔒</div>
+        <div class="ht">セリフは隠されています</div>
+      </div>
+
+      <button class="peek">👁 チラ見する</button>
+    </div>
+
+    <div class="controls">
+      <div class="crow">
+        <button class="cbtn">◀</button>
+        <button class="next">言えた・次へ ▶</button>
+        <button class="mic">🎙</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

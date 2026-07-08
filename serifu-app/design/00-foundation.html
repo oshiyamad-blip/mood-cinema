@@ -1,0 +1,161 @@
+<!-- @dsCard group="Foundation" -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Foundation — セリフ稽古</title>
+<style>
+  :root{
+    /* Brand */
+    --indigo-700:#1E40AF;
+    --indigo-600:#1D4ED8;
+    --indigo-500:#2563EB; /* primary */
+    --indigo-400:#60A5FA;
+    --indigo-100:#DBEAFE;
+    --indigo-050:#EFF6FF;
+    /* Accent (あなたの番) */
+    --amber-600:#D98A12;
+    --amber-500:#F5A623;
+    --amber-200:#FCE3B4;
+    --amber-050:#FFF7E9;
+    /* Stage (dark rehearsal) */
+    --stage-900:#0F172A;
+    --stage-800:#1E293B;
+    --stage-700:#334155;
+    --stage-text:#E2E8F0;
+    --stage-muted:#94A3B8;
+    /* Neutral (light) */
+    --ink-900:#172033;
+    --ink-700:#334155;
+    --ink-500:#64748B;
+    --ink-300:#94A3B8;
+    --line:#E2E8F0;
+    --surface:#FFFFFF;
+    --bg:#F4F7FB;
+    /* States */
+    --green-500:#2BB673;
+    --red-500:#E5484D;
+    /* Radius / shadow */
+    --r-sm:10px; --r-md:16px; --r-lg:24px; --r-pill:999px;
+    --shadow-sm:0 2px 8px rgba(15,33,70,.08);
+    --shadow-md:0 8px 24px rgba(15,33,70,.12);
+    --shadow-lg:0 16px 40px rgba(15,33,70,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;
+    background:#2A3550;display:flex;justify-content:center;padding:24px;color:var(--ink-900);
+  }
+  .phone{
+    width:390px;min-height:844px;background:var(--bg);border-radius:40px;
+    box-shadow:var(--shadow-lg);overflow:hidden;position:relative;
+  }
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:13px;font-weight:700;color:var(--ink-900);}
+  .content{padding:8px 20px 32px;}
+  h1.title{font-size:24px;font-weight:800;letter-spacing:.02em;margin-bottom:4px;}
+  .sub{color:var(--ink-500);font-size:13px;margin-bottom:20px;}
+  .section{background:var(--surface);border-radius:var(--r-md);padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+  .section h2{font-size:14px;font-weight:800;color:var(--ink-700);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .section h2::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--indigo-500);}
+
+  /* color swatches */
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .sw{border-radius:var(--r-sm);overflow:hidden;box-shadow:var(--shadow-sm);}
+  .sw .chip{height:48px;}
+  .sw .meta{padding:6px 8px;background:#fff;}
+  .sw .name{font-size:10px;font-weight:700;color:var(--ink-900);}
+  .sw .hex{font-size:9px;color:var(--ink-500);font-family:ui-monospace,monospace;}
+
+  /* type scale */
+  .type-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .type-row:last-child{border-bottom:none;}
+  .type-label{font-size:11px;color:var(--ink-500);font-family:ui-monospace,monospace;}
+  .t-display{font-size:28px;font-weight:800;}
+  .t-h1{font-size:22px;font-weight:800;}
+  .t-h2{font-size:17px;font-weight:700;}
+  .t-body{font-size:15px;font-weight:500;}
+  .t-script{font-size:20px;font-weight:600;line-height:1.7;}
+  .t-caption{font-size:12px;font-weight:600;color:var(--ink-500);}
+
+  /* spacing */
+  .space-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .space-box{background:var(--indigo-100);border-radius:4px;height:18px;}
+  .space-name{font-size:11px;font-family:ui-monospace,monospace;color:var(--ink-500);width:64px;}
+
+  /* radius */
+  .radii{display:flex;gap:12px;}
+  .radii .rb{flex:1;height:56px;background:var(--indigo-050);border:2px solid var(--indigo-400);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;color:var(--indigo-600);font-weight:700;}
+
+  /* elevation */
+  .elevs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .elev{height:60px;background:#fff;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--ink-500);}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>セリフ稽古</span><span>●●● ▮</span></div>
+    <div class="content">
+      <h1 class="title">デザイン基盤</h1>
+      <p class="sub">セリフ稽古 / Design Foundation</p>
+
+      <div class="section">
+        <h2>カラーパレット</h2>
+        <div class="swatches">
+          <div class="sw"><div class="chip" style="background:#2563EB"></div><div class="meta"><div class="name">Primary</div><div class="hex">#2563EB</div></div></div>
+          <div class="sw"><div class="chip" style="background:#1E40AF"></div><div class="meta"><div class="name">Indigo700</div><div class="hex">#1E40AF</div></div></div>
+          <div class="sw"><div class="chip" style="background:#DBEAFE"></div><div class="meta"><div class="name">Indigo100</div><div class="hex">#DBEAFE</div></div></div>
+          <div class="sw"><div class="chip" style="background:#EFF6FF"></div><div class="meta"><div class="name">Indigo050</div><div class="hex">#EFF6FF</div></div></div>
+          <div class="sw"><div class="chip" style="background:#F5A623"></div><div class="meta"><div class="name">Accent</div><div class="hex">#F5A623</div></div></div>
+          <div class="sw"><div class="chip" style="background:#FCE3B4"></div><div class="meta"><div class="name">Amber200</div><div class="hex">#FCE3B4</div></div></div>
+          <div class="sw"><div class="chip" style="background:#FFF7E9"></div><div class="meta"><div class="name">Amber050</div><div class="hex">#FFF7E9</div></div></div>
+          <div class="sw"><div class="chip" style="background:#2BB673"></div><div class="meta"><div class="name">Success</div><div class="hex">#2BB673</div></div></div>
+          <div class="sw"><div class="chip" style="background:#0F172A"></div><div class="meta"><div class="name">Stage900</div><div class="hex">#0F172A</div></div></div>
+          <div class="sw"><div class="chip" style="background:#1E293B"></div><div class="meta"><div class="name">Stage800</div><div class="hex">#1E293B</div></div></div>
+          <div class="sw"><div class="chip" style="background:#172033"></div><div class="meta"><div class="name">Ink900</div><div class="hex">#172033</div></div></div>
+          <div class="sw"><div class="chip" style="background:#64748B"></div><div class="meta"><div class="name">Ink500</div><div class="hex">#64748B</div></div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>タイプスケール</h2>
+        <div class="type-row"><span class="t-display">表示 28</span><span class="type-label">Display / 800</span></div>
+        <div class="type-row"><span class="t-h1">見出し 22</span><span class="type-label">H1 / 800</span></div>
+        <div class="type-row"><span class="t-h2">小見出し 17</span><span class="type-label">H2 / 700</span></div>
+        <div class="type-row"><span class="t-script">台本 太郎「おはよう」</span><span class="type-label">Script / 20·600</span></div>
+        <div class="type-row"><span class="t-body">本文 15px</span><span class="type-label">Body / 500</span></div>
+        <div class="type-row"><span class="t-caption">キャプション 12px</span><span class="type-label">Caption / 600</span></div>
+      </div>
+
+      <div class="section">
+        <h2>余白スケール</h2>
+        <div class="space-row"><span class="space-name">4 / xs</span><div class="space-box" style="width:4px"></div></div>
+        <div class="space-row"><span class="space-name">8 / sm</span><div class="space-box" style="width:8px"></div></div>
+        <div class="space-row"><span class="space-name">12 / md</span><div class="space-box" style="width:12px"></div></div>
+        <div class="space-row"><span class="space-name">16 / lg</span><div class="space-box" style="width:16px"></div></div>
+        <div class="space-row"><span class="space-name">24 / xl</span><div class="space-box" style="width:24px"></div></div>
+        <div class="space-row"><span class="space-name">32 / 2xl</span><div class="space-box" style="width:32px"></div></div>
+      </div>
+
+      <div class="section">
+        <h2>角丸</h2>
+        <div class="radii">
+          <div class="rb" style="border-radius:10px">10</div>
+          <div class="rb" style="border-radius:16px">16</div>
+          <div class="rb" style="border-radius:24px">24</div>
+          <div class="rb" style="border-radius:999px">pill</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>影 / エレベーション</h2>
+        <div class="elevs">
+          <div class="elev" style="box-shadow:0 2px 8px rgba(15,33,70,.08)">sm</div>
+          <div class="elev" style="box-shadow:0 8px 24px rgba(15,33,70,.12)">md</div>
+          <div class="elev" style="box-shadow:0 16px 40px rgba(15,33,70,.18)">lg</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

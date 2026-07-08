@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TestFlight / App Store 提出用のエクスポート設定。
+  下記の REPLACE_... を自分の値に置き換えること（docs/07-ios-testflight.md 参照）。
+  ・teamID: Apple Developer の Team ID（10桁）
+  ・provisioningProfiles: bundle id → プロビジョニングプロファイル名
+  ・古い Xcode では method を app-store に変更。
+-->
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>teamID</key>
+  <string>REPLACE_WITH_TEAM_ID</string>
+  <key>signingStyle</key>
+  <string>manual</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>jp.honyomi.app</key>
+    <string>REPLACE_WITH_PROVISIONING_PROFILE_NAME</string>
+  </dict>
+  <key>uploadSymbols</key>
+  <true/>
+  <key>destination</key>
+  <string>export</string>
+</dict>
+</plist>
