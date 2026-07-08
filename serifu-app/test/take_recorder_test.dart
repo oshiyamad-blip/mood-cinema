@@ -103,4 +103,47 @@ void main() {
     ]);
     expect(rec.stuckLines(max: 2), hasLength(2));
   });
+
+  group('buildFocusLines（部分練習の行組み立て）', () {
+    Line d(String id, String sp, String text) =>
+        Line(id: id, type: LineType.dialogue, speaker: sp, text: text);
+
+    test('つまずいた行の直前の非メタ行をキューとして含める', () {
+      final lines = [
+        Line(id: 'm0', type: LineType.meta, text: 'タイトル'),
+        d('a', '相手', 'こんにちは'),
+        d('b', '私', 'どうも'),        // つまずいた
+        Line(id: 'dir', type: LineType.direction, text: '間'),
+        d('c', '私', 'それでは'),      // つまずいた
+      ];
+      final stuck = [
+        StuckLine(line: lines[2], reason: StuckReason.slow, elapsedMs: 9000),
+        StuckLine(line: lines[4], reason: StuckReason.peeked, elapsedMs: 1000),
+      ];
+      final focus = buildFocusLines(lines, stuck);
+      expect(focus.map((l) => l.id).toList(), ['a', 'b', 'dir', 'c']);
+    });
+
+    test('連続してつまずいた場合もキューが重複しない', () {
+      final lines = [
+        d('a', '相手', 'きっかけ'),
+        d('b', '私', 'ひとつめ'),
+        d('c', '私', 'ふたつめ'),
+      ];
+      final stuck = [
+        StuckLine(line: lines[1], reason: StuckReason.slow, elapsedMs: 9000),
+        StuckLine(line: lines[2], reason: StuckReason.slow, elapsedMs: 9000),
+      ];
+      expect(buildFocusLines(lines, stuck).map((l) => l.id).toList(),
+          ['a', 'b', 'c']);
+    });
+
+    test('冒頭の行がつまずきでもクラッシュしない（キューなし）', () {
+      final lines = [d('a', '私', '一行目')];
+      final stuck = [
+        StuckLine(line: lines[0], reason: StuckReason.peeked, elapsedMs: 100),
+      ];
+      expect(buildFocusLines(lines, stuck).map((l) => l.id).toList(), ['a']);
+    });
+  });
 }

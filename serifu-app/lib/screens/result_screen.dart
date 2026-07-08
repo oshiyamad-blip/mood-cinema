@@ -81,6 +81,22 @@ class ResultScreen extends StatelessWidget {
           if (stuck.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xl),
             _StuckSection(stuck: stuck),
+            const SizedBox(height: AppSpacing.md),
+            // つまずいた行＋直前のキューだけを反復する部分練習。
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52)),
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => RehearsalScreen(
+                    script: script,
+                    focusLines: buildFocusLines(script.lines, stuck),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.repeat),
+              label: const Text('つまずいたところだけ練習'),
+            ),
           ],
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
