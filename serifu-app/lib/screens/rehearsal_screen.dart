@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../audio/recording_store.dart';
 import '../billing/features.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
@@ -264,6 +265,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     final prepared = _prepared;
     if (prepared == null) return;
     for (final path in prepared.pathByLineId.values) {
+      if (RecordingStore.isRecordingPath(path)) continue; // 録音は永続
       File(path).delete().catchError((_) => File(path));
     }
   }
@@ -287,13 +289,23 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       });
     }
 
-    // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
-    void onLineReady(String lineId, String path) => _preparedMap[lineId] = path;
+    // 本読み録音があればTTSより優先して使う（自分の行の録音は聞き流しで活きる）。
+    final recordings = await RecordingStore().loadAll(s.id);
+    _preparedMap.addAll(recordings);
 
+    // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
+    // 録音済みの行は上書きしない。
+    void onLineReady(String lineId, String path) {
+      if (!recordings.containsKey(lineId)) _preparedMap[lineId] = path;
+    }
+
+    // 録音済みの行は合成不要。
+    final toSynth =
+        _lines.where((l) => !recordings.containsKey(l.id)).toList();
     try {
       final result = useCloud
           ? await _cloudPreparer.prepare(
-              _lines,
+              toSynth,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -302,7 +314,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onLineReady: onLineReady,
             )
           : await _preparer.prepare(
-              _lines,
+              toSynth,
               myCharacter: s.myCharacter,
               readDirections: s.readDirections,
               voiceFor: s.voiceFor,
@@ -310,7 +322,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onProgress: onProgress,
               onLineReady: onLineReady,
             );
-      _preparedMap.addAll(result.pathByLineId);
+      result.pathByLineId.forEach((id, path) {
+        if (!recordings.containsKey(id)) _preparedMap[id] = path;
+      });
     } catch (_) {
       // 失敗した分はライブ合成で賄う（準備済みの行はそのまま使える）。
     }
