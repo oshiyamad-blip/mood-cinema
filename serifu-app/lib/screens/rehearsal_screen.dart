@@ -11,6 +11,7 @@ import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../rehearsal/line_matcher.dart';
 import '../rehearsal/rehearsal_controller.dart';
+import '../rehearsal/take_recorder.dart';
 import '../speech/cloud_line_audio_preparer.dart';
 import '../speech/cloud_tts_client.dart';
 import '../speech/device_speech_engine.dart';
@@ -129,6 +130,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   /// リザルト表示用：練習の開始時刻と遷移済みフラグ。
   late final DateTime _startedAt;
+
+  /// 「詰まったかも」推定用の記録（チラ見・リトライ・所要時間）。
+  final _recorder = TakeRecorder();
   bool _navigatedToResult = false;
 
   @override
@@ -180,6 +184,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (phase == RehearsalPhase.waitingForUser && _lastPhase != phase) {
       _heard = '';
       _listenRestarts = 0;
+      final line = _c.currentLine;
+      if (line != null) _recorder.onMyTurnStart(line);
       if (_handsFree) {
         _listenForMyLine();
       } else {
@@ -240,7 +246,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _autoAdvanceTimer?.cancel();
     _autoAdvanceTimer = Timer(Duration(seconds: secs), () {
       if (mounted && _c.phase == RehearsalPhase.waitingForUser && !_handsFree) {
-        _advanceMine();
+        _advanceMine(auto: true);
       }
     });
   }
@@ -317,6 +323,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       final ended = status == 'done' || status == 'notListening' || status == 'error';
       if (ended && _listenRestarts < _maxListenRestarts) {
         _listenRestarts++;
+        _recorder.onListenRestart();
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted &&
               _handsFree &&
@@ -353,7 +360,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     await _c.pause();
   }
 
-  void _advanceMine() {
+  void _advanceMine({bool auto = false}) {
+    _recorder.onAdvance(auto: auto);
     _autoAdvanceTimer?.cancel();
     _recognizer.stop();
     _c.advanceMine();
@@ -388,6 +396,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           script: s,
           duration: DateTime.now().difference(_startedAt),
           listenMode: _c.listenMode,
+          stuck: _recorder.stuckLines(),
         ),
       ),
     );
@@ -723,7 +732,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                 ),
               const SizedBox(height: AppSpacing.lg),
               TextButton.icon(
-                onPressed: () => setState(() => _peek = !_peek),
+                onPressed: () => setState(() {
+                  _peek = !_peek;
+                  if (_peek) _recorder.onPeek();
+                }),
                 style: TextButton.styleFrom(foregroundColor: AppColors.accent),
                 icon: Icon(_peek ? Icons.visibility_off : Icons.visibility),
                 label: Text(_peek ? '隠す' : 'チラ見'),

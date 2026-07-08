@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serifu_app/models/script.dart';
+import 'package:serifu_app/rehearsal/take_recorder.dart';
 import 'package:serifu_app/screens/result_screen.dart';
 import 'package:serifu_app/theme/app_theme.dart';
 
@@ -83,5 +84,30 @@ void main() {
     await tester.tap(find.text('台本に戻る'));
     await tester.pumpAndSettle();
     expect(find.text('open'), findsOneWidget);
+  });
+
+  testWidgets('「つまずいたかも？」セクションに理由バッジ付きでセリフが出る', (tester) async {
+    final script = _script();
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.light(),
+      home: ResultScreen(
+        script: script,
+        duration: const Duration(minutes: 1),
+        listenMode: false,
+        stuck: [
+          StuckLine(
+              line: script.lines[0], reason: StuckReason.peeked, elapsedMs: 1000),
+          StuckLine(
+              line: script.lines[2], reason: StuckReason.slow, elapsedMs: 9000),
+        ],
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.text('つまずいたかも？'), findsOneWidget);
+    expect(find.text('チラ見'), findsOneWidget);
+    expect(find.text('時間がかかった'), findsOneWidget);
+    expect(find.text('「やあ」'), findsOneWidget);
+    expect(find.text('「元気？」'), findsOneWidget);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
 import '../models/script.dart';
+import '../rehearsal/take_recorder.dart';
 import '../theme/app_theme.dart';
 import 'rehearsal_screen.dart';
 
@@ -16,11 +17,15 @@ class ResultScreen extends StatelessWidget {
     required this.script,
     required this.duration,
     required this.listenMode,
+    this.stuck = const [],
   });
 
   final Script script;
   final Duration duration;
   final bool listenMode;
+
+  /// 詰まった可能性の高いセリフ（確度順）。聞き流しモードでは常に空。
+  final List<StuckLine> stuck;
 
   String get _durationLabel {
     final m = duration.inMinutes;
@@ -73,6 +78,10 @@ class ResultScreen extends StatelessWidget {
               ),
             ],
           ),
+          if (stuck.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xl),
+            _StuckSection(stuck: stuck),
+          ],
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
@@ -119,6 +128,82 @@ class _StatCard extends StatelessWidget {
             Text(value, style: AppText.h1.copyWith(color: AppColors.primary600)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 「詰まったかも」一覧。芝居の間との区別は完全ではないため断定しない。
+class _StuckSection extends StatelessWidget {
+  const _StuckSection({required this.stuck});
+
+  final List<StuckLine> stuck;
+
+  String _reasonLabel(StuckReason r) => switch (r) {
+        StuckReason.peeked => 'チラ見',
+        StuckReason.manyRetries => '言い直し',
+        StuckReason.slow => '時間がかかった',
+      };
+
+  Color _reasonColor(StuckReason r) => switch (r) {
+        StuckReason.peeked => AppColors.accent600,
+        StuckReason.manyRetries => AppColors.primary600,
+        StuckReason.slow => AppColors.ink500,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('つまずいたかも？', style: AppText.h2),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '時間がかかった・チラ見したセリフです。役作りの「間」なら気にしないでください。',
+            style: AppText.caption,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (final item in stuck) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _reasonColor(item.reason).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Text(
+                    _reasonLabel(item.reason),
+                    style: AppText.caption.copyWith(
+                      color: _reasonColor(item.reason),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '「${item.line.text}」',
+                    style: AppText.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
       ),
     );
   }
