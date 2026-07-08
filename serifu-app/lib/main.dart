@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'ads/ad_route_observer.dart';
 import 'ads/ads.dart';
 import 'billing/features.dart';
 import 'billing/purchase_service.dart';
@@ -32,6 +33,8 @@ class SerifuApp extends StatelessWidget {
       title: 'ホンヨミ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      // 広告制御用：ホームが最前面かどうかを AdBanner が検知するため。
+      navigatorObservers: [adRouteObserver],
       home: const HomeScreen(),
     );
   }
