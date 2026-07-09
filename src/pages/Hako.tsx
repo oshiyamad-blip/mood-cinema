@@ -26,7 +26,9 @@ export default function Hako() {
   const [outline, setOutline] = useState<Outline>(() => emptyOutline());
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState('');
+  const [focusId, setFocusId] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  const headingRefs = useRef(new Map<string, HTMLInputElement>());
 
   // 初回マウントで保存済みアウトラインを復元
   useEffect(() => {
@@ -42,6 +44,13 @@ export default function Hako() {
   }, [outline, loaded]);
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+  // 箱を追加した直後、その見出し入力へフォーカスして続けて書けるようにする
+  useEffect(() => {
+    if (!focusId) return;
+    headingRefs.current.get(focusId)?.focus();
+    setFocusId(null);
+  }, [focusId]);
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -66,8 +75,11 @@ export default function Hako() {
     patch({ structure, boxes });
   };
 
-  const addBox = (act: string) =>
-    patch({ boxes: [...outline.boxes, { id: uid(), act, heading: '', body: '' }] });
+  const addBox = (act: string) => {
+    const id = uid();
+    patch({ boxes: [...outline.boxes, { id, act, heading: '', body: '' }] });
+    setFocusId(id);
+  };
 
   const updateBox = (id: string, p: Partial<Box>) =>
     patch({ boxes: outline.boxes.map(b => (b.id === id ? { ...b, ...p } : b)) });
@@ -135,6 +147,10 @@ export default function Hako() {
         <span className="hako-box__num">{index}</span>
         <div className="hako-box__fields">
           <input
+            ref={el => {
+              if (el) headingRefs.current.set(box.id, el);
+              else headingRefs.current.delete(box.id);
+            }}
             className="hako-box__heading"
             type="text"
             value={box.heading}

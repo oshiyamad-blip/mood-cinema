@@ -98,7 +98,7 @@ main {
   gap: var(--space-4);
   font-size: 0.9rem;
 }
-.site-nav a { color: var(--color-text-muted); transition: color 0.15s; }
+.site-nav a { color: var(--color-text-muted); transition: color 0.15s; white-space: nowrap; }
 .site-nav a:hover { color: var(--color-text); }
 .lang-switch {
   padding: 3px 10px;
@@ -954,6 +954,34 @@ main {
 @keyframes hako-toast-in {
   from { opacity: 0; transform: translate(-50%, 8px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── モバイル調整（SP版） ── */
+@media (max-width: 640px) {
+  /* ヘッダーのナビが幅に収まらず「箱書き」等が1文字ずつ折り返す問題を解消。
+     ナビ全体を2段目のフル幅行へ落とし、各項目は改行させない。 */
+  .site-header__inner { flex-wrap: wrap; row-gap: var(--space-2); }
+  .site-nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    font-size: 0.85rem;
+  }
+  .lang-switch { margin-left: auto; }
+
+  /* 箱の操作ボタン（↑↓✕）を下段のフル幅行へ回し、44px 以上のタップ領域を確保。 */
+  .hako-box { flex-wrap: wrap; }
+  .hako-box__actions {
+    flex: 1 1 100%;
+    flex-direction: row;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+  .hako-box__actions button {
+    flex: 1 1 auto;
+    height: 44px;
+    font-size: 1.05rem;
+  }
 }
 
 /* ── Loading / error ── */
