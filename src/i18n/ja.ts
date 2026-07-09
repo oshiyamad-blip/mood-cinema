@@ -113,6 +113,10 @@ export const ja = {
     resetDone: '消去しました',
     actUnassigned: '未分類',
     exportTitleFallback: '無題の作品',
+    open: 'ひらいて書く',
+    done: '完了',
+    prevBox: '← 前の箱',
+    nextBox: '次の箱 →',
   },
   balloonLabel: {
     cry: '泣きたい',

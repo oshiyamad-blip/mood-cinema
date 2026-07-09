@@ -113,6 +113,10 @@ export const en = {
     resetDone: 'Cleared',
     actUnassigned: 'Unassigned',
     exportTitleFallback: 'Untitled',
+    open: 'Open & write',
+    done: 'Done',
+    prevBox: '← Prev',
+    nextBox: 'Next →',
   },
   balloonLabel: {
     cry: 'Want to cry',

@@ -27,8 +27,10 @@ export default function Hako() {
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState('');
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const headingRefs = useRef(new Map<string, HTMLInputElement>());
+  const focusBodyRef = useRef<HTMLTextAreaElement | null>(null);
 
   // 初回マウントで保存済みアウトラインを復元
   useEffect(() => {
@@ -51,6 +53,36 @@ export default function Hako() {
     headingRefs.current.get(focusId)?.focus();
     setFocusId(null);
   }, [focusId]);
+
+  // フォーカス執筆モード：開いている箱が変わったら本文の高さを内容に合わせる
+  useEffect(() => {
+    if (!openId) return;
+    autoGrow(focusBodyRef.current);
+  }, [openId]);
+
+  // フォーカス執筆モード中は Esc で閉じ、背面スクロールを止める
+  useEffect(() => {
+    if (!openId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenId(null); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [openId]);
+
+  // textarea を内容に合わせて自動で伸ばす（スマホで本文を書き切れるように）
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+  const setFocusBody = (el: HTMLTextAreaElement | null) => {
+    focusBodyRef.current = el;
+    autoGrow(el);
+  };
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -168,6 +200,12 @@ export default function Hako() {
         <div className="hako-box__actions">
           <button
             type="button"
+            className="hako-box__open"
+            aria-label={t.hako.open}
+            onClick={() => setOpenId(box.id)}
+          >⤢</button>
+          <button
+            type="button"
             aria-label={t.hako.moveUp}
             disabled={pos <= 0}
             onClick={() => moveBox(box.id, -1)}
@@ -195,6 +233,21 @@ export default function Hako() {
     acts.length === 0
       ? [{ act: '', boxes: outline.boxes }]
       : acts.map(act => ({ act, boxes: outline.boxes.filter(b => b.act === act) }));
+
+  // フォーカス執筆モード用：表示順にならした箱の一覧（前後移動と通し番号に使う）
+  const orderedBoxes: Box[] =
+    acts.length === 0
+      ? outline.boxes
+      : acts.flatMap(act => outline.boxes.filter(b => b.act === act));
+  const openBox = openId ? orderedBoxes.find(b => b.id === openId) : undefined;
+  const openIndex = openBox ? orderedBoxes.findIndex(b => b.id === openBox.id) : -1;
+  const openActLabel = openBox?.act ? (t.hako.acts[openBox.act] ?? openBox.act) : '';
+
+  const gotoFocus = (dir: -1 | 1) => {
+    const j = openIndex + dir;
+    if (j < 0 || j >= orderedBoxes.length) return;
+    setOpenId(orderedBoxes[j].id);
+  };
 
   return (
     <div className="container hako-page">
@@ -251,6 +304,49 @@ export default function Hako() {
       </div>
 
       {toast && <div className="hako-toast" role="status">{toast}</div>}
+
+      {openBox && (
+        <div className="hako-focus" role="dialog" aria-modal="true" aria-label={t.hako.heading}>
+          <div className="hako-focus__bar">
+            <span className="hako-focus__pos">
+              {openActLabel && <span className="hako-focus__act">{openActLabel}</span>}
+              {openIndex + 1} / {orderedBoxes.length}
+            </span>
+            <button type="button" className="hako-focus__done" onClick={() => setOpenId(null)}>
+              {t.hako.done}
+            </button>
+          </div>
+          <div className="hako-focus__body">
+            <input
+              className="hako-focus__heading"
+              type="text"
+              value={openBox.heading}
+              placeholder={t.hako.boxHeadingPlaceholder}
+              onChange={e => updateBox(openBox.id, { heading: e.target.value })}
+            />
+            <textarea
+              ref={setFocusBody}
+              className="hako-focus__text"
+              value={openBox.body}
+              placeholder={t.hako.boxBodyPlaceholder}
+              onChange={e => { updateBox(openBox.id, { body: e.target.value }); autoGrow(e.target); }}
+              autoFocus
+            />
+          </div>
+          <div className="hako-focus__nav">
+            <button
+              type="button"
+              disabled={openIndex <= 0}
+              onClick={() => gotoFocus(-1)}
+            >{t.hako.prevBox}</button>
+            <button
+              type="button"
+              disabled={openIndex >= orderedBoxes.length - 1}
+              onClick={() => gotoFocus(1)}
+            >{t.hako.nextBox}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
