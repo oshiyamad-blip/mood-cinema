@@ -96,9 +96,9 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
     const defaultJsonLd: Record<string, unknown> = {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'mood-cinema',
+      name: 'Scene Studio',
       url: SITE_URL,
-      description: '気分で選ぶ映画レコメンド診断',
+      description: '脚本を組み立てる編集卓',
       potentialAction: {
         '@type': 'SearchAction',
         target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/result?mood={mood}` },
@@ -132,7 +132,7 @@ export function buildArticleJsonLd(opts: {
     dateModified: opts.publishedAt,
     publisher: {
       '@type': 'Organization',
-      name: 'mood-cinema',
+      name: 'Scene Studio',
       url: SITE_URL,
     },
     mainEntityOfPage: {

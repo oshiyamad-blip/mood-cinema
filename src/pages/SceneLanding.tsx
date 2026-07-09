@@ -22,7 +22,7 @@ export default function SceneLanding() {
   const { params, moodReason } = buildParamsFromBalloons(balloons);
 
   useSeo({
-    title: scene?.title ?? 'シーン別おすすめ映画 | mood-cinema',
+    title: scene?.title ?? 'シーン別おすすめ映画 | Scene Studio',
     description: scene?.description ?? '',
     canonicalPath: scene ? `/scene/${scene.slug}` : '/mood',
   });

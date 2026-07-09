@@ -1,6 +1,12 @@
-# mood-cinema
+# Scene Studio
 
-気分で選ぶ映画レコメンド診断 PWA。React 19 + Vite + TypeScript。
+脚本開発をスムーズにする統合エディタ PWA（旧 **mood-cinema**）。React 19 + Vite + TypeScript。
+
+アイデア・人物・参考作品といった「素材」を、シーンの箱を並べたタイムラインの上でまとめて
+コントロールし、一本の脚本に組み立てる。動画編集ソフトのように素材を束ねて作品にする、という
+発想を脚本に持ち込んでいる。旧レコメンド機能は「参考作品ファインダー」として、書いている物語の
+トーンに近い作品を気分から引く素材ツールに転生している。コンセプトの全体像は
+[`docs/scene-studio-concept.md`](docs/scene-studio-concept.md) を参照。
 
 ## セットアップ
 

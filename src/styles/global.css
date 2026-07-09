@@ -217,6 +217,8 @@ main {
 @media (min-width: 640px) {
   .card-grid { grid-template-columns: 1fr 1fr; }
 }
+/* 参考作品ファインダーの導線カードと、その下のトーン別ショートカット群の間の余白 */
+.card-grid--tight { margin-top: var(--space-3); }
 
 /* ── Movie card ── */
 .movie-card {

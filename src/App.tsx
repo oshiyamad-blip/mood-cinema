@@ -43,14 +43,14 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
       <ScrollToTop />
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to={`${prefix}/`} className="brand" aria-label="mood-cinema トップへ">
+          <Link to={`${prefix}/`} className="brand" aria-label="Scene Studio トップへ">
             <span className="brand__icon" aria-hidden>🎬</span>
-            <span className="brand__name">mood-cinema</span>
+            <span className="brand__name">Scene Studio</span>
           </Link>
           <nav className="site-nav">
+            <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
             <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
             <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
-            <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
             <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
             <LangSwitcher lang={lang} prefix={prefix} />
           </nav>
@@ -83,7 +83,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           </nav>
           <p className="site-footer__meta">
             {t.footer.tmdb}<br />
-            © {new Date().getFullYear()} mood-cinema
+            © {new Date().getFullYear()} Scene Studio
           </p>
         </div>
       </footer>
