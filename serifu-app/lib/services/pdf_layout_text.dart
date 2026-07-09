@@ -115,9 +115,26 @@ class PdfLayoutText {
         if (gap > pitch * 1.8) lines.add('');
       }
       final col = columns[i]..sort((a, b) => a.y.compareTo(b.y));
-      lines.add(col.map((g) => g.text.trim()).join());
+      lines.add(_joinColumn(col));
     }
     return lines;
+  }
+
+  /// 列内のグリフを連結する。文字セル1つぶん以上の縦の空きがあれば
+  /// 全角空白を入れる（「役名␣␣セリフ」形式の区切りを保存するため。
+  /// 空白グリフ自体は抽出時に落ちることが多い）。
+  static String _joinColumn(List<GlyphRun> col) {
+    final buf = StringBuffer();
+    for (var i = 0; i < col.length; i++) {
+      if (i > 0) {
+        final prev = col[i - 1];
+        final gap = col[i].y - (prev.y + prev.height);
+        final cell = math.max(prev.height, col[i].height);
+        if (cell > 0 && gap > cell * 0.5) buf.write('　');
+      }
+      buf.write(col[i].text.trim());
+    }
+    return buf.toString();
   }
 
   /// 横書き：y座標で行を作り、上から下へ。

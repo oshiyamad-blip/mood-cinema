@@ -33,6 +33,12 @@ class RuleBasedParser {
   static final RegExp _colonForm =
       RegExp(r'^[\s　]*([^\s　「『（(）)：:、。，．]{1,10})[\s　]*[：:][\s　]*(.+)$');
 
+  /// 役名＋空白＋セリフ（カギ括弧なし）。例: ニコ　ママと似てないね。
+  /// テレビ・映画台本の抜粋に多い形式。空白の前の短い語が本文中に
+  /// 繰り返し現れる場合のみ役名とみなす（ト書きの誤検出を防ぐ）。
+  static final RegExp _spaceForm = RegExp(
+      r'^[\s　]*([^\s　「『（(）)：:、。，．！？!?]{1,6})[ 　]+(.{2,})$');
+
   /// カッコのみで完結する行＝ト書き。例:（ため息をつく）
   static final RegExp _fullParen = RegExp(r'^[\s　]*[（(].*[)）][\s　]*$');
 
@@ -117,6 +123,7 @@ class RuleBasedParser {
     }
 
     final colonCounts = <String, int>{};
+    final spaceCounts = <String, int>{};
     var inCast = false;
     for (var i = coverUntil; i < rawLines.length; i++) {
       final t = rawLines[i].trim();
@@ -147,11 +154,24 @@ class RuleBasedParser {
       if (c != null && !_pageNumber.hasMatch(c.group(1)!)) {
         final name = _cleanName(c.group(1)!);
         colonCounts[name] = (colonCounts[name] ?? 0) + 1;
+        continue;
+      }
+      final sp = _spaceForm.firstMatch(t);
+      if (sp != null) {
+        final name = _cleanName(sp.group(1)!);
+        if (name.isNotEmpty) {
+          spaceCounts[name] = (spaceCounts[name] ?? 0) + 1;
+        }
       }
     }
     // コロン形式は同じ名前が2回以上現れたら役名とみなす（「場所：公園」等の見出しを除外）。
     colonCounts.forEach((name, count) {
       if (count >= 2) addName(name);
+    });
+    // 空白区切り形式（カギ括弧なし）はより弱い証拠のため3回以上で役名とみなす
+    // （ト書きの「二人　顔を見合わせる」のような偶発一致を除外）。
+    spaceCounts.forEach((name, count) {
+      if (count >= 3) addName(name);
     });
     // 役名情報が皆無（登場人物もカギカッコも無い、コロンだけの台本）なら、
     // コロン形式の名前をすべて役名として採用する。
@@ -169,6 +189,7 @@ class RuleBasedParser {
     String? blockSpeaker; // 役名単独行のあとのセリフブロック（戯曲形式）
     Line? blockLine;
     Line? proseDirection; // 直前の地の文ト書き（折返しの連結用）
+    Line? wrapDialogue; // 直前の空白区切りセリフ（文末で終わっていない＝折返し中）
     inCast = false;
 
     void closeBlock() {
@@ -193,6 +214,7 @@ class RuleBasedParser {
         inCast = false;
         closeBlock();
         proseDirection = null;
+        wrapDialogue = null;
         continue;
       }
       // ページ番号は無視。
@@ -243,7 +265,9 @@ class RuleBasedParser {
             _pillar.hasMatch(t) ||
             _fullParen.hasMatch(t) ||
             (_colonForm.firstMatch(t) != null &&
-                dict.contains(_cleanName(_colonForm.firstMatch(t)!.group(1)!)));
+                dict.contains(_cleanName(_colonForm.firstMatch(t)!.group(1)!))) ||
+            (_spaceForm.firstMatch(t) != null &&
+                dict.contains(_cleanName(_spaceForm.firstMatch(t)!.group(1)!)));
         if (!isStructural) {
           final bl = blockLine;
           if (bl == null) {
@@ -265,6 +289,8 @@ class RuleBasedParser {
       // ここから通常判定。地の文ト書きの連結は「直前も地の文」の場合だけ。
       final prevProse = proseDirection;
       proseDirection = null;
+      final prevWrap = wrapDialogue;
+      wrapDialogue = null;
 
       // 柱・見出し → ト書き。
       if (_pillar.hasMatch(t)) {
@@ -314,10 +340,32 @@ class RuleBasedParser {
         continue;
       }
 
+      // 役名＋空白＋セリフ（辞書照合。カギ括弧なしのテレビ・映画台本形式）。
+      final sp = _spaceForm.firstMatch(t);
+      if (sp != null && dict.contains(_cleanName(sp.group(1)!))) {
+        final line = Line(
+            id: nextId(),
+            type: LineType.dialogue,
+            speaker: _cleanName(sp.group(1)!),
+            text: sp.group(2)!.trim());
+        lines.add(line);
+        // 文末記号で終わっていなければ折返し（縦書きPDFの列またぎ）とみなし、
+        // 次の地の文をこのセリフに連結できるようにする。
+        if (!_endsSentence(line.text)) wrapDialogue = line;
+        continue;
+      }
+
       // 辞書にある役名だけの行 → 戯曲形式（次の行からセリフ）。
       if (dict.contains(t)) {
         blockSpeaker = t;
         blockLine = null;
+        continue;
+      }
+
+      // 直前の空白区切りセリフが文の途中で切れている → 折返しの続きとして連結。
+      if (prevWrap != null) {
+        prevWrap.text = '${prevWrap.text}$t';
+        if (!_endsSentence(prevWrap.text)) wrapDialogue = prevWrap;
         continue;
       }
 
@@ -342,6 +390,10 @@ class RuleBasedParser {
     return ParsedScript(
         characters: speaking.isEmpty ? characters : speaking, lines: lines);
   }
+
+  /// 文末記号で終わっているか（折返し判定用）。
+  bool _endsSentence(String t) =>
+      RegExp(r'[。．！？!?♪」』…‥）)]$').hasMatch(t.trim());
 
   String _cleanName(String s) =>
       s.replaceAll(RegExp(r'[（(].*[)）]'), '').trim();
