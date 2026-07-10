@@ -833,25 +833,58 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           if (_handsFree) ...[
             const SizedBox(height: 6),
             Builder(builder: (_) {
-              // 聞き取りを諦めた（再開上限に達した）ら、その旨を明示して
-              // 手動ボタンへ誘導する（「聞き取り中…」のまま固めない）。
+              // 聞き取りを諦めた（再開上限に達した）ら、その旨を明示。
               final gaveUp = _listenRestarts >= _maxListenRestarts &&
                   !_recognizer.isListening;
-              final label = gaveUp
+              final status = gaveUp
                   ? 'うまく聞き取れません。少し待つと自動で進みます'
-                  : (_heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard);
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                  : '聞き取り中…（言い終わると自動で進みます）';
+              return Column(
                 children: [
-                  Icon(
-                    gaveUp
-                        ? Icons.mic_off
-                        : (_recognizer.isListening ? Icons.mic : Icons.mic_none),
-                    size: 18,
-                    color: gaveUp ? AppColors.ink500 : AppColors.accent600,
+                  // マイクの状態行。
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        gaveUp
+                            ? Icons.mic_off
+                            : (_recognizer.isListening
+                                ? Icons.mic
+                                : Icons.mic_none),
+                        size: 18,
+                        color: gaveUp ? AppColors.ink500 : AppColors.accent600,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(child: Text(status, style: AppText.caption)),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Flexible(child: Text(label, style: AppText.caption)),
+                  // 聞き取れた言葉をそのまま文字で見せる（自分の声が
+                  // どう認識されたか分かる＝進まない不安の解消）。
+                  if (_heard.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.accent200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.hearing,
+                              size: 16, color: AppColors.accent600),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(_heard,
+                                style: AppText.body.copyWith(
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               );
             }),

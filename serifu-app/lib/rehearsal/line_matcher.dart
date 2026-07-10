@@ -14,8 +14,8 @@ import 'dart:math' as math;
 /// セリフ全体のバイグラムで見るため実用上は十分一致する。
 class LineMatcher {
   LineMatcher({
-    this.partialCoverageThreshold = 0.8,
-    this.finalCoverageThreshold = 0.5,
+    this.partialCoverageThreshold = 0.7,
+    this.finalCoverageThreshold = 0.4,
     this.tailLength = 6,
   });
 
@@ -76,11 +76,12 @@ class LineMatcher {
     if (ne.isEmpty) return isFinal;
 
     // 語尾一致 → 言い終わりとみなし、部分結果でも即進む。
+    // 認識が末尾に助詞や相づちを付けても拾えるよう contains で許容する。
     final tail = ne.substring(ne.length - math.min(tailLength, ne.length));
-    if (nr.endsWith(tail)) return true;
+    if (nr.contains(tail)) return true;
 
     final cov = coverage(expected, recognized);
-    if (cov >= partialCoverageThreshold) return true; // ほぼ全部言えている
-    return isFinal && cov >= finalCoverageThreshold; // 確定なら過半の一致で可
+    if (cov >= partialCoverageThreshold) return true; // だいたい言えている
+    return isFinal && cov >= finalCoverageThreshold; // 確定なら大まかな一致で可
   }
 }

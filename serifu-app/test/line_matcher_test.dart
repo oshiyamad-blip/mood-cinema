@@ -87,6 +87,40 @@ void main() {
       );
     });
 
+    test('大まかに合っていれば確定で進む（緩め判定）', () {
+      // 助詞の取りこぼし・言い換えがあっても4割方合っていれば進む。
+      expect(
+        m.shouldAdvance(
+          expected: 'ママとおじさんって全然似てないね',
+          recognized: 'ママとおじさん全然似てない',
+          isFinal: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('末尾に相づき・助詞がついても語尾一致で進む', () {
+      expect(
+        m.shouldAdvance(
+          expected: 'もう行かなくちゃ',
+          recognized: 'もう行かなくちゃね',
+          isFinal: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('緩めても無関係な発話では進まない（誤進行の防止は維持）', () {
+      expect(
+        m.shouldAdvance(
+          expected: '海の向こうに行きたいんだ',
+          recognized: 'そうだね',
+          isFinal: true,
+        ),
+        isFalse,
+      );
+    });
+
     test('認識が空なら進まない', () {
       expect(
         m.shouldAdvance(expected: 'おはよう', recognized: '', isFinal: true),
