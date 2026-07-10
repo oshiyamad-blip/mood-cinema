@@ -86,4 +86,20 @@ void main() {
       expect('はい'.allMatches(text).length, greaterThanOrEqualTo(3));
     });
   });
+
+  test('縦書き：列内に文字セル1つ以上の空きがあれば全角空白を復元する', () {
+    // 「ニコ␣␣ママと」を模す：役名2文字のあと約2セル空けてセリフが始まる。
+    // 判定に足る他の列も置く（縦書き判定は10グリフ以上で有効になる）。
+    final glyphs = [
+      ...column(120, 'そうかもしれないよ'),
+      ch(100, 87, 'ニ'),
+      ch(100, 87 + 14.2, 'コ'),
+      ch(100, 87 + 14.2 * 4, 'マ'),
+      ch(100, 87 + 14.2 * 5, 'マ'),
+      ch(100, 87 + 14.2 * 6, 'と'),
+    ];
+    final text = PdfLayoutText.reconstruct([glyphs]);
+    final lines = text.trim().split('\n');
+    expect(lines, contains('ニコ　ママと'));
+  });
 }

@@ -181,4 +181,43 @@ void main() {
       expect(r.characters, ['太郎']);
     });
   });
+
+  group('空白区切り形式（カギ括弧なし・テレビ/映画台本の抜粋）', () {
+    test('役名＋空白＋セリフを認識し、頻出しない先頭語は誤検出しない', () {
+      final r = parser.parse('おじの平山の元に、姪であるニコが家出の最中。\n'
+          '\n'
+          'ニコ　ママとおじさんって全然似てないね。\n'
+          '平山　そう。\n'
+          'ニコ　おじさんとは住む世界が違うんだって。\n'
+          '平山　そうかもしれない。\n'
+          'ニコ　そうなの。\n'
+          '平山　こんどはこんど。\n'
+          '\n'
+          '立ち止まり、遠くを見る。\n'
+          '\n'
+          '二人　顔を見合わせる。\n');
+      expect(r.characters, ['ニコ', '平山']);
+      final d = r.lines.where((l) => l.type == LineType.dialogue).toList();
+      expect(d, hasLength(6));
+      expect(d.first.speaker, 'ニコ');
+      expect(d.first.text, 'ママとおじさんって全然似てないね。');
+      // 前説・ト書き・1回だけの「二人　…」はセリフにしない。
+      final dirs = r.lines.where((l) => l.type == LineType.direction).toList();
+      expect(dirs.any((l) => l.text.contains('顔を見合わせる')), isTrue);
+      expect(dirs.any((l) => l.text.contains('家出の最中')), isTrue);
+    });
+
+    test('文末で切れていないセリフは次の行（縦書き折返し）を連結する', () {
+      final r = parser.parse('ニコ　これは長いセリフでつなが\n'
+          'っていない世界の話。\n'
+          '平山　そう。\n'
+          'ニコ　二行目。\n'
+          '平山　三行目。\n'
+          'ニコ　四行目。\n'
+          '平山　五行目。\n');
+      final d = r.lines.where((l) => l.type == LineType.dialogue).toList();
+      expect(d.first.text, 'これは長いセリフでつながっていない世界の話。');
+      expect(d, hasLength(6));
+    });
+  });
 }
