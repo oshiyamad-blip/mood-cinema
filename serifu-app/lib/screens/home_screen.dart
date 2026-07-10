@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
-import '../audio/recording_store.dart';
+import '../audio/read_through_store.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 onDelete: () {
                   _repo.remove(s.id);
-                  RecordingStore().deleteAll(s.id); // 本読み録音も一緒に消す
+                  ReadThroughStore().deleteAll(s.id); // 通し録音も一緒に消す
                 },
               );
             },

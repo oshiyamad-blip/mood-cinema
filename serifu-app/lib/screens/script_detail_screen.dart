@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import '../data/script_repository.dart';
 import '../models/script.dart';
 import '../theme/app_theme.dart';
+import 'read_through_screen.dart';
 import 'rehearsal_screen.dart';
 import 'script_edit_screen.dart';
-import 'voice_record_screen.dart';
 import 'voice_settings_screen.dart';
 
 /// 台本詳細：自分の役の選択、ト書きON/OFF、声設定、練習開始。
@@ -217,7 +217,8 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
                     MaterialPageRoute(builder: (_) => VoiceSettingsScreen(script: s)),
                   ),
                 ),
-                // 本読み録音（モバイルのみ。録音がある行は合成音声より優先）。
+                // 通し録音（モバイルのみ。声のある行は合成音声より優先され、
+                // 掛け合いの「間」も録音どおりに再現される）。
                 if (!kIsWeb)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -230,13 +231,13 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
                       ),
                       child: const Icon(Icons.mic, color: AppColors.accent600),
                     ),
-                    title: const Text('本読み録音'),
-                    subtitle: const Text('実際の声を吹き込む（相手役も自分も）'),
+                    title: const Text('通し録音'),
+                    subtitle: const Text('共演者との本読みを録音、実際の声と間で練習'),
                     trailing:
                         const Icon(Icons.chevron_right, color: AppColors.ink300),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                          builder: (_) => VoiceRecordScreen(script: s)),
+                          builder: (_) => ReadThroughScreen(script: s)),
                     ),
                   ),
               ],

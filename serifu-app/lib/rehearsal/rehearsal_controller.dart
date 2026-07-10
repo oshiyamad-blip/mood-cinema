@@ -38,10 +38,12 @@ class RehearsalController extends ChangeNotifier {
     required RehearsalLineSpeaker speaker,
     this.listenMode = false,
     this.directionPause = const Duration(milliseconds: 500),
-    Duration Function()? replyPauseProvider,
+    Duration Function(Line next)? replyPauseProvider,
+    Duration Function(Line next)? lineGapProvider,
   })  : _lines = lines,
         _speaker = speaker,
-        _replyPauseProvider = replyPauseProvider;
+        _replyPauseProvider = replyPauseProvider,
+        _lineGapProvider = lineGapProvider;
 
   final List<Line> _lines;
   final String? myCharacter;
@@ -61,7 +63,13 @@ class RehearsalController extends ChangeNotifier {
 
   /// 自分のセリフの後、相手が返すまでの「間」を返すプロバイダ
   /// （設定変更を即時反映できるよう毎回読む）。null なら間なし。
-  final Duration Function()? _replyPauseProvider;
+  /// 引数はこれから話す相手の行（通し録音の間を行ごとに引けるように）。
+  final Duration Function(Line next)? _replyPauseProvider;
+
+  /// 自分の番以外の行間（相手→相手、ト書き前後など）に置く「間」。
+  /// 通し録音があるとき、記録された掛け合いのテンポを再現するのに使う。
+  /// null なら従来どおり間なし。
+  final Duration Function(Line next)? _lineGapProvider;
 
   int _index = 0;
   RehearsalPhase _phase = RehearsalPhase.idle;
@@ -114,13 +122,17 @@ class RehearsalController extends ChangeNotifier {
         return;
       }
 
-      // 自分のセリフ直後の相手の行には「返しの間」を置く（0なら即レス）。
+      // 行の前に置く「間」：自分のセリフ直後は「返しの間」、
+      // それ以外の行間は通し録音の間（あれば）。0なら即レス。
+      final Duration pause;
       if (_pendingReplyPause) {
         _pendingReplyPause = false;
-        final pause = _replyPauseProvider?.call() ?? Duration.zero;
-        if (pause > Duration.zero) {
-          await Future<void>.delayed(pause);
-        }
+        pause = _replyPauseProvider?.call(line) ?? Duration.zero;
+      } else {
+        pause = _lineGapProvider?.call(line) ?? Duration.zero;
+      }
+      if (pause > Duration.zero) {
+        await Future<void>.delayed(pause);
         if (!_running) {
           _setPhase(RehearsalPhase.idle); // 間の途中で一時停止された
           return;

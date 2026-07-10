@@ -29,6 +29,13 @@ class SpeechRecognizer {
   /// 聞き取りを開始する。
   /// [onResult] は (認識テキスト, 確定か) を返す。
   ///
+  /// 無音待ちは二段構え：
+  /// - 話し始めるまでは [preSpeechGrace]（芝居の間・長考でセッションが
+  ///   死なないよう長め。プラグインの pauseFor は「認識結果イベントの途絶」を
+  ///   listen 開始直後から数えるため、短いと発話前に切れて再開を繰り返す）。
+  /// - 最初の結果が届いたら [endSilence] に切り替え（changePauseFor）、
+  ///   言い終わりの無音から素早く確定して相手が返る。
+  ///
   /// プライバシー方針：[preferOnDevice] が true の間は可能な限り
   /// **オンデバイス音声認識**を使う（セリフ音声をクラウドへ送らない）。
   /// 設定で「高精度認識」を選んだ場合のみ false（OSのクラウド認識を許可）。
@@ -36,29 +43,42 @@ class SpeechRecognizer {
     required void Function(String text, bool isFinal) onResult,
     String localeId = 'ja_JP',
     Duration listenFor = const Duration(seconds: 60),
-    // 会話のテンポを出すため無音待ちは短め。言い終わり（無音）から
-    // 素早く確定して相手が返る。長すぎると「言ったのに間があく」原因になる。
-    // 「話し終わってからトータル1秒で返す」ため、無音検出は0.5秒に固定し、
-    // 残り（約0.5秒）を rehearsal 側の「返しの間」で使う。
-    Duration pauseFor = const Duration(milliseconds: 500),
+    Duration preSpeechGrace = const Duration(seconds: 20),
+    Duration endSilence = const Duration(milliseconds: 500),
     bool preferOnDevice = true,
   }) async {
     if (!_available) {
       if (!await init()) return;
     }
-    await _stt.listen(
-      onResult: (r) => onResult(r.recognizedWords, r.finalResult),
-      listenOptions: SpeechListenOptions(
-        onDevice: preferOnDevice,
-        partialResults: true,
-        localeId: localeId,
-        listenFor: listenFor,
-        pauseFor: pauseFor,
-        // セリフは一息の長文になりがち。逐次書き取りモードの方が
-        // 途中で確定されにくく、取りこぼしが減る。
-        listenMode: ListenMode.dictation,
-      ),
-    );
+    var gotFirstResult = false;
+    try {
+      await _stt.listen(
+        onResult: (r) {
+          if (!gotFirstResult && r.recognizedWords.isNotEmpty) {
+            gotFirstResult = true;
+            // 発話が始まった：無音待ちを「言い終わり検出」の短さへ。
+            try {
+              _stt.changePauseFor(endSilence);
+            } catch (_) {}
+          }
+          onResult(r.recognizedWords, r.finalResult);
+        },
+        listenOptions: SpeechListenOptions(
+          onDevice: preferOnDevice,
+          partialResults: true,
+          localeId: localeId,
+          listenFor: listenFor,
+          pauseFor: preSpeechGrace,
+          // セリフは一息の長文になりがち。逐次書き取りモードの方が
+          // 途中で確定されにくく、取りこぼしが減る。
+          listenMode: ListenMode.dictation,
+        ),
+      );
+    } catch (_) {
+      // オンデバイス認識非対応端末などで listen が例外を投げることがある。
+      // 黙って死なせず error を通知し、呼び出し側のUI（手動ボタン誘導）に委ねる。
+      onStatus?.call('error');
+    }
   }
 
   Future<void> stop() async {

@@ -178,7 +178,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             millis == 0
                 ? 'すぐに返す（間なし）'
-                : 'あなたのセリフの後、${sec.toStringAsFixed(1)}秒おいて相手が返します',
+                : '話し終わってから合計${sec.toStringAsFixed(1)}秒で相手が返します'
+                    '（通し録音がある台本では録音した間が優先されます）',
             style: AppText.caption,
           ),
           Row(

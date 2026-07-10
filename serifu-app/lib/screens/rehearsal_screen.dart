@@ -5,7 +5,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-import '../audio/recording_store.dart';
+import '../audio/read_through.dart';
+import '../audio/read_through_store.dart';
 import '../billing/features.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
@@ -53,6 +54,7 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
     required this.narrator,
     required this.voiceFor,
     required this.preparedGetter,
+    required this.readThroughGetter,
   });
 
   final AudioPlayer player;
@@ -61,8 +63,17 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
   final VoiceProfile Function(String character) voiceFor;
   final PreparedAudio? Function() preparedGetter;
 
+  /// 通し本読み（実際の声）。区間のある行はTTSより優先して再生する。
+  final ({ReadThroughData data, String audioPath})? Function() readThroughGetter;
+
   @override
   Future<void> speakLine(Line line) async {
+    final rt = readThroughGetter();
+    final seg = rt?.data.segmentFor(line.id);
+    if (rt != null && seg != null && seg.hasVoice) {
+      await _playSegment(rt.audioPath, seg);
+      return;
+    }
     final path = preparedGetter()?.pathFor(line.id);
     if (path != null) {
       await _playFile(path);
@@ -86,8 +97,45 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
       await player.play(DeviceFileSource(path));
       // 壊れた/空の録音ファイル等で完了イベントが来ないと永久に待ってしまう。
       // 安全弁として上限時間で必ず解決し、次の行へ進める。
-      await done.future.timeout(const Duration(seconds: 30), onTimeout: () {});
+      // このとき再生も止める（鳴らしっぱなしのままマイクと重ならないように）。
+      await done.future.timeout(const Duration(seconds: 30), onTimeout: () async {
+        await player.stop();
+      });
     } finally {
+      await sub.cancel();
+    }
+  }
+
+  /// 通し録音のうち1行分の区間だけを再生する。
+  /// 終端は位置イベント（精密）とタイマー（保険）の二重で止める。
+  Future<void> _playSegment(String path, ReadThroughSegment seg) async {
+    final done = Completer<void>();
+    final sub = player.onPlayerStateChanged.listen((st) {
+      if (st == PlayerState.completed || st == PlayerState.stopped) {
+        if (!done.isCompleted) done.complete();
+      }
+    });
+    final posSub = player.onPositionChanged.listen((p) {
+      if (p.inMilliseconds >= seg.endMs) player.stop();
+    });
+    // シークや再生開始のもたつき分の余裕をみたタイマー保険。
+    final guard = Timer(Duration(milliseconds: seg.durationMs + 800), () {
+      player.stop();
+    });
+    try {
+      await player.play(
+        DeviceFileSource(path),
+        position: Duration(milliseconds: seg.startMs),
+      );
+      await done.future.timeout(
+        Duration(milliseconds: seg.durationMs + 5000),
+        onTimeout: () async {
+          await player.stop();
+        },
+      );
+    } finally {
+      guard.cancel();
+      await posSub.cancel();
       await sub.cancel();
     }
   }
@@ -137,9 +185,21 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   int _listenRestarts = 0;
   static const _maxListenRestarts = 12;
 
+  /// 聞き取り再開の予約中フラグ（'notListening' と 'done' の二重カウント防止）。
+  bool _restartPending = false;
+
   /// 言い終わり（無音）を検知するまでの待ち時間。
   /// 「話し終わってからトータル約1秒で返す」ため短く固定し、返しの間から差し引く。
   static const _silenceDetectMillis = 500;
+
+  /// 直近の advanceMine までに「言い終わりの無音」として既に経過した時間。
+  /// 無音検出で確定した進行のみ 500ms（返しの間から差し引く）。
+  /// 語尾一致の即進行・手動ボタン・安全ネットでは 0（無音は経過していない）。
+  int _advanceSilenceMs = 0;
+
+  /// 通し本読み（実際の声＋掛け合いの間）。あればTTS・既定の間より優先。
+  ReadThroughData? _readThrough;
+  String? _readThroughAudio;
 
   Script get s => widget.script;
 
@@ -167,16 +227,28 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         narrator: _narrator,
         voiceFor: s.voiceFor,
         preparedGetter: () => _prepared,
+        readThroughGetter: () {
+          final data = _readThrough;
+          final audio = _readThroughAudio;
+          return (data != null && audio != null)
+              ? (data: data, audioPath: audio)
+              : null;
+        },
       ),
-      // 「返しの間」は設定から毎回読む（変更を即時反映）。
-      // 設定値は「話し終わってから相手が返るまでの合計」の意味。
-      // ハンズフリー時は無音検出（pauseFor≈0.5秒）で既にその分だけ
-      // 経過しているため、その分を差し引いて合計が設定値に収まるようにする。
-      replyPauseProvider: () {
-        final total = SettingsStore.instance.settings.replyPauseMillis;
-        final elapsed = _handsFree ? _silenceDetectMillis : 0;
-        return Duration(milliseconds: (total - elapsed).clamp(0, total));
+      // 「返しの間」＝話し終わってから相手が返るまでの合計。
+      // 通し録音にこの行の直前の間が記録されていればそれを、無ければ設定値を使う。
+      // 無音検出で確定した進行では、検出に使った時間（≈0.5秒）が既に
+      // 経過しているため差し引く（語尾一致の即進行や手動ボタンでは差し引かない）。
+      replyPauseProvider: (next) {
+        final total = _readThrough?.gapBeforeMs(next.id) ??
+            SettingsStore.instance.settings.replyPauseMillis;
+        return Duration(
+          milliseconds: (total - _advanceSilenceMs).clamp(0, total),
+        );
       },
+      // 相手同士の行間は、通し録音の間をそのまま再現（無ければ従来どおり間なし）。
+      lineGapProvider: (next) =>
+          Duration(milliseconds: _readThrough?.gapBeforeMs(next.id) ?? 0),
     );
     _c.addListener(_onProgress);
     _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う
@@ -302,7 +374,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     final prepared = _prepared;
     if (prepared == null) return;
     for (final path in prepared.pathByLineId.values) {
-      if (RecordingStore.isRecordingPath(path)) continue; // 録音は永続
+      if (ReadThroughStore.isRecordingPath(path)) continue; // 録音は永続
       File(path).delete().catchError((_) => File(path));
     }
   }
@@ -326,19 +398,21 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       });
     }
 
-    // 本読み録音があればTTSより優先して使う（自分の行の録音は聞き流しで活きる）。
-    final recordings = await RecordingStore().loadAll(s.id);
-    _preparedMap.addAll(recordings);
+    // 通し本読みがあれば読み込む。声が入っている行はTTSより優先して
+    // 再生され、「間」も録音どおりに再現される（自分の行の声は聞き流しで活きる）。
+    final rt = await ReadThroughStore().load(s.id);
+    _readThrough = rt?.data;
+    _readThroughAudio = rt?.audioPath;
+    bool hasVoice(String lineId) =>
+        _readThrough?.segmentFor(lineId)?.hasVoice ?? false;
 
     // 準備が済んだ行から順次 _preparedMap に載せる（本番中でも使える）。
-    // 録音済みの行は上書きしない。
     void onLineReady(String lineId, String path) {
-      if (!recordings.containsKey(lineId)) _preparedMap[lineId] = path;
+      _preparedMap[lineId] = path;
     }
 
-    // 録音済みの行は合成不要。
-    final toSynth =
-        _lines.where((l) => !recordings.containsKey(l.id)).toList();
+    // 通し録音に声がある行は合成不要。
+    final toSynth = _lines.where((l) => !hasVoice(l.id)).toList();
     try {
       final result = useCloud
           ? await _cloudPreparer.prepare(
@@ -360,7 +434,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               onLineReady: onLineReady,
             );
       result.pathByLineId.forEach((id, path) {
-        if (!recordings.containsKey(id)) _preparedMap[id] = path;
+        _preparedMap[id] = path;
       });
     } catch (_) {
       // 失敗した分はライブ合成で賄う（準備済みの行はそのまま使える）。
@@ -379,10 +453,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _recognizer.onStatus = (status) {
       if (!mounted || !_handsFree || _c.phase != RehearsalPhase.waitingForUser) return;
       final ended = status == 'done' || status == 'notListening' || status == 'error';
-      if (ended && _listenRestarts < _maxListenRestarts) {
+      // 1回のセッション終了で 'notListening' と 'done' が連続して届くことがある。
+      // 二重に数えると再開回数が実質半減するため、再開予約中は無視する。
+      if (ended && !_restartPending && _listenRestarts < _maxListenRestarts) {
+        _restartPending = true;
         _listenRestarts++;
         _recorder.onListenRestart();
         Future.delayed(const Duration(milliseconds: 300), () {
+          _restartPending = false;
           if (mounted &&
               _handsFree &&
               _c.phase == RehearsalPhase.waitingForUser &&
@@ -390,7 +468,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
             _startListening();
           }
         });
-      } else if (ended) {
+      } else if (ended && !_restartPending) {
         // 再開上限に達した：聞き取りを諦めた状態をUIに反映する。
         // これをしないとバナーが「聞き取り中…」のまま固まり、
         // ユーザーは「言ったのに相手が返ってこない」と感じる（手動ボタンを見落とす）。
@@ -401,19 +479,28 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   Future<void> _startListening() async {
-    final expected = _c.currentLine?.text ?? '';
+    final myLine = _c.currentLine;
+    final expected = myLine?.text ?? '';
     await _recognizer.start(
       // 既定はオンデバイス認識（プライバシー優先）。設定で高精度(クラウド)を許可。
       preferOnDevice: !SettingsStore.instance.settings.highAccuracyRecognition,
-      // 無音検出は短く固定（返しの間から差し引いて合計約1秒に収める）。
-      pauseFor: const Duration(milliseconds: _silenceDetectMillis),
+      // 言い終わりの無音検出（返しの間から差し引いて合計を設定値に収める）。
+      endSilence: const Duration(milliseconds: _silenceDetectMillis),
       onResult: (text, isFinal) {
         if (!mounted || _c.phase != RehearsalPhase.waitingForUser || !_handsFree) return;
+        // 前の行あての残留結果は無視（自分のセリフが連続すると
+        // 停止直前のセッションから確定結果が遅れて届くことがある）。
+        if (!identical(_c.currentLine, myLine)) return;
         setState(() => _heard = text);
+        // 発話中は安全ネットを張り直す（長ゼリフや芝居の間で、
+        // まだ言っている最中に相手が返ってしまわないように）。
+        if (text.isNotEmpty) _startHandsFreeSafetyNet(myLine);
         // 台本セリフと照合：語尾一致なら部分結果でも即進む。
         // 一致が弱いままの確定（雑音・言い直し）は進まず聞き直す。
         if (_matcher.shouldAdvance(expected: expected, recognized: text, isFinal: isFinal)) {
-          _advanceMine();
+          // 確定結果＝無音検出（約0.5秒）を経ている。部分結果＝言い終わりの
+          // 瞬間なので無音は経過していない。返しの間の差し引きに使う。
+          _advanceMine(silenceElapsedMs: isFinal ? _silenceDetectMillis : 0);
         }
       },
     );
@@ -426,11 +513,12 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     await _c.pause();
   }
 
-  void _advanceMine({bool auto = false}) {
+  void _advanceMine({bool auto = false, int silenceElapsedMs = 0}) {
     _recorder.onAdvance(auto: auto);
     _autoAdvanceTimer?.cancel();
     _handsFreeSafetyTimer?.cancel();
     _recognizer.stop();
+    _advanceSilenceMs = silenceElapsedMs;
     _c.advanceMine();
   }
 
