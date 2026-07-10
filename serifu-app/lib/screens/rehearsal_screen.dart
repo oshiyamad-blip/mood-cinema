@@ -84,7 +84,9 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
     });
     try {
       await player.play(DeviceFileSource(path));
-      await done.future;
+      // 壊れた/空の録音ファイル等で完了イベントが来ないと永久に待ってしまう。
+      // 安全弁として上限時間で必ず解決し、次の行へ進める。
+      await done.future.timeout(const Duration(seconds: 30), onTimeout: () {});
     } finally {
       await sub.cancel();
     }
@@ -353,6 +355,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
             _startListening();
           }
         });
+      } else if (ended) {
+        // 再開上限に達した：聞き取りを諦めた状態をUIに反映する。
+        // これをしないとバナーが「聞き取り中…」のまま固まり、
+        // ユーザーは「言ったのに相手が返ってこない」と感じる（手動ボタンを見落とす）。
+        setState(() {});
       }
     };
     await _startListening();
@@ -796,20 +803,29 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           ],
           if (_handsFree) ...[
             const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(_recognizer.isListening ? Icons.mic : Icons.mic_none,
-                    size: 18, color: AppColors.accent600),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    _heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard,
-                    style: AppText.caption,
+            Builder(builder: (_) {
+              // 聞き取りを諦めた（再開上限に達した）ら、その旨を明示して
+              // 手動ボタンへ誘導する（「聞き取り中…」のまま固めない）。
+              final gaveUp = _listenRestarts >= _maxListenRestarts &&
+                  !_recognizer.isListening;
+              final label = gaveUp
+                  ? '聞き取れませんでした。下のボタンで進めてください'
+                  : (_heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    gaveUp
+                        ? Icons.mic_off
+                        : (_recognizer.isListening ? Icons.mic : Icons.mic_none),
+                    size: 18,
+                    color: gaveUp ? AppColors.ink500 : AppColors.accent600,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(label, style: AppText.caption)),
+                ],
+              );
+            }),
           ],
           const SizedBox(height: 10),
           FilledButton.icon(

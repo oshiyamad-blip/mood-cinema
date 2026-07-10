@@ -130,7 +130,14 @@ class RehearsalController extends ChangeNotifier {
       if (line.type == LineType.direction && !readDirections) {
         await Future<void>.delayed(directionPause);
       } else {
-        await _speaker.speakLine(line);
+        // 読み上げ（再生）が失敗しても進行を止めない。壊れた録音ファイルや
+        // TTSの一時失敗でその行の音が出なくても、次の行へ進める
+        // （ここで例外を飲まないと相手の声が「返ってこない」まま固まる）。
+        try {
+          await _speaker.speakLine(line);
+        } catch (_) {
+          // この行は無音で飛ばす。
+        }
       }
 
       if (!_running) {

@@ -7,7 +7,7 @@ class AppSettings {
     this.defaultRate = 1.0,
     this.defaultReadDirections = true,
     this.autoAdvanceSeconds = 0, // 0 = 手動（自分の番で止まる）
-    this.replyPauseMillis = 0, // 自分のセリフ後、相手が返すまでの間（ms）
+    this.replyPauseMillis = 1000, // 自分のセリフ後、相手が返すまでの間（ms・既定1秒）
     this.useCloudVoices = false, // クラウド高品質音声（Pro・要設定）
     this.highAccuracyRecognition = false, // 音声認識にクラウドを許可（精度優先）
   });
@@ -68,7 +68,7 @@ class AppSettings {
         defaultRate: (json['defaultRate'] as num?)?.toDouble() ?? 1.0,
         defaultReadDirections: (json['defaultReadDirections'] as bool?) ?? true,
         autoAdvanceSeconds: (json['autoAdvanceSeconds'] as num?)?.toInt() ?? 0,
-        replyPauseMillis: (json['replyPauseMillis'] as num?)?.toInt() ?? 0,
+        replyPauseMillis: (json['replyPauseMillis'] as num?)?.toInt() ?? 1000,
         useCloudVoices: (json['useCloudVoices'] as bool?) ?? false,
         highAccuracyRecognition: (json['highAccuracyRecognition'] as bool?) ?? false,
       );
