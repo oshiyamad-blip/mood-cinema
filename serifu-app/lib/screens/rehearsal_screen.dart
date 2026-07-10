@@ -84,7 +84,9 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
     });
     try {
       await player.play(DeviceFileSource(path));
-      await done.future;
+      // 壊れた/空の録音ファイル等で完了イベントが来ないと永久に待ってしまう。
+      // 安全弁として上限時間で必ず解決し、次の行へ進める。
+      await done.future.timeout(const Duration(seconds: 30), onTimeout: () {});
     } finally {
       await sub.cancel();
     }
@@ -118,6 +120,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   bool _handsFree = false;
   Timer? _autoAdvanceTimer;
+  // ハンズフリーの安全ネット：認識が失敗しても、この時間で必ず相手が返る
+  // （「言ったのに声が返ってこない」を構造的に防ぐ最後の砦）。
+  Timer? _handsFreeSafetyTimer;
   bool _showScript = true; // false = 暗記モード
   bool _peek = false; // 暗記モードでのチラ見
   String _heard = '';
@@ -179,6 +184,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _player.dispose();
     _scroll.dispose();
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     _cleanupPreparedFiles();
     super.dispose();
   }
@@ -196,12 +202,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       if (line != null) _recorder.onMyTurnStart(line);
       if (_handsFree) {
         _listenForMyLine();
+        _startHandsFreeSafetyNet(line);
       } else {
         _maybeStartAutoAdvance();
       }
     }
     if (phase != RehearsalPhase.waitingForUser) {
       _autoAdvanceTimer?.cancel();
+      _handsFreeSafetyTimer?.cancel();
     }
     // 最後まで通せたらリザルト画面へ（広告は練習が終わったこの後だけ）。
     if (phase == RehearsalPhase.finished && !_navigatedToResult) {
@@ -246,6 +254,25 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   GlobalObjectKey _lineKey(int i) => GlobalObjectKey('${identityHashCode(this)}_line_$i');
+
+  /// ハンズフリーの安全ネット。認識が一度も通らなくても、この猶予のあと
+  /// 自動で次へ進めて相手の声を返す（ハンズフリーが行き止まりにならない保証）。
+  /// 猶予はセリフの長さに応じる（長ゼリフを途中で切らないよう十分長く取る）。
+  /// 通常は認識が先に成功して advanceMine → タイマーは破棄される。
+  void _startHandsFreeSafetyNet(Line? line) {
+    _handsFreeSafetyTimer?.cancel();
+    if (line == null) return;
+    // 期待発話時間（1.5秒+150ms/字）の2倍＋4秒。8〜30秒にクランプ。
+    final expected = 1500 + line.text.length * 150;
+    final budgetMs = (expected * 2 + 4000).clamp(8000, 30000);
+    _handsFreeSafetyTimer = Timer(Duration(milliseconds: budgetMs), () {
+      if (mounted &&
+          _handsFree &&
+          _c.phase == RehearsalPhase.waitingForUser) {
+        _advanceMine(auto: true); // 相手が返る
+      }
+    });
+  }
 
   /// 自分の番：設定の自動進行秒数が正なら、その後に自動で次へ。
   void _maybeStartAutoAdvance() {
@@ -353,6 +380,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
             _startListening();
           }
         });
+      } else if (ended) {
+        // 再開上限に達した：聞き取りを諦めた状態をUIに反映する。
+        // これをしないとバナーが「聞き取り中…」のまま固まり、
+        // ユーザーは「言ったのに相手が返ってこない」と感じる（手動ボタンを見落とす）。
+        setState(() {});
       }
     };
     await _startListening();
@@ -377,6 +409,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _pause() async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.pause();
   }
@@ -384,6 +417,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   void _advanceMine({bool auto = false}) {
     _recorder.onAdvance(auto: auto);
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     _recognizer.stop();
     _c.advanceMine();
   }
@@ -395,12 +429,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _jump(int delta) async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.jump(delta);
   }
 
   Future<void> _restart() async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.restart();
   }
@@ -796,20 +832,62 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           ],
           if (_handsFree) ...[
             const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(_recognizer.isListening ? Icons.mic : Icons.mic_none,
-                    size: 18, color: AppColors.accent600),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    _heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard,
-                    style: AppText.caption,
+            Builder(builder: (_) {
+              // 聞き取りを諦めた（再開上限に達した）ら、その旨を明示。
+              final gaveUp = _listenRestarts >= _maxListenRestarts &&
+                  !_recognizer.isListening;
+              final status = gaveUp
+                  ? 'うまく聞き取れません。少し待つと自動で進みます'
+                  : '聞き取り中…（言い終わると自動で進みます）';
+              return Column(
+                children: [
+                  // マイクの状態行。
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        gaveUp
+                            ? Icons.mic_off
+                            : (_recognizer.isListening
+                                ? Icons.mic
+                                : Icons.mic_none),
+                        size: 18,
+                        color: gaveUp ? AppColors.ink500 : AppColors.accent600,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(child: Text(status, style: AppText.caption)),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                  // 聞き取れた言葉をそのまま文字で見せる（自分の声が
+                  // どう認識されたか分かる＝進まない不安の解消）。
+                  if (_heard.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.accent200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.hearing,
+                              size: 16, color: AppColors.accent600),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(_heard,
+                                style: AppText.body.copyWith(
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            }),
           ],
           const SizedBox(height: 10),
           FilledButton.icon(

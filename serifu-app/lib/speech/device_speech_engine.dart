@@ -61,7 +61,16 @@ class DeviceSpeechEngine implements SpeechEngine {
       await _tts.setVoice({'name': profile.voiceId!, 'locale': languageCode});
     }
 
-    await _tts.speak(text);
+    // 一部のAndroid OEM TTSでは完了コールバックが発火しないことがあり、
+    // await _tts.speak(...) が永久に返らない → 進行が固まる。
+    // 発話長から妥当な上限時間を見積もり、超えたら打ち切って先へ進む。
+    final budget = Duration(
+        milliseconds: (3000 + text.length * 220).clamp(3000, 30000));
+    try {
+      await _tts.speak(text).timeout(budget);
+    } on Exception {
+      await _tts.stop(); // 取りこぼしの再生を止めて次の行へ
+    }
   }
 
   @override

@@ -34,7 +34,7 @@ void main() {
     expect(restored.defaultRate, 1.0);
     expect(restored.defaultReadDirections, true);
     expect(restored.autoAdvanceSeconds, 0);
-    expect(restored.replyPauseMillis, 0);
+    expect(restored.replyPauseMillis, 1000); // 既定は1秒（返しの間）
     expect(restored.useCloudVoices, false);
     expect(restored.highAccuracyRecognition, false);
   });

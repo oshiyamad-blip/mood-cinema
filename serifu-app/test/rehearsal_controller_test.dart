@@ -27,6 +27,22 @@ class FakeSpeaker implements RehearsalLineSpeaker {
   }
 }
 
+/// 指定した行の読み上げで例外を投げる読み上げ器（再生失敗の模擬）。
+class _ThrowingSpeaker implements RehearsalLineSpeaker {
+  _ThrowingSpeaker({required this.throwOnId});
+  final String throwOnId;
+  final spokenIds = <String>[];
+
+  @override
+  Future<void> speakLine(Line line) async {
+    spokenIds.add(line.id);
+    if (line.id == throwOnId) throw Exception('再生失敗（壊れたファイル等）');
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
 Line dialogue(String id, String speaker, String text) =>
     Line(id: id, type: LineType.dialogue, speaker: speaker, text: text);
 Line direction(String id, String text) =>
@@ -337,6 +353,30 @@ void main() {
       await c.run();
       await c.advanceMine();
       expect(sp.spokenIds, ['l1']);
+    });
+  });
+
+  group('読み上げ失敗でも進行が固まらない（返ってこないバグ対策）', () {
+    test('相手のセリフの読み上げが例外を投げても次の行へ進む', () async {
+      // 壊れた録音ファイルやTTS失敗を模して speakLine が投げる状況。
+      final sp = _ThrowingSpeaker(throwOnId: 'l1');
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '花子', 'A'), // 相手（正常）
+          dialogue('l1', '花子', 'B'), // 相手（再生失敗）
+          dialogue('l2', '花子', 'C'), // 相手（正常）
+          dialogue('l3', '太郎', 'D'), // 自分
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+      );
+
+      await c.run(); // l0,l1(失敗),l2 を経て自分の番(l3)で停止
+      expect(c.phase, RehearsalPhase.waitingForUser);
+      expect(c.index, 3); // 失敗した l1 で止まらず l3 まで到達
+      expect(sp.spokenIds, ['l0', 'l1', 'l2']); // l1 も試行はした
     });
   });
 
