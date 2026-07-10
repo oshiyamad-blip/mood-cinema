@@ -120,6 +120,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   bool _handsFree = false;
   Timer? _autoAdvanceTimer;
+  // ハンズフリーの安全ネット：認識が失敗しても、この時間で必ず相手が返る
+  // （「言ったのに声が返ってこない」を構造的に防ぐ最後の砦）。
+  Timer? _handsFreeSafetyTimer;
   bool _showScript = true; // false = 暗記モード
   bool _peek = false; // 暗記モードでのチラ見
   String _heard = '';
@@ -181,6 +184,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _player.dispose();
     _scroll.dispose();
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     _cleanupPreparedFiles();
     super.dispose();
   }
@@ -198,12 +202,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       if (line != null) _recorder.onMyTurnStart(line);
       if (_handsFree) {
         _listenForMyLine();
+        _startHandsFreeSafetyNet(line);
       } else {
         _maybeStartAutoAdvance();
       }
     }
     if (phase != RehearsalPhase.waitingForUser) {
       _autoAdvanceTimer?.cancel();
+      _handsFreeSafetyTimer?.cancel();
     }
     // 最後まで通せたらリザルト画面へ（広告は練習が終わったこの後だけ）。
     if (phase == RehearsalPhase.finished && !_navigatedToResult) {
@@ -248,6 +254,25 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   }
 
   GlobalObjectKey _lineKey(int i) => GlobalObjectKey('${identityHashCode(this)}_line_$i');
+
+  /// ハンズフリーの安全ネット。認識が一度も通らなくても、この猶予のあと
+  /// 自動で次へ進めて相手の声を返す（ハンズフリーが行き止まりにならない保証）。
+  /// 猶予はセリフの長さに応じる（長ゼリフを途中で切らないよう十分長く取る）。
+  /// 通常は認識が先に成功して advanceMine → タイマーは破棄される。
+  void _startHandsFreeSafetyNet(Line? line) {
+    _handsFreeSafetyTimer?.cancel();
+    if (line == null) return;
+    // 期待発話時間（1.5秒+150ms/字）の2倍＋4秒。8〜30秒にクランプ。
+    final expected = 1500 + line.text.length * 150;
+    final budgetMs = (expected * 2 + 4000).clamp(8000, 30000);
+    _handsFreeSafetyTimer = Timer(Duration(milliseconds: budgetMs), () {
+      if (mounted &&
+          _handsFree &&
+          _c.phase == RehearsalPhase.waitingForUser) {
+        _advanceMine(auto: true); // 相手が返る
+      }
+    });
+  }
 
   /// 自分の番：設定の自動進行秒数が正なら、その後に自動で次へ。
   void _maybeStartAutoAdvance() {
@@ -384,6 +409,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _pause() async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.pause();
   }
@@ -391,6 +417,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   void _advanceMine({bool auto = false}) {
     _recorder.onAdvance(auto: auto);
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     _recognizer.stop();
     _c.advanceMine();
   }
@@ -402,12 +429,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _jump(int delta) async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.jump(delta);
   }
 
   Future<void> _restart() async {
     _autoAdvanceTimer?.cancel();
+    _handsFreeSafetyTimer?.cancel();
     await _recognizer.stop();
     await _c.restart();
   }
@@ -809,7 +838,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               final gaveUp = _listenRestarts >= _maxListenRestarts &&
                   !_recognizer.isListening;
               final label = gaveUp
-                  ? '聞き取れませんでした。下のボタンで進めてください'
+                  ? 'うまく聞き取れません。少し待つと自動で進みます'
                   : (_heard.isEmpty ? '聞き取り中…（言い終わると自動で進みます）' : _heard);
               return Row(
                 mainAxisAlignment: MainAxisAlignment.center,
