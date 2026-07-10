@@ -305,7 +305,7 @@ void main() {
         readDirections: true,
         speaker: sp,
         directionPause: Duration.zero,
-        replyPauseProvider: () => const Duration(milliseconds: 40),
+        replyPauseProvider: (_) => const Duration(milliseconds: 40),
       );
 
       await c.run(); // 自分の番で停止
@@ -329,7 +329,7 @@ void main() {
         readDirections: true,
         speaker: sp,
         directionPause: Duration.zero,
-        replyPauseProvider: () => const Duration(milliseconds: 200),
+        replyPauseProvider: (_) => const Duration(milliseconds: 200),
       );
 
       await c.run();
@@ -353,6 +353,89 @@ void main() {
       await c.run();
       await c.advanceMine();
       expect(sp.spokenIds, ['l1']);
+    });
+
+    test('返しの間プロバイダにはこれから話す行が渡る（行ごとの間を引ける）', () async {
+      final sp = FakeSpeaker();
+      Line? passed;
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '太郎', 'A'),
+          dialogue('l1', '花子', 'B'),
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        replyPauseProvider: (next) {
+          passed = next;
+          return Duration.zero;
+        },
+      );
+
+      await c.run();
+      await c.advanceMine();
+      expect(passed?.id, 'l1');
+    });
+  });
+
+  group('行間の間（lineGapProvider・通し録音のテンポ再現）', () {
+    test('相手同士の行間に間が置かれ、対象の行が渡る', () async {
+      final sp = FakeSpeaker();
+      final gapCalls = <String>[];
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '花子', 'A'), // 相手
+          dialogue('l1', '次郎', 'B'), // 相手（この前に間）
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        lineGapProvider: (next) {
+          gapCalls.add(next.id);
+          return next.id == 'l1'
+              ? const Duration(milliseconds: 40)
+              : Duration.zero;
+        },
+      );
+
+      final sw = Stopwatch()..start();
+      await c.run();
+      sw.stop();
+
+      expect(sp.spokenIds, ['l0', 'l1']);
+      expect(gapCalls, contains('l1'));
+      expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(35));
+    });
+
+    test('自分のセリフ直後は lineGap でなく返しの間が使われる', () async {
+      final sp = FakeSpeaker();
+      var gapUsedForReply = false;
+      var replyUsed = false;
+      final c = RehearsalController(
+        lines: [
+          dialogue('l0', '太郎', 'A'), // 自分
+          dialogue('l1', '花子', 'B'), // 相手
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        replyPauseProvider: (next) {
+          replyUsed = true;
+          return Duration.zero;
+        },
+        lineGapProvider: (next) {
+          if (next.id == 'l1') gapUsedForReply = true;
+          return Duration.zero;
+        },
+      );
+
+      await c.run();
+      await c.advanceMine();
+      expect(replyUsed, isTrue);
+      expect(gapUsedForReply, isFalse);
     });
   });
 
