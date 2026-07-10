@@ -38,7 +38,9 @@ class SpeechRecognizer {
     Duration listenFor = const Duration(seconds: 60),
     // 会話のテンポを出すため無音待ちは短め。言い終わり（無音）から
     // 素早く確定して相手が返る。長すぎると「言ったのに間があく」原因になる。
-    Duration pauseFor = const Duration(milliseconds: 700),
+    // 「話し終わってからトータル1秒で返す」ため、無音検出は0.5秒に固定し、
+    // 残り（約0.5秒）を rehearsal 側の「返しの間」で使う。
+    Duration pauseFor = const Duration(milliseconds: 500),
     bool preferOnDevice = true,
   }) async {
     if (!_available) {
