@@ -133,8 +133,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   final LineMatcher _matcher = LineMatcher();
 
   /// 自分の番あたりの聞き取り自動再開の回数（無限再開を防ぐ）。
+  /// 無音待ち(pauseFor)を短くした分、話し始めまでマイクを生かすため多めに再開する。
   int _listenRestarts = 0;
-  static const _maxListenRestarts = 5;
+  static const _maxListenRestarts = 12;
+
+  /// 言い終わり（無音）を検知するまでの待ち時間。
+  /// 「話し終わってからトータル約1秒で返す」ため短く固定し、返しの間から差し引く。
+  static const _silenceDetectMillis = 500;
 
   Script get s => widget.script;
 
@@ -164,9 +169,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         preparedGetter: () => _prepared,
       ),
       // 「返しの間」は設定から毎回読む（変更を即時反映）。
-      replyPauseProvider: () => Duration(
-        milliseconds: SettingsStore.instance.settings.replyPauseMillis,
-      ),
+      // 設定値は「話し終わってから相手が返るまでの合計」の意味。
+      // ハンズフリー時は無音検出（pauseFor≈0.5秒）で既にその分だけ
+      // 経過しているため、その分を差し引いて合計が設定値に収まるようにする。
+      replyPauseProvider: () {
+        final total = SettingsStore.instance.settings.replyPauseMillis;
+        final elapsed = _handsFree ? _silenceDetectMillis : 0;
+        return Duration(milliseconds: (total - elapsed).clamp(0, total));
+      },
     );
     _c.addListener(_onProgress);
     _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う
@@ -395,6 +405,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     await _recognizer.start(
       // 既定はオンデバイス認識（プライバシー優先）。設定で高精度(クラウド)を許可。
       preferOnDevice: !SettingsStore.instance.settings.highAccuracyRecognition,
+      // 無音検出は短く固定（返しの間から差し引いて合計約1秒に収める）。
+      pauseFor: const Duration(milliseconds: _silenceDetectMillis),
       onResult: (text, isFinal) {
         if (!mounted || _c.phase != RehearsalPhase.waitingForUser || !_handsFree) return;
         setState(() => _heard = text);
