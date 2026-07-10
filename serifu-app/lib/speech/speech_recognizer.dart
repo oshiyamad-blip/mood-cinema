@@ -36,7 +36,9 @@ class SpeechRecognizer {
     required void Function(String text, bool isFinal) onResult,
     String localeId = 'ja_JP',
     Duration listenFor = const Duration(seconds: 60),
-    Duration pauseFor = const Duration(seconds: 2),
+    // 会話のテンポを出すため無音待ちは短め。言い終わり（無音）から
+    // 素早く確定して相手が返る。長すぎると「言ったのに間があく」原因になる。
+    Duration pauseFor = const Duration(milliseconds: 700),
     bool preferOnDevice = true,
   }) async {
     if (!_available) {

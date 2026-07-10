@@ -133,8 +133,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   final LineMatcher _matcher = LineMatcher();
 
   /// 自分の番あたりの聞き取り自動再開の回数（無限再開を防ぐ）。
+  /// 無音待ち(pauseFor)を短くした分、話し始めまでマイクを生かすため多めに再開する。
   int _listenRestarts = 0;
-  static const _maxListenRestarts = 5;
+  static const _maxListenRestarts = 12;
 
   Script get s => widget.script;
 
