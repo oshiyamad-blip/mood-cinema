@@ -1,6 +1,7 @@
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/script.dart';
+import 'auto_voice.dart';
 import 'speech_engine.dart';
 
 /// 端末内蔵TTS（iOS AVSpeechSynthesizer / Android TextToSpeech）を
@@ -11,6 +12,9 @@ class DeviceSpeechEngine implements SpeechEngine {
   final String languageCode;
   final FlutterTts _tts = FlutterTts();
   bool _initialized = false;
+
+  /// 性別ごとの自動選択ボイス（毎行 getVoices しないためのキャッシュ）。
+  final Map<Gender, String?> _autoVoiceCache = {};
 
   Future<void> _ensureInit() async {
     if (_initialized) return;
@@ -23,27 +27,19 @@ class DeviceSpeechEngine implements SpeechEngine {
   @override
   Future<List<TtsVoice>> voices(String languageCode) async {
     await _ensureInit();
-    final raw = (await _tts.getVoices) as List<dynamic>?;
-    if (raw == null) return [];
-    final result = <TtsVoice>[];
-    for (final v in raw) {
-      final map = Map<String, dynamic>.from(v as Map);
-      final locale = (map['locale'] ?? '').toString();
-      if (!locale.toLowerCase().startsWith(languageCode.toLowerCase().split('-').first)) {
-        continue;
-      }
-      final name = (map['name'] ?? '').toString();
-      result.add(TtsVoice(id: name, name: name, gender: _guessGender(map)));
+    try {
+      return parseVoices(await _tts.getVoices, languageCode);
+    } catch (_) {
+      return [];
     }
-    return result;
   }
 
-  /// プラットフォームによっては gender 情報が無いため推測（ヒューリスティック）。
-  Gender? _guessGender(Map<String, dynamic> map) {
-    final g = (map['gender'] ?? '').toString().toLowerCase();
-    if (g.contains('male') && !g.contains('female')) return Gender.male;
-    if (g.contains('female')) return Gender.female;
-    return null;
+  /// 「自動（性別から選択）」用：性別に合う最も高音質な端末ボイスを返す。
+  /// 無ければ null（OS既定のまま）。
+  Future<String?> _autoVoiceIdFor(Gender gender) async {
+    if (_autoVoiceCache.containsKey(gender)) return _autoVoiceCache[gender];
+    final picked = pickAutoVoice(await voices(languageCode), gender);
+    return _autoVoiceCache[gender] = picked?.id;
   }
 
   /// 論理速度（0.5〜2.0）を flutter_tts の 0.0〜1.0 帯へマップする
@@ -59,8 +55,13 @@ class DeviceSpeechEngine implements SpeechEngine {
     await _tts.setSpeechRate(mapRate(profile.rate));
     await _tts.setPitch(profile.pitch.clamp(0.5, 2.0));
 
-    if (profile.voiceId != null && profile.voiceId!.isNotEmpty) {
-      await _tts.setVoice({'name': profile.voiceId!, 'locale': languageCode});
+    // 声：明示指定があればそれを、無ければ性別に合う高音質ボイスを自動選択
+    //（端末の拡張/プレミアム音声を無料で活かす）。
+    final voiceId = (profile.voiceId != null && profile.voiceId!.isNotEmpty)
+        ? profile.voiceId
+        : await _autoVoiceIdFor(profile.gender);
+    if (voiceId != null && voiceId.isNotEmpty) {
+      await _tts.setVoice({'name': voiceId, 'locale': languageCode});
     }
 
     // 一部のAndroid OEM TTSでは完了コールバックが発火しないことがあり、

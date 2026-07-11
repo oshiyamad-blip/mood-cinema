@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../billing/features.dart';
 import '../data/script_repository.dart';
 import '../models/script.dart';
+import '../speech/auto_voice.dart';
 import '../speech/device_speech_engine.dart';
 import '../speech/speech_engine.dart';
 import '../theme/app_theme.dart';
@@ -42,6 +43,8 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
   Future<void> _loadVoices() async {
     try {
       final v = await _engine.voices('ja-JP');
+      // 高音質（拡張/プレミアム等）を上に並べる。自動選択もこの先頭側を使う。
+      v.sort((a, b) => voiceQualityScore(b.id).compareTo(voiceQualityScore(a.id)));
       if (!mounted) return;
       setState(() {
         _voices = v;
@@ -81,6 +84,8 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                       AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xxl),
                   children: [
                     _voiceCountPill(),
+                    const SizedBox(height: AppSpacing.sm),
+                    _qualityHint(),
                     const SizedBox(height: AppSpacing.lg),
                     for (var i = 0; i < others.length; i++) ...[
                       _buildCharacter(s, others[i], i),
@@ -123,6 +128,35 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                   const TextSpan(text: '（オフライン・端末内蔵）'),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 声の質を無料で上げる方法の案内。
+  /// 端末に高音質ボイスが入っていれば自動で優先されるため、
+  /// ダウンロードだけで効果が出る。
+  Widget _qualityHint() {
+    final hasHq = _voices.any((v) => voiceQualityScore(v.id) >= 10);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.accent050,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, size: 16, color: AppColors.accent600),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              hasHq
+                  ? 'この端末には高音質ボイスがあります。「自動」のままで最も良い声を優先して使います。'
+                  : '声の質は無料で上げられます。iPhoneは「設定 > アクセシビリティ > 読み上げコンテンツ > 声 > 日本語」から拡張版をダウンロード、Androidは「Googleの音声サービス」を最新にしてください。ダウンロード後は自動で優先されます。',
+              style: AppText.caption,
             ),
           ),
         ],
@@ -219,7 +253,11 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
                       ...candidates.map(
                         (v) => DropdownMenuItem(
                             value: v.id,
-                            child: Text(v.name, overflow: TextOverflow.ellipsis)),
+                            child: Text(
+                                voiceQualityScore(v.id) >= 10
+                                    ? '${v.name}（高音質）'
+                                    : v.name,
+                                overflow: TextOverflow.ellipsis)),
                       ),
                     ],
                     onChanged: (v) => setState(() {

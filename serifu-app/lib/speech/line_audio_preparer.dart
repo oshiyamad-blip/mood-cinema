@@ -5,7 +5,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/script.dart';
+import 'auto_voice.dart';
 import 'device_speech_engine.dart';
+import 'speech_engine.dart';
 import 'speech_text.dart';
 
 /// 事前合成済み音声の参照（lineId → 音声ファイルパス）。
@@ -59,13 +61,31 @@ class LineAudioPreparer {
     final map = <String, String>{};
     var done = 0;
 
+    // 「自動（性別から選択）」の行に使う高音質ボイス（性別ごとに一度だけ解決）。
+    final autoVoiceByGender = <Gender, String?>{};
+    List<TtsVoice>? deviceVoices;
+    Future<String?> autoVoiceFor(Gender gender) async {
+      if (autoVoiceByGender.containsKey(gender)) return autoVoiceByGender[gender];
+      try {
+        deviceVoices ??= parseVoices(await _tts.getVoices, languageCode);
+      } catch (_) {
+        deviceVoices = [];
+      }
+      return autoVoiceByGender[gender] =
+          pickAutoVoice(deviceVoices!, gender)?.id;
+    }
+
     for (final line in targets) {
       final profile =
           line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
       await _tts.setSpeechRate(DeviceSpeechEngine.mapRate(profile.rate));
       await _tts.setPitch(profile.pitch.clamp(0.5, 2.0));
-      if (profile.voiceId != null && profile.voiceId!.isNotEmpty) {
-        await _tts.setVoice({'name': profile.voiceId!, 'locale': languageCode});
+      // 声：明示指定があればそれを、無ければ性別に合う高音質ボイスを自動選択。
+      final voiceId = (profile.voiceId != null && profile.voiceId!.isNotEmpty)
+          ? profile.voiceId
+          : await autoVoiceFor(profile.gender);
+      if (voiceId != null && voiceId.isNotEmpty) {
+        await _tts.setVoice({'name': voiceId, 'locale': languageCode});
       }
 
       final fullPath = '${dir.path}/line_${line.id}.$ext';
