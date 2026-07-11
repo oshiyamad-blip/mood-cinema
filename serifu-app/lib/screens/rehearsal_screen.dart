@@ -20,6 +20,7 @@ import '../speech/device_speech_engine.dart';
 import '../speech/line_audio_preparer.dart';
 import '../speech/speech_engine.dart';
 import '../speech/speech_recognizer.dart';
+import '../speech/speech_text.dart';
 import '../theme/app_theme.dart';
 import '../theme/role_colors.dart';
 import 'paywall_screen.dart';
@@ -80,7 +81,8 @@ class _PreparedLineSpeaker implements RehearsalLineSpeaker {
     } else {
       final profile =
           line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
-      await engine.speak(line.text, profile);
+      // （）内は演技指示なので声に出さない。
+      await engine.speak(speechText(line.text), profile);
     }
   }
 
@@ -345,7 +347,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _handsFreeSafetyTimer?.cancel();
     if (line == null) return;
     // 期待発話時間（1.5秒+150ms/字）の2倍＋4秒。8〜30秒にクランプ。
-    final expected = 1500 + line.text.length * 150;
+    // 声に出す部分の長さで見積もる（（）内の演技指示は読まれない）。
+    final expected = 1500 + speechText(line.text).length * 150;
     final budgetMs = (expected * 2 + 4000).clamp(8000, 30000);
     _handsFreeSafetyTimer = Timer(Duration(milliseconds: budgetMs), () {
       if (mounted &&
@@ -480,7 +483,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   Future<void> _startListening() async {
     final myLine = _c.currentLine;
-    final expected = myLine?.text ?? '';
+    // 照合は声に出す部分だけと比べる（（）内の演技指示は発話されない）。
+    final expected = speechText(myLine?.text ?? '');
     await _recognizer.start(
       // 既定はオンデバイス認識（プライバシー優先）。設定で高精度(クラウド)を許可。
       preferOnDevice: !SettingsStore.instance.settings.highAccuracyRecognition,

@@ -5,6 +5,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/script.dart';
+import 'device_speech_engine.dart';
+import 'speech_text.dart';
 
 /// 事前合成済み音声の参照（lineId → 音声ファイルパス）。
 class PreparedAudio {
@@ -50,7 +52,7 @@ class LineAudioPreparer {
       if (l.type == LineType.meta) return false;
       if (l.type == LineType.direction) return readDirections;
       return l.speaker != myCharacter;
-    }).where((l) => l.text.trim().isNotEmpty).toList();
+    }).where((l) => speechText(l.text).isNotEmpty).toList();
 
     final dir = await getTemporaryDirectory();
     final ext = Platform.isIOS ? 'caf' : 'wav';
@@ -60,7 +62,7 @@ class LineAudioPreparer {
     for (final line in targets) {
       final profile =
           line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
-      await _tts.setSpeechRate((profile.rate * 0.5).clamp(0.0, 1.0));
+      await _tts.setSpeechRate(DeviceSpeechEngine.mapRate(profile.rate));
       await _tts.setPitch(profile.pitch.clamp(0.5, 2.0));
       if (profile.voiceId != null && profile.voiceId!.isNotEmpty) {
         await _tts.setVoice({'name': profile.voiceId!, 'locale': languageCode});
@@ -68,7 +70,9 @@ class LineAudioPreparer {
 
       final fullPath = '${dir.path}/line_${line.id}.$ext';
       try {
-        final result = await _tts.synthesizeToFile(line.text, fullPath, true);
+        // （）内は演技指示なので声に出さない。
+        final result =
+            await _tts.synthesizeToFile(speechText(line.text), fullPath, true);
         if (result == 1 && await File(fullPath).exists()) {
           map[line.id] = fullPath;
           // 準備完了した行から順次使えるように通知（バックグラウンド準備用）。

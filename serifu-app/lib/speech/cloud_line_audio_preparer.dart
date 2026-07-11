@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/script.dart';
 import 'cloud_tts_client.dart';
 import 'line_audio_preparer.dart' show PreparedAudio;
+import 'speech_text.dart';
 
 /// クラウドTTSで相手役・ト書きの音声を事前合成し、mp3をキャッシュする。
 /// [LineAudioPreparer] と同じ入出力なので、リハーサル側で差し替えられる。
@@ -33,7 +34,7 @@ class CloudLineAudioPreparer {
       if (l.type == LineType.meta) return false;
       if (l.type == LineType.direction) return readDirections;
       return l.speaker != myCharacter;
-    }).where((l) => l.text.trim().isNotEmpty).toList();
+    }).where((l) => speechText(l.text).isNotEmpty).toList();
 
     final dir = await getTemporaryDirectory();
     final map = <String, String>{};
@@ -43,7 +44,7 @@ class CloudLineAudioPreparer {
       final profile =
           line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
       final bytes = await _client.synthesize(
-        text: line.text,
+        text: speechText(line.text), // （）内は演技指示なので声に出さない
         voice: CloudVoices.forProfile(profile),
         rate: profile.rate,
       );

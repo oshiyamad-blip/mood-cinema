@@ -121,6 +121,49 @@ void main() {
       );
     });
 
+    test('「？」で終わるセリフ：終助詞が認識で落ちても語尾で進む', () {
+      // 「〜の？」の「の」を認識が取りこぼした想定。
+      expect(
+        m.shouldAdvance(
+          expected: 'どこへ行くの？',
+          recognized: 'どこへ行く',
+          isFinal: false,
+        ),
+        isTrue,
+      );
+      // 「〜かな？」→ 終助詞2文字が落ちた想定。
+      expect(
+        m.shouldAdvance(
+          expected: '明日は晴れるかな？',
+          recognized: '明日は晴れる',
+          isFinal: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('「。」で終わる言い切り：終助詞ゆれでも語尾で進む', () {
+      expect(
+        m.shouldAdvance(
+          expected: 'もう寝るね。',
+          recognized: 'もう寝る',
+          isFinal: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('終助詞を除いても無関係な発話では進まない（誤進行の防止）', () {
+      expect(
+        m.shouldAdvance(
+          expected: '行くのか？',
+          recognized: 'そうだね',
+          isFinal: false,
+        ),
+        isFalse,
+      );
+    });
+
     test('認識が空なら進まない', () {
       expect(
         m.shouldAdvance(expected: 'おはよう', recognized: '', isFinal: true),

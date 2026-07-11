@@ -11,6 +11,7 @@ import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../parser/rule_based_parser.dart';
 import '../services/text_extractor.dart';
+import '../speech/speech_recognizer.dart';
 import '../theme/app_theme.dart';
 import 'script_detail_screen.dart';
 import 'script_edit_screen.dart';
@@ -29,6 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final _extractor = TextExtractor();
   final _parser = RuleBasedParser();
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // マイクはこのアプリの中核機能（ハンズフリー・通し録音）。
+    // 練習開始の直前に許可ダイアログで流れを止めないよう、起動時に
+    // まとめて許可を取っておく（許可済みなら何も表示されない）。
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SpeechRecognizer().init();
+      });
+    }
+  }
 
   Future<void> _import() async {
     // 完全無料＋広告モデル：台本数の制限なし。
