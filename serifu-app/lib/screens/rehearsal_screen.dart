@@ -156,7 +156,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   final CloudLineAudioPreparer _cloudPreparer = CloudLineAudioPreparer();
   final AudioPlayer _player = AudioPlayer();
   final ScrollController _scroll = ScrollController();
-  final _narrator = VoiceProfile(gender: Gender.female, rate: 1.0);
+  // ト書きの語り手。テンポは設定の既定速度に合わせる。
+  late final _narrator = VoiceProfile(
+    gender: Gender.female,
+    rate: SettingsStore.instance.settings.defaultRate,
+  );
 
   late final RehearsalController _c;
 

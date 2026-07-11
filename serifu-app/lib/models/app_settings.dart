@@ -4,7 +4,8 @@ import 'script.dart';
 class AppSettings {
   AppSettings({
     this.defaultGender = Gender.female,
-    this.defaultRate = 1.0,
+    // 読み合わせは会話としてやや速めが自然（実機フィードバックにより既定1.7x）。
+    this.defaultRate = 1.7,
     this.defaultReadDirections = true,
     this.autoAdvanceSeconds = 0, // 0 = 手動（自分の番で止まる）
     this.replyPauseMillis = 1000, // 自分のセリフ後、相手が返すまでの間（ms・既定1秒）
@@ -65,7 +66,7 @@ class AppSettings {
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
         defaultGender: Gender.values.byName((json['defaultGender'] as String?) ?? 'female'),
-        defaultRate: (json['defaultRate'] as num?)?.toDouble() ?? 1.0,
+        defaultRate: (json['defaultRate'] as num?)?.toDouble() ?? 1.7,
         defaultReadDirections: (json['defaultReadDirections'] as bool?) ?? true,
         autoAdvanceSeconds: (json['autoAdvanceSeconds'] as num?)?.toInt() ?? 0,
         replyPauseMillis: (json['replyPauseMillis'] as num?)?.toInt() ?? 1000,

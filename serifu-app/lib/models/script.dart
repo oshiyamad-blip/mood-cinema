@@ -17,14 +17,14 @@ enum Gender { male, female }
 class VoiceProfile {
   VoiceProfile({
     this.gender = Gender.female,
-    this.rate = 1.0,
+    this.rate = 1.7,
     this.pitch = 1.0,
     this.voiceId,
   });
 
   Gender gender;
 
-  /// 読み上げ速度（0.5〜2.0、既定1.0）。テンポ調整に使用。
+  /// 読み上げ速度（0.5〜2.0、既定1.7）。テンポ調整に使用。
   double rate;
 
   /// ピッチ（既定1.0）。
@@ -51,7 +51,7 @@ class VoiceProfile {
 
   factory VoiceProfile.fromJson(Map<String, dynamic> json) => VoiceProfile(
         gender: Gender.values.byName((json['gender'] as String?) ?? 'female'),
-        rate: (json['rate'] as num?)?.toDouble() ?? 1.0,
+        rate: (json['rate'] as num?)?.toDouble() ?? 1.7,
         pitch: (json['pitch'] as num?)?.toDouble() ?? 1.0,
         voiceId: json['voiceId'] as String?,
       );
