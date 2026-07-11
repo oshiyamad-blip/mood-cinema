@@ -80,8 +80,30 @@ class LineMatcher {
     final tail = ne.substring(ne.length - math.min(tailLength, ne.length));
     if (nr.contains(tail)) return true;
 
+    // 「〜の？」「〜だよね。」など疑問形・言い切りは、終助詞が認識で
+    // 落ちたり別表記になったりしやすい。終助詞を除いた語尾でも
+    // 言い終わりとみなす（短すぎる語尾は誤進行を避けるため使わない）。
+    final coreNe = _stripFinalParticles(ne);
+    if (coreNe.length >= 3 && coreNe.length < ne.length) {
+      final coreTail =
+          coreNe.substring(coreNe.length - math.min(tailLength, coreNe.length));
+      if (_stripFinalParticles(nr).contains(coreTail)) return true;
+    }
+
     final cov = coverage(expected, recognized);
     if (cov >= partialCoverageThreshold) return true; // だいたい言えている
     return isFinal && cov >= finalCoverageThreshold; // 確定なら大まかな一致で可
+  }
+
+  static const _finalParticles = {'か', 'の', 'ね', 'よ', 'な', 'わ', 'さ', 'ぞ', 'ぜ'};
+
+  /// 末尾の終助詞（最大2文字）を取り除く。
+  static String _stripFinalParticles(String s) {
+    var t = s;
+    for (var i = 0; i < 2 && t.isNotEmpty; i++) {
+      if (!_finalParticles.contains(t[t.length - 1])) break;
+      t = t.substring(0, t.length - 1);
+    }
+    return t;
   }
 }

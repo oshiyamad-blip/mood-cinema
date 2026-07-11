@@ -46,15 +46,18 @@ class DeviceSpeechEngine implements SpeechEngine {
     return null;
   }
 
+  /// 論理速度（0.5〜2.0）を flutter_tts の 0.0〜1.0 帯へマップする。
+  /// 台本の読み合わせは会話としてやや速めが自然、という実機フィードバックを
+  /// 受け、等速(1.0)の基準を従来の 0.5 から 0.57 に引き上げている。
+  static double mapRate(double rate) => (rate * 0.57).clamp(0.0, 1.0);
+
   @override
   Future<void> speak(String text, VoiceProfile profile) async {
     if (text.trim().isEmpty) return;
     await _ensureInit();
 
-    // テンポ（速度）。flutter_tts の rate は 0.0〜1.0 を基準にプラットフォーム差があるため、
-    // 0.5〜2.0 の論理値を 0.0〜1.0 帯へマップ（1.0 → 0.5 が等速の目安）。
-    final mappedRate = (profile.rate * 0.5).clamp(0.0, 1.0);
-    await _tts.setSpeechRate(mappedRate);
+    // テンポ（速度）。flutter_tts の rate は 0.0〜1.0 を基準にプラットフォーム差がある。
+    await _tts.setSpeechRate(mapRate(profile.rate));
     await _tts.setPitch(profile.pitch.clamp(0.5, 2.0));
 
     if (profile.voiceId != null && profile.voiceId!.isNotEmpty) {
