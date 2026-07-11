@@ -405,7 +405,7 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                '台本を取り込んで練習を始めましょう',
+                'まずは台本を取り込みましょう',
                 style: AppText.h2.copyWith(color: AppColors.ink900),
                 textAlign: TextAlign.center,
               ),

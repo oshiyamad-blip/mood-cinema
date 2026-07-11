@@ -243,6 +243,43 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+
+          // 台本の中身への導線（右上のアイコンだけでは気づかれないため）。
+          _section(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionHeading('台本の内容'),
+                const SizedBox(height: AppSpacing.xs),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary050,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: const Icon(Icons.menu_book_outlined,
+                        color: AppColors.primary),
+                  ),
+                  title: const Text('台本を読む・修正する'),
+                  subtitle: const Text('セリフとト書きの一覧。種別や話者もここで直せます'),
+                  trailing:
+                      const Icon(Icons.chevron_right, color: AppColors.ink300),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => ScriptEditScreen(script: s)),
+                    );
+                    ScriptRepository.instance.touch();
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.xl),
 
           // 練習開始：幅いっぱい。
