@@ -31,7 +31,7 @@ void main() {
   test('欠損キーは既定値にフォールバックする', () {
     final restored = AppSettings.fromJson(const {});
     expect(restored.defaultGender, Gender.female);
-    expect(restored.defaultRate, 1.0);
+    expect(restored.defaultRate, 1.7); // 既定はやや速め（実機フィードバック）
     expect(restored.defaultReadDirections, true);
     expect(restored.autoAdvanceSeconds, 0);
     expect(restored.replyPauseMillis, 1000); // 既定は1秒（返しの間）
