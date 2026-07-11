@@ -13,7 +13,7 @@ void main() {
     // AppBar タイトルと空状態メッセージが描画される。
     // （完全無料＋広告モデルのためアップグレード導線は無い。）
     expect(find.text('ホンヨミ'), findsOneWidget);
-    expect(find.text('台本を取り込んで練習を始めましょう'), findsOneWidget);
+    expect(find.text('まずは台本を取り込みましょう'), findsOneWidget);
     expect(find.byIcon(Icons.workspace_premium_outlined), findsNothing);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });

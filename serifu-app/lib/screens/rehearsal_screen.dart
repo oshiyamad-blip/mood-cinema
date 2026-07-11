@@ -259,6 +259,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _c.addListener(_onProgress);
     _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う
     _prepareAudio();
+
+    // 「練習開始」を押したらすぐ相手が読み始める（もう一度「再生」を
+    // 押させない）。事前合成は裏で進み、準備できた行から使われる。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_c.running && _c.phase == RehearsalPhase.idle && !_c.atEnd) {
+        _c.run();
+      }
+    });
   }
 
   @override
@@ -293,6 +301,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         _startHandsFreeSafetyNet(line);
       } else {
         _maybeStartAutoAdvance();
+        _maybeShowHandsFreeHint();
       }
     }
     if (phase != RehearsalPhase.waitingForUser) {
@@ -646,6 +655,43 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (mounted) setState(() {});
   }
 
+  /// ハンズフリーのON/OFF切替（アプリバーのマイクとヒントの両方から使う）。
+  Future<void> _toggleHandsFree() async {
+    // ハンズフリーは有料機能。未加入ならペイウォールへ。
+    if (!_handsFree && !Features.handsFree) {
+      final upgraded = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => const PaywallScreen(reason: 'ハンズフリー進行はプロの機能です'),
+        ),
+      );
+      if (!mounted || upgraded != true) return;
+    }
+    setState(() => _handsFree = !_handsFree);
+    if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
+      _listenForMyLine();
+      _startHandsFreeSafetyNet(_c.currentLine);
+    } else if (!_handsFree) {
+      _handsFreeSafetyTimer?.cancel();
+      _recognizer.stop();
+      _maybeStartAutoAdvance();
+    }
+  }
+
+  /// 初回だけ、自分の番でハンズフリーの存在を知らせる
+  /// （マイクアイコンだけでは気づかれないため）。
+  void _maybeShowHandsFreeHint() {
+    final store = SettingsStore.instance;
+    if (_handsFree || _c.listenMode || store.settings.seenHandsFreeHint) return;
+    store.update(store.settings.copyWith(seenHandsFreeHint: true));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: const Text('セリフを言うだけで進めたいときは、右上のマイクをONに'),
+        action: SnackBarAction(label: 'ONにする', onPressed: _toggleHandsFree),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final atEnd = _c.atEnd;
@@ -681,24 +727,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           ),
           IconButton(
             icon: Icon(_handsFree ? Icons.mic : Icons.mic_off),
-            tooltip: _handsFree ? 'ハンズフリー: ON' : 'ハンズフリー: OFF（プロ）',
-            onPressed: () async {
-              // ハンズフリーは有料機能。未加入ならペイウォールへ。
-              if (!_handsFree && !Features.handsFree) {
-                final upgraded = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => const PaywallScreen(reason: 'ハンズフリー進行はプロの機能です'),
-                  ),
-                );
-                if (!mounted || upgraded != true) return;
-              }
-              setState(() => _handsFree = !_handsFree);
-              if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
-                _listenForMyLine();
-              } else if (!_handsFree) {
-                _recognizer.stop();
-              }
-            },
+            tooltip: _handsFree
+                ? 'ハンズフリー: ON（セリフを言うと自動で進む）'
+                : 'ハンズフリー: OFF（タップでON）',
+            onPressed: _toggleHandsFree,
           ),
           IconButton(icon: const Icon(Icons.replay), onPressed: _restart, tooltip: '頭出し'),
         ],
