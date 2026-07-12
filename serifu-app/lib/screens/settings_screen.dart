@@ -272,6 +272,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: const Icon(Icons.gavel_outlined, size: 18),
             label: const Text('プライバシーポリシー・利用規約'),
           ),
+          // OSSライセンス表記（BSD/MIT等の帰属表示義務に対応）。
+          TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => showLicensePage(
+              context: context,
+              applicationName: 'ホンヨミ',
+              applicationLegalese: 'このアプリは以下のオープンソースソフトウェアを利用しています。',
+            ),
+            icon: const Icon(Icons.menu_book_outlined, size: 18),
+            label: const Text('オープンソースライセンス'),
+          ),
         ],
       ),
     );

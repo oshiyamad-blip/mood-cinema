@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- ハンズフリー進行の音声認識に使用 -->
+    <!-- ハンズフリー進行の音声認識と通し録音に使用 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- 課金(RevenueCat)・TTSボイスの追加DL等に使用 -->
     <uses-permission android:name="android.permission.INTERNET"/>
