@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/practice_log.dart';
 import '../data/script_repository.dart';
 import '../data/script_transfer.dart';
 import '../models/script.dart';
@@ -25,6 +26,20 @@ class ScriptDetailScreen extends StatefulWidget {
 
 class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
   Script get s => widget.script;
+
+  /// 練習の記録（進捗表示用。無ければセクション非表示）。
+  List<PracticeRecord> _records = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecords();
+  }
+
+  Future<void> _loadRecords() async {
+    final records = await PracticeLog().forScript(s.id);
+    if (mounted && records.isNotEmpty) setState(() => _records = records);
+  }
 
   /// 台本を .honyomi ファイルとして共有（バックアップ・共演者への受け渡し）。
   Future<void> _exportScript() async {
@@ -276,6 +291,12 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
+          // 練習の記録（進捗の実感）。
+          if (_records.isNotEmpty) ...[
+            _section(child: _progressSection()),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
           // 台本の中身への導線（右上のアイコンだけでは気づかれないため）。
           _section(
             child: Column(
@@ -332,6 +353,66 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 練習の記録：回数・直近の仕上がり・推移のミニバー。
+  Widget _progressSection() {
+    final fullRuns = _records.where((r) => r.isFullRun).toList();
+    final latest = fullRuns.isNotEmpty ? fullRuns.last : null;
+    final recent =
+        fullRuns.length > 10 ? fullRuns.sublist(fullRuns.length - 10) : fullRuns;
+    final last = _records.last.at;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeading('練習の記録'),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Text('${_records.length}回練習', style: AppText.body),
+            const SizedBox(width: AppSpacing.lg),
+            if (latest != null)
+              Text(
+                '直近の仕上がり ${latest.score}%',
+                style: AppText.body.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary600,
+                ),
+              ),
+          ],
+        ),
+        if (recent.length >= 2) ...[
+          const SizedBox(height: AppSpacing.md),
+          // 通し稽古ごとの仕上がり推移（左が古い）。
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (final r in recent) ...[
+                Container(
+                  width: 14,
+                  height: 8 + r.score * 0.32,
+                  decoration: BoxDecoration(
+                    color: r == recent.last
+                        ? AppColors.primary
+                        : AppColors.primary100,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              const SizedBox(width: AppSpacing.sm),
+              Text('仕上がりの推移', style: AppText.caption),
+            ],
+          ),
+        ],
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          '最終練習: ${last.month}/${last.day} '
+          '${last.hour}:${last.minute.toString().padLeft(2, '0')}',
+          style: AppText.caption,
+        ),
+      ],
     );
   }
 
