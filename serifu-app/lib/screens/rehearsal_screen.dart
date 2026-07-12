@@ -15,6 +15,7 @@ import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../rehearsal/line_matcher.dart';
+import '../rehearsal/memorize_mask.dart';
 import '../rehearsal/rehearsal_controller.dart';
 import '../rehearsal/take_recorder.dart';
 import '../speech/cloud_line_audio_preparer.dart';
@@ -180,8 +181,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   // ハンズフリーの安全ネット：認識が失敗しても、この時間で必ず相手が返る
   // （「言ったのに声が返ってこない」を構造的に防ぐ最後の砦）。
   Timer? _handsFreeSafetyTimer;
-  bool _showScript = true; // false = 暗記モード
-  bool _peek = false; // 暗記モードでのチラ見
+  /// 台本の表示段階。覚えかけの時期のために「全部見える」と「全部隠す」の
+  /// 間（自分だけ伏せ字／頭文字ヒント）を用意する。
+  _ScriptView _view = _ScriptView.full;
+  bool _peek = false; // 伏せ字/暗記でのチラ見（現在行だけ一時的に表示）
   String _heard = '';
   RehearsalPhase _lastPhase = RehearsalPhase.idle;
   int _lastIndex = 0;
@@ -209,6 +212,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   /// 通し本読み（実際の声＋掛け合いの間）。あればTTS・既定の間より優先。
   ReadThroughData? _readThrough;
   String? _readThroughAudio;
+
+  /// 通し録音の「間」のテンポ倍率（テンポ稽古用・この練習の間だけ有効）。
+  /// 1.0=録音どおり、0.8=間を2割詰める、1.2=2割広げる。
+  double _gapScale = 1.0;
 
   /// 自分のセリフの自動録音（聞き返し用・ハンズフリーOFF時のみ）。
   /// ハンズフリー中は音声認識がマイクを使うため録音できない。
@@ -256,15 +263,19 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       // 無音検出で確定した進行では、検出に使った時間（≈0.5秒）が既に
       // 経過しているため差し引く（語尾一致の即進行や手動ボタンでは差し引かない）。
       replyPauseProvider: (next) {
-        final total = _readThrough?.gapBeforeMs(next.id) ??
-            SettingsStore.instance.settings.replyPauseMillis;
+        final recorded = _readThrough?.gapBeforeMs(next.id);
+        final total = recorded != null
+            ? (recorded * _gapScale).round()
+            : SettingsStore.instance.settings.replyPauseMillis;
         return Duration(
           milliseconds: (total - _advanceSilenceMs).clamp(0, total),
         );
       },
-      // 相手同士の行間は、通し録音の間をそのまま再現（無ければ従来どおり間なし）。
-      lineGapProvider: (next) =>
-          Duration(milliseconds: _readThrough?.gapBeforeMs(next.id) ?? 0),
+      // 相手同士の行間は、通し録音の間を再現（テンポ倍率つき。無ければ間なし）。
+      lineGapProvider: (next) => Duration(
+        milliseconds:
+            ((_readThrough?.gapBeforeMs(next.id) ?? 0) * _gapScale).round(),
+      ),
     );
     _c.addListener(_onProgress);
     _prepared = PreparedAudio(_preparedMap); // 準備済みの行から順次使う
@@ -338,7 +349,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   /// 台本表示モードで現在行へ自動スクロール（テレプロンプター追従）。
   void _scrollToCurrent() {
-    if (!_showScript) return;
+    if (_view == _ScriptView.memorize) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
       final ctx = _lineKey(_c.index).currentContext;
@@ -676,6 +687,24 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                     setSheet(() {});
                   },
                 ),
+                // 通し録音の間のテンポ（テンポ稽古：録音した間を詰める/広げる）
+                if (_readThrough != null) ...[
+                  Text(
+                    '間のテンポ：×${_gapScale.toStringAsFixed(1)}'
+                    '${_gapScale == 1.0 ? '（録音どおり）' : _gapScale < 1.0 ? '（詰める）' : '（広げる）'}',
+                    style: AppText.body,
+                  ),
+                  Slider(
+                    min: 0.5,
+                    max: 1.5,
+                    divisions: 10,
+                    value: _gapScale,
+                    onChanged: (v) {
+                      setState(() => _gapScale = v);
+                      setSheet(() {});
+                    },
+                  ),
+                ],
                 // 自動進行（手動モードで自分の番を自動で送る）
                 Text(
                   settings.autoAdvanceSeconds == 0
@@ -717,6 +746,36 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   /// ハンズフリーのON/OFF切替（アプリバーのマイクとヒントの両方から使う）。
   Future<void> _toggleHandsFree() async {
+    // Web版はブラウザの音声認識＝発話がブラウザ提供元のサーバで処理される。
+    // 端末内処理のネイティブ版と違うため、初回に明示的に同意を取る。
+    if (!_handsFree && kIsWeb) {
+      final store = SettingsStore.instance;
+      if (!store.settings.acceptedWebSpeech) {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Web版のハンズフリーについて'),
+            content: const Text(
+              'Web版ではブラウザの音声認識を使うため、発話した音声が'
+              'ブラウザ提供元（Apple/Google等）のサーバで処理されることがあります。\n\n'
+              'アプリ版（iOS/Android）では可能な限り端末内で認識します。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('やめておく'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('同意して使う'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true || !mounted) return;
+        store.update(store.settings.copyWith(acceptedWebSpeech: true));
+      }
+    }
     // ハンズフリーは有料機能。未加入ならペイウォールへ。
     if (!_handsFree && !Features.handsFree) {
       final upgraded = await Navigator.of(context).push<bool>(
@@ -808,7 +867,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           ),
           _buildModeSwitch(),
           if (_preparing) _buildPreparingBanner(),
-          Expanded(child: _showScript ? _buildScriptView() : _buildMemorizeView()),
+          Expanded(
+              child: _view == _ScriptView.memorize
+                  ? _buildMemorizeView()
+                  : _buildScriptView()),
           if (waiting) _buildYourTurnBanner(),
           if (atEnd) _buildEndBanner(),
           _buildControls(atEnd),
@@ -820,15 +882,25 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   Widget _buildModeSwitch() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: SegmentedButton<bool>(
+      child: SegmentedButton<_ScriptView>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
         segments: const [
-          ButtonSegment(value: true, label: Text('台本表示'), icon: Icon(Icons.menu_book, size: 18)),
-          ButtonSegment(value: false, label: Text('暗記'), icon: Icon(Icons.visibility_off, size: 18)),
+          ButtonSegment(value: _ScriptView.full, label: Text('台本')),
+          ButtonSegment(value: _ScriptView.maskMine, label: Text('伏せ字')),
+          ButtonSegment(value: _ScriptView.hintMine, label: Text('頭文字')),
+          ButtonSegment(value: _ScriptView.memorize, label: Text('暗記')),
         ],
-        selected: {_showScript},
+        selected: {_view},
         onSelectionChanged: (set) {
-          setState(() => _showScript = set.first);
-          if (set.first) _scrollToCurrent();
+          setState(() {
+            _view = set.first;
+            _peek = false;
+          });
+          if (_view != _ScriptView.memorize) _scrollToCurrent();
         },
       ),
     );
@@ -879,7 +951,25 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         final isDirection = l.type == LineType.direction;
         final isMeta = l.type == LineType.meta;
 
-        return Container(
+        // 自分のセリフの表示テキスト（伏せ字/頭文字。チラ見中の現在行は素の文）。
+        final masked = mine && !(_peek && current);
+        final displayText = switch (_view) {
+          _ScriptView.maskMine when masked => maskLine(l.text),
+          _ScriptView.hintMine when masked => maskLine(l.text, revealFirst: true),
+          _ => l.text,
+        };
+        final maskable = mine &&
+            current &&
+            (_view == _ScriptView.maskMine || _view == _ScriptView.hintMine);
+
+        return GestureDetector(
+          onTap: maskable
+              ? () => setState(() {
+                    _peek = !_peek;
+                    if (_peek) _recorder.onPeek(); // チラ見はつまずき推定に使う
+                  })
+              : null,
+          child: Container(
           key: current ? _lineKey(i) : null,
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -907,7 +997,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                   child: _speakerBadge(l.speaker ?? '', mine),
                 ),
               Text(
-                l.text,
+                displayText,
                 style: isMeta
                     ? AppText.body.copyWith(color: AppColors.ink300, fontSize: 12)
                     : isDirection
@@ -918,7 +1008,16 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                             fontWeight: current ? FontWeight.w700 : FontWeight.w500,
                           ),
               ),
+              if (maskable)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _peek ? 'タップで隠す' : 'タップでチラ見',
+                    style: AppText.caption.copyWith(color: AppColors.accent600),
+                  ),
+                ),
             ],
+          ),
           ),
         );
       },
@@ -1029,10 +1128,18 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
                       fontWeight: FontWeight.w800, color: AppColors.accent600)),
             ],
           ),
-          // 暗記モードでは本文を出さない（チラ見で確認）。
-          if (line != null && _showScript) ...[
+          // 暗記では本文を出さない（チラ見で確認）。伏せ字/頭文字はその形で出す。
+          if (line != null && _view != _ScriptView.memorize) ...[
             const SizedBox(height: 4),
-            Text(line.text, textAlign: TextAlign.center, style: AppText.body),
+            Text(
+              switch (_view) {
+                _ScriptView.maskMine => maskLine(line.text),
+                _ScriptView.hintMine => maskLine(line.text, revealFirst: true),
+                _ => line.text,
+              },
+              textAlign: TextAlign.center,
+              style: AppText.body,
+            ),
           ],
           if (_handsFree) ...[
             const SizedBox(height: 6),
@@ -1141,7 +1248,11 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
               )
             else
               FilledButton.icon(
-                onPressed: atEnd ? null : _c.run,
+                // 自分の番は「言えた・次へ」で進める（ここで run すると
+                // 聞き取りや録音のターン開始処理が二重に走るため無効化）。
+                onPressed: atEnd || _c.phase == RehearsalPhase.waitingForUser
+                    ? null
+                    : _c.run,
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('再生'),
               ),
@@ -1151,4 +1262,12 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       ),
     );
   }
+}
+
+/// 台本の表示段階（覚えかけ→暗記への階段）。
+enum _ScriptView {
+  full, // 全部見える
+  maskMine, // 自分のセリフだけ伏せ字（リズムの手がかりは残す）
+  hintMine, // 自分のセリフは頭文字だけ
+  memorize, // 全部隠す（舞台ダーク）
 }
