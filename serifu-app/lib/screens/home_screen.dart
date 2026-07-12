@@ -167,10 +167,17 @@ class _HomeScreenState extends State<HomeScreen> {
         animation: _repo,
         builder: (context, _) {
           final scripts = _repo.scripts;
+          // 空でも同じ構造：トップは常に「練習する／台本を取り込む」の2択。
+          // 台本が無ければ「練習する」の先でサンプル台本に繋がる。
           if (scripts.isEmpty) {
-            return _EmptyState(
-              onImport: _busy ? null : _import,
-              onSample: _busy ? null : _openSample,
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 120),
+              children: [
+                _quickActions(scripts),
+                const SizedBox(height: AppSpacing.lg),
+                const _EmptyState(),
+              ],
             );
           }
           return ListView.separated(
@@ -220,14 +227,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// ホーム最上部の2択：「練習をつづける」／「台本を取り込む」。
+  /// ホーム最上部の2択：「練習する」／「台本を取り込む」。
+  /// 台本が無いときは「練習する」の先でサンプル台本に繋がる。
   Widget _quickActions(List<Script> scripts) {
     // 直近に触った台本（練習した日時が新しいもの、無ければ取り込みが新しいもの）。
-    final recent = scripts.reduce((a, b) {
-      final at = a.lastPracticedAt ?? a.importedAt;
-      final bt = b.lastPracticedAt ?? b.importedAt;
-      return at.isAfter(bt) ? a : b;
-    });
+    final recent = scripts.isEmpty
+        ? null
+        : scripts.reduce((a, b) {
+            final at = a.lastPracticedAt ?? a.importedAt;
+            final bt = b.lastPracticedAt ?? b.importedAt;
+            return at.isAfter(bt) ? a : b;
+          });
     // IntrinsicHeight で左右のカードの高さを揃える
     // （ListView内のRowにstretchを直接使うと高さが無限になり描画例外になる）。
     return IntrinsicHeight(
@@ -239,12 +249,15 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.play_arrow_rounded,
               iconBg: AppColors.primary,
               iconFg: Colors.white,
-              title: '練習をつづける',
-              subtitle: recent.title,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => ScriptDetailScreen(script: recent)),
-              ),
+              title: recent == null ? '練習する' : '練習をつづける',
+              subtitle: recent?.title ?? 'サンプル台本で体験',
+              onTap: recent == null
+                  ? (_busy ? null : _openSample)
+                  : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                ScriptDetailScreen(script: recent)),
+                      ),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -495,11 +508,9 @@ class _Avatar extends StatelessWidget {
   }
 }
 
+/// 台本が無いときの説明カード（操作は上の2択カードに集約済み）。
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({this.onImport, this.onSample});
-
-  final VoidCallback? onImport;
-  final VoidCallback? onSample;
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -530,8 +541,15 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                '練習する台本を用意しましょう',
+                '台本はまだありません',
                 style: AppText.h2.copyWith(color: AppColors.ink900),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '上の「練習する」でサンプル台本をすぐ体験できます。\n'
+                '自分の台本で練習するときは「台本を取り込む」から。',
+                style: AppText.body,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -539,24 +557,6 @@ class _EmptyState extends StatelessWidget {
                 kIsWeb
                     ? 'Web版：PDF（テキスト埋込）/ Word(docx) / TXT に対応\n台本はこのブラウザに保存されます（写真のOCRはモバイル版のみ）'
                     : 'PDF / Word(docx) / 画像・写真 / TXT に対応\n（台本は端末内でのみ処理されます）',
-                style: AppText.caption,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton.icon(
-                onPressed: onImport,
-                icon: const Icon(Icons.add),
-                label: const Text('台本を取り込む'),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FilledButton.tonalIcon(
-                onPressed: onSample,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('サンプル台本で試す'),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                '手元に台本が無くても、サンプルですぐ体験できます',
                 style: AppText.caption,
                 textAlign: TextAlign.center,
               ),
