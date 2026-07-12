@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:record/record.dart';
 
+import '../audio/my_take_store.dart';
 import '../audio/read_through.dart';
 import '../audio/read_through_store.dart';
 import '../billing/features.dart';
@@ -207,6 +209,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   ReadThroughData? _readThrough;
   String? _readThroughAudio;
 
+  /// 自分のセリフの自動録音（聞き返し用・ハンズフリーOFF時のみ）。
+  /// ハンズフリー中は音声認識がマイクを使うため録音できない。
+  final AudioRecorder _myRecorder = AudioRecorder();
+  final MyTakeStore _myTakes = MyTakeStore();
+  String? _recordingLineId;
+  bool _myTakesCleared = false; // 直近1回分だけ保持（初回録音時に前回分を消す）
+
   Script get s => widget.script;
 
   /// この練習で使う行（部分練習なら focusLines、通常は台本全体）。
@@ -277,6 +286,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     _recognizer.dispose();
     _preparer.dispose();
     _cloudPreparer.dispose();
+    _stopMyLineRecording();
+    _myRecorder.dispose();
     _player.dispose();
     _scroll.dispose();
     _autoAdvanceTimer?.cancel();
@@ -302,11 +313,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       } else {
         _maybeStartAutoAdvance();
         _maybeShowHandsFreeHint();
+        _startMyLineRecording(line);
       }
     }
     if (phase != RehearsalPhase.waitingForUser) {
       _autoAdvanceTimer?.cancel();
       _handsFreeSafetyTimer?.cancel();
+      _stopMyLineRecording();
     }
     // 最後まで通せたらリザルト画面へ（広告は練習が終わったこの後だけ）。
     if (phase == RehearsalPhase.finished && !_navigatedToResult) {
@@ -370,6 +383,34 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         _advanceMine(auto: true); // 相手が返る
       }
     });
+  }
+
+  /// 自分の番の自動録音を開始（聞き返し用）。
+  /// 録音できなくても練習は止めない。Web・ハンズフリー中・設定OFFでは何もしない。
+  Future<void> _startMyLineRecording(Line? line) async {
+    if (kIsWeb || line == null || _handsFree) return;
+    if (!SettingsStore.instance.settings.recordMyLines) return;
+    try {
+      if (!await _myRecorder.hasPermission()) return;
+      if (!_myTakesCleared) {
+        _myTakesCleared = true;
+        await _myTakes.clear(s.id); // 直近の練習1回分だけを保持
+      }
+      final path = await _myTakes.pathFor(s.id, line.id);
+      await _myRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+      _recordingLineId = line.id;
+    } catch (_) {}
+  }
+
+  Future<void> _stopMyLineRecording() async {
+    if (_recordingLineId == null) return;
+    _recordingLineId = null;
+    try {
+      await _myRecorder.stop();
+    } catch (_) {}
   }
 
   /// 自分の番：設定の自動進行秒数が正なら、その後に自動で次へ。
@@ -526,6 +567,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   Future<void> _pause() async {
     _autoAdvanceTimer?.cancel();
     _handsFreeSafetyTimer?.cancel();
+    await _stopMyLineRecording();
     await _recognizer.stop();
     await _c.pause();
   }
@@ -668,12 +710,16 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     }
     setState(() => _handsFree = !_handsFree);
     if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
+      await _stopMyLineRecording(); // 認識とマイクを取り合わない
       _listenForMyLine();
       _startHandsFreeSafetyNet(_c.currentLine);
     } else if (!_handsFree) {
       _handsFreeSafetyTimer?.cancel();
       _recognizer.stop();
       _maybeStartAutoAdvance();
+      if (_c.phase == RehearsalPhase.waitingForUser) {
+        _startMyLineRecording(_c.currentLine);
+      }
     }
   }
 

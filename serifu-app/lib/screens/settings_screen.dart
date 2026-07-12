@@ -38,6 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: AppSpacing.md),
           _replyPauseSection(),
           const SizedBox(height: AppSpacing.md),
+          _myTakeSection(),
+          const SizedBox(height: AppSpacing.md),
           _recognitionSection(),
           // クラウド音声は自前エンドポイントを設定したビルドでのみ表示
           // （通常ビルドでは費用のかかる外部APIは一切使わない）。
@@ -47,6 +49,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
           const SizedBox(height: AppSpacing.md),
           _privacySection(),
+        ],
+      ),
+    );
+  }
+
+  /// 自分のセリフの自動録音（聞き返し）。
+  Widget _myTakeSection() {
+    final s = _store.settings;
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading('自分のセリフの録音'),
+          const SizedBox(height: AppSpacing.xs),
+          SwitchListTile(
+            title: const Text('自分の番を自動で録音する'),
+            subtitle: const Text(
+              '練習後に「つまずいた行」から自分の演技を聞き返せます'
+              '（手動進行のときのみ。録音は端末内・直近1回分だけ保持）',
+            ),
+            value: s.recordMyLines,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) => _save(s.copyWith(recordMyLines: v)),
+          ),
         ],
       ),
     );
