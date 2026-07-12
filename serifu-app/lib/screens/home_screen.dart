@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
 import '../audio/read_through_store.dart';
+import '../data/sample_script.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
@@ -51,7 +52,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: const [
-          'pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'bmp',
+          'pdf',
+          'docx',
+          'txt',
+          'jpg',
+          'jpeg',
+          'png',
+          'heic',
+          'heif',
+          'webp',
+          'bmp',
         ],
         // Webはファイルパスを持たないため bytes で受け取る（モバイルは従来通りパス）。
         withData: kIsWeb,
@@ -88,7 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // 既定の声を各役に適用（あとで個別変更可）。
         voiceByCharacter: {
           for (final c in parsed.characters)
-            c: VoiceProfile(gender: settings.defaultGender, rate: settings.defaultRate),
+            c: VoiceProfile(
+                gender: settings.defaultGender, rate: settings.defaultRate),
         },
       );
       _repo.add(script);
@@ -99,7 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         if (mounted) {
           await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ScriptDetailScreen(script: script)),
+            MaterialPageRoute(
+                builder: (_) => ScriptDetailScreen(script: script)),
           );
         }
       }
@@ -110,6 +122,18 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// サンプル台本で練習体験へ（既にあれば同じものを開く）。
+  Future<void> _openSample() async {
+    final existing =
+        _repo.scripts.where((sc) => sc.title == sampleScriptTitle).toList();
+    final script = existing.isNotEmpty ? existing.first : buildSampleScript();
+    if (existing.isEmpty) _repo.add(script);
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ScriptDetailScreen(script: script)),
+    );
+    if (mounted) setState(() {});
   }
 
   void _snack(String msg) {
@@ -144,7 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, _) {
           final scripts = _repo.scripts;
           if (scripts.isEmpty) {
-            return _EmptyState(onImport: _busy ? null : _import);
+            return _EmptyState(
+              onImport: _busy ? null : _import,
+              onSample: _busy ? null : _openSample,
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(
@@ -157,16 +184,25 @@ class _HomeScreenState extends State<HomeScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, i) {
               if (i == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: Text('${scripts.length}件の台本', style: AppText.caption),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _quickActions(scripts),
+                    const SizedBox(height: AppSpacing.lg),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Text('${scripts.length}件の台本 — 選んで練習',
+                          style: AppText.caption),
+                    ),
+                  ],
                 );
               }
               final s = scripts[i - 1];
               return _ScriptCard(
                 script: s,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ScriptDetailScreen(script: s)),
+                  MaterialPageRoute(
+                      builder: (_) => ScriptDetailScreen(script: s)),
                 ),
                 onDelete: () {
                   _repo.remove(s.id);
@@ -183,9 +219,97 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _busy ? null : _import,
         icon: _busy
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.add),
         label: const Text('台本を取り込む'),
+      ),
+    );
+  }
+
+  /// ホーム最上部の2択：「練習をつづける」／「台本を取り込む」。
+  Widget _quickActions(List<Script> scripts) {
+    // 直近に触った台本（練習した日時が新しいもの、無ければ取り込みが新しいもの）。
+    final recent = scripts.reduce((a, b) {
+      final at = a.lastPracticedAt ?? a.importedAt;
+      final bt = b.lastPracticedAt ?? b.importedAt;
+      return at.isAfter(bt) ? a : b;
+    });
+    // IntrinsicHeight で左右のカードの高さを揃える
+    // （ListView内のRowにstretchを直接使うと高さが無限になり描画例外になる）。
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _actionCard(
+              icon: Icons.play_arrow_rounded,
+              iconBg: AppColors.primary,
+              iconFg: Colors.white,
+              title: '練習をつづける',
+              subtitle: recent.title,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => ScriptDetailScreen(script: recent)),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: _actionCard(
+              icon: Icons.add,
+              iconBg: AppColors.accent050,
+              iconFg: AppColors.accent600,
+              title: '台本を取り込む',
+              subtitle: kIsWeb ? 'PDF / Word / TXT' : 'PDF / Word / 写真',
+              onTap: _busy ? null : _import,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionCard({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconFg,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(icon, color: iconFg, size: 22),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(title,
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style: AppText.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -333,7 +457,9 @@ class _RoleAvatars extends StatelessWidget {
             Positioned(
               left: i * 20.0,
               child: _Avatar(
-                label: shown[i].characters.isEmpty ? '?' : shown[i].characters.first,
+                label: shown[i].characters.isEmpty
+                    ? '?'
+                    : shown[i].characters.first,
                 colors: _palette[i % _palette.length],
               ),
             ),
@@ -372,9 +498,10 @@ class _Avatar extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({this.onImport});
+  const _EmptyState({this.onImport, this.onSample});
 
   final VoidCallback? onImport;
+  final VoidCallback? onSample;
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +532,7 @@ class _EmptyState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'まずは台本を取り込みましょう',
+                '練習する台本を用意しましょう',
                 style: AppText.h2.copyWith(color: AppColors.ink900),
                 textAlign: TextAlign.center,
               ),
@@ -422,6 +549,18 @@ class _EmptyState extends StatelessWidget {
                 onPressed: onImport,
                 icon: const Icon(Icons.add),
                 label: const Text('台本を取り込む'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton.tonalIcon(
+                onPressed: onSample,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('サンプル台本で試す'),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '手元に台本が無くても、サンプルですぐ体験できます',
+                style: AppText.caption,
+                textAlign: TextAlign.center,
               ),
             ],
           ),
