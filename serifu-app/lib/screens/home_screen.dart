@@ -216,16 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // 広告はホーム下部の小さなバナー1枠のみ（練習画面には出さない）。
       // 未読込・読込失敗時は高さ0でレイアウトに影響しない。
       bottomNavigationBar: const AdBanner(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _busy ? null : _import,
-        icon: _busy
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.add),
-        label: const Text('台本を取り込む'),
-      ),
+      // 「台本を取り込む」は上部の2択カード（空状態はカード内ボタン）に一本化。
     );
   }
 
@@ -278,6 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color iconFg,
     required String title,
     required String subtitle,
+    bool busy = false,
     VoidCallback? onTap,
   }) {
     return Card(
@@ -297,7 +289,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: iconBg,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: Icon(icon, color: iconFg, size: 22),
+                child: busy
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: iconFg),
+                      )
+                    : Icon(icon, color: iconFg, size: 22),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(title,
