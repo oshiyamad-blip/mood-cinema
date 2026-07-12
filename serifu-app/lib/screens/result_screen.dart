@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
 import '../audio/my_take_store.dart';
+import '../data/practice_log.dart';
 import '../models/script.dart';
 import '../rehearsal/take_recorder.dart';
 import '../theme/app_theme.dart';
@@ -20,11 +21,15 @@ class ResultScreen extends StatefulWidget {
     required this.duration,
     required this.listenMode,
     this.stuck = const [],
+    this.focus = false,
   });
 
   final Script script;
   final Duration duration;
   final bool listenMode;
+
+  /// 部分練習（つまずいた行だけ）だったか。前回比の表示判定に使う。
+  final bool focus;
 
   /// 詰まった可能性の高いセリフ（確度順）。聞き流しモードでは常に空。
   final List<StuckLine> stuck;
@@ -39,6 +44,9 @@ class _ResultScreenState extends State<ResultScreen> {
   bool get listenMode => widget.listenMode;
   List<StuckLine> get stuck => widget.stuck;
 
+  /// 前回の通し稽古との比較（今回が通し稽古で、前回の記録があるときのみ）。
+  ({PracticeRecord latest, PracticeRecord previous})? _comparison;
+
   /// この練習で自動録音された自分のセリフ（lineId → パス）。
   Map<String, String> _myTakes = {};
   final AudioPlayer _takePlayer = AudioPlayer();
@@ -50,6 +58,16 @@ class _ResultScreenState extends State<ResultScreen> {
     MyTakeStore().loadAll(script.id).then((map) {
       if (mounted && map.isNotEmpty) setState(() => _myTakes = map);
     });
+    // 前回比（今回の記録は練習終了時に追記済み＝最新が今回）。
+    if (!widget.listenMode && !widget.focus) {
+      PracticeLog().forScript(script.id).then((records) {
+        final runs = latestFullRuns(records);
+        final prev = runs?.previous;
+        if (mounted && runs != null && prev != null) {
+          setState(() => _comparison = (latest: runs.latest, previous: prev));
+        }
+      });
+    }
     _takePlayer.onPlayerComplete.listen((_) {
       if (mounted) setState(() => _playingLineId = null);
     });
@@ -130,6 +148,10 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ],
           ),
+          if (_comparison != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _ComparisonCard(comparison: _comparison!),
+          ],
           if (stuck.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xl),
             _StuckSection(
@@ -174,6 +196,53 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
       // 練習終了後のみ。ホームと同じ無視できるバナー（読み込み失敗時は高さ0）。
       bottomNavigationBar: const AdBanner(),
+    );
+  }
+}
+
+/// 前回の通し稽古との比較（進捗の実感を作る）。
+class _ComparisonCard extends StatelessWidget {
+  const _ComparisonCard({required this.comparison});
+
+  final ({PracticeRecord latest, PracticeRecord previous}) comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = comparison.latest;
+    final prev = comparison.previous;
+    final improved = latest.score >= prev.score;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: improved
+            ? AppColors.success.withValues(alpha: 0.08)
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: improved
+              ? AppColors.success.withValues(alpha: 0.5)
+              : AppColors.line,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            improved ? Icons.trending_up : Icons.trending_flat,
+            color: improved ? AppColors.success : AppColors.ink500,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              '前回の通し稽古と比べて: '
+              '仕上がり ${prev.score}% → ${latest.score}% ・ '
+              'つまずき ${prev.stuckCount} → ${latest.stuckCount}行',
+              style: AppText.body,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

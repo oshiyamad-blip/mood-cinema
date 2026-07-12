@@ -10,6 +10,7 @@ import '../audio/my_take_store.dart';
 import '../audio/read_through.dart';
 import '../audio/read_through_store.dart';
 import '../billing/features.dart';
+import '../data/practice_log.dart';
 import '../data/script_repository.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
@@ -602,6 +603,22 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
 
   /// 練習完了 → リザルト画面へ差し替え遷移（戻るで台本詳細に戻れる）。
   Future<void> _goToResult() async {
+    // 進捗の可視化用に1回分を記録（失敗しても遷移は続行）。
+    final stuckList = _recorder.stuckLines();
+    final myLines = _lines
+        .where((l) => l.type == LineType.dialogue && l.speaker == s.myCharacter)
+        .length;
+    await PracticeLog().add(
+      s.id,
+      PracticeRecord(
+        at: DateTime.now(),
+        durationSec: DateTime.now().difference(_startedAt).inSeconds,
+        stuckCount: stuckList.length,
+        myLineCount: myLines,
+        listenMode: _c.listenMode,
+        focus: widget.focusLines != null,
+      ),
+    );
     await _recognizer.stop();
     // 最後のセリフの余韻をひと呼吸だけ待つ。
     await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -613,6 +630,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
           duration: DateTime.now().difference(_startedAt),
           listenMode: _c.listenMode,
           stuck: _recorder.stuckLines(),
+          focus: widget.focusLines != null,
         ),
       ),
     );

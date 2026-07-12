@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
 import '../audio/read_through_store.dart';
+import '../data/practice_log.dart';
 import '../data/sample_script.dart';
 import '../data/script_repository.dart';
 import '../data/script_transfer.dart';
@@ -243,6 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onDelete: () {
                   _repo.remove(s.id);
                   ReadThroughStore().deleteAll(s.id); // 通し録音も一緒に消す
+                  PracticeLog().remove(s.id); // 練習記録も一緒に消す
                 },
               );
             },
