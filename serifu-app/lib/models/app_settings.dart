@@ -13,6 +13,7 @@ class AppSettings {
     this.highAccuracyRecognition = false, // 音声認識にクラウドを許可（精度優先）
     this.seenHandsFreeHint = false, // ハンズフリーの初回ヒントを表示済みか
     this.recordMyLines = true, // 自分のセリフを自動録音（聞き返し用）
+    this.acceptedWebSpeech = false, // Web版ハンズフリーの説明に同意済みか
   });
 
   /// 新規台本の相手役に適用する既定の声。
@@ -43,6 +44,9 @@ class AppSettings {
   /// （ハンズフリーOFF時のみ動作。録音は端末内・直近1回分のみ保持）。
   bool recordMyLines;
 
+  /// Web版ハンズフリー（ブラウザの音声認識＝外部処理）の説明に同意済みか。
+  bool acceptedWebSpeech;
+
   AppSettings copyWith({
     Gender? defaultGender,
     double? defaultRate,
@@ -53,6 +57,7 @@ class AppSettings {
     bool? highAccuracyRecognition,
     bool? seenHandsFreeHint,
     bool? recordMyLines,
+    bool? acceptedWebSpeech,
   }) {
     return AppSettings(
       defaultGender: defaultGender ?? this.defaultGender,
@@ -64,6 +69,7 @@ class AppSettings {
       highAccuracyRecognition: highAccuracyRecognition ?? this.highAccuracyRecognition,
       seenHandsFreeHint: seenHandsFreeHint ?? this.seenHandsFreeHint,
       recordMyLines: recordMyLines ?? this.recordMyLines,
+      acceptedWebSpeech: acceptedWebSpeech ?? this.acceptedWebSpeech,
     );
   }
 
@@ -77,6 +83,7 @@ class AppSettings {
         'highAccuracyRecognition': highAccuracyRecognition,
         'seenHandsFreeHint': seenHandsFreeHint,
         'recordMyLines': recordMyLines,
+        'acceptedWebSpeech': acceptedWebSpeech,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -89,5 +96,6 @@ class AppSettings {
         highAccuracyRecognition: (json['highAccuracyRecognition'] as bool?) ?? false,
         seenHandsFreeHint: (json['seenHandsFreeHint'] as bool?) ?? false,
         recordMyLines: (json['recordMyLines'] as bool?) ?? true,
+        acceptedWebSpeech: (json['acceptedWebSpeech'] as bool?) ?? false,
       );
 }
