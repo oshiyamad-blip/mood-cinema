@@ -19,7 +19,7 @@
 		</dict>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>セリフ練習でのハンズフリー進行に音声を使用します。</string>
+	<string>セリフ練習のハンズフリー進行と、本読みの通し録音にマイクを使用します。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>自分のセリフの言い終わりを判定するために音声認識を使用します。</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
