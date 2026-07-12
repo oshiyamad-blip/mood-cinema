@@ -164,6 +164,46 @@ void main() {
       );
     });
 
+    test('長ゼリフは部分結果の被覆率だけでは早進みしない（言い切る前に被らない）', () {
+      const long = '私はあの日、海辺の街で君と出会ってから、ずっと同じ夢を見続けているんだよ';
+      // 8割ほど言えた部分結果 → まだ進まない（従来0.7なら進んでいた）。
+      expect(
+        m.shouldAdvance(
+          expected: long,
+          recognized: '私はあの日海辺の街で君と出会ってからずっと同じ夢を',
+          isFinal: false,
+        ),
+        isFalse,
+      );
+      // 言い切れば語尾一致で進む。
+      expect(
+        m.shouldAdvance(
+          expected: long,
+          recognized: '私はあの日海辺の街で君と出会ってからずっと同じ夢を見続けているんだよ',
+          isFinal: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('前半＋後半を合わせた蓄積照合で、途中の間があっても進める', () {
+      // セリフ途中の間で一度確定→再開後に後半だけ認識された想定。
+      // 呼び出し側は前半を蓄積して結合済みテキストで照合する。
+      const expected = 'うん、オーディションがあるんだ。だから今日は早く帰るね';
+      const firstHalf = 'うんオーディションがあるんだ';
+      const secondHalf = 'だから今日は早く帰るね';
+      // 後半だけでは（語尾一致するのでこの例は進むが）被覆率は不足し得る。
+      // 結合すれば確実に進む。
+      expect(
+        m.shouldAdvance(
+          expected: expected,
+          recognized: '$firstHalf $secondHalf',
+          isFinal: true,
+        ),
+        isTrue,
+      );
+    });
+
     test('認識が空なら進まない', () {
       expect(
         m.shouldAdvance(expected: 'おはよう', recognized: '', isFinal: true),

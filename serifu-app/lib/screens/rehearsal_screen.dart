@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 
 import '../audio/my_take_store.dart';
+import '../audio/prepared_line_speaker.dart';
 import '../audio/read_through.dart';
 import '../audio/read_through_store.dart';
 import '../billing/features.dart';
@@ -47,110 +48,6 @@ class RehearsalScreen extends StatefulWidget {
 
   @override
   State<RehearsalScreen> createState() => _RehearsalScreenState();
-}
-
-/// 事前合成済みの音声を再生する読み上げ器。
-/// 合成が無い行は端末TTSでライブ合成する。
-/// 再生完了は audioplayers の状態イベントで待つ（ポーリングしない）。
-class _PreparedLineSpeaker implements RehearsalLineSpeaker {
-  _PreparedLineSpeaker({
-    required this.player,
-    required this.engine,
-    required this.narrator,
-    required this.voiceFor,
-    required this.preparedGetter,
-    required this.readThroughGetter,
-  });
-
-  final AudioPlayer player;
-  final SpeechEngine engine;
-  final VoiceProfile narrator;
-  final VoiceProfile Function(String character) voiceFor;
-  final PreparedAudio? Function() preparedGetter;
-
-  /// 通し本読み（実際の声）。区間のある行はTTSより優先して再生する。
-  final ({ReadThroughData data, String audioPath})? Function() readThroughGetter;
-
-  @override
-  Future<void> speakLine(Line line) async {
-    final rt = readThroughGetter();
-    final seg = rt?.data.segmentFor(line.id);
-    if (rt != null && seg != null && seg.hasVoice) {
-      await _playSegment(rt.audioPath, seg);
-      return;
-    }
-    final path = preparedGetter()?.pathFor(line.id);
-    if (path != null) {
-      await _playFile(path);
-    } else {
-      final profile =
-          line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
-      // （）内は演技指示なので声に出さない。
-      await engine.speak(speechText(line.text), profile);
-    }
-  }
-
-  Future<void> _playFile(String path) async {
-    final done = Completer<void>();
-    // completed（再生終了）または stopped（stop()による中断）で解決する。
-    // 進行は逐次実行なので、前の再生の残留イベントを拾う心配はない。
-    final sub = player.onPlayerStateChanged.listen((st) {
-      if (st == PlayerState.completed || st == PlayerState.stopped) {
-        if (!done.isCompleted) done.complete();
-      }
-    });
-    try {
-      await player.play(DeviceFileSource(path));
-      // 壊れた/空の録音ファイル等で完了イベントが来ないと永久に待ってしまう。
-      // 安全弁として上限時間で必ず解決し、次の行へ進める。
-      // このとき再生も止める（鳴らしっぱなしのままマイクと重ならないように）。
-      await done.future.timeout(const Duration(seconds: 30), onTimeout: () async {
-        await player.stop();
-      });
-    } finally {
-      await sub.cancel();
-    }
-  }
-
-  /// 通し録音のうち1行分の区間だけを再生する。
-  /// 終端は位置イベント（精密）とタイマー（保険）の二重で止める。
-  Future<void> _playSegment(String path, ReadThroughSegment seg) async {
-    final done = Completer<void>();
-    final sub = player.onPlayerStateChanged.listen((st) {
-      if (st == PlayerState.completed || st == PlayerState.stopped) {
-        if (!done.isCompleted) done.complete();
-      }
-    });
-    final posSub = player.onPositionChanged.listen((p) {
-      if (p.inMilliseconds >= seg.endMs) player.stop();
-    });
-    // シークや再生開始のもたつき分の余裕をみたタイマー保険。
-    final guard = Timer(Duration(milliseconds: seg.durationMs + 800), () {
-      player.stop();
-    });
-    try {
-      await player.play(
-        DeviceFileSource(path),
-        position: Duration(milliseconds: seg.startMs),
-      );
-      await done.future.timeout(
-        Duration(milliseconds: seg.durationMs + 5000),
-        onTimeout: () async {
-          await player.stop();
-        },
-      );
-    } finally {
-      guard.cancel();
-      await posSub.cancel();
-      await sub.cancel();
-    }
-  }
-
-  @override
-  Future<void> stop() async {
-    await player.stop(); // stopped イベントで _playFile が解決する
-    await engine.stop();
-  }
 }
 
 class _RehearsalScreenState extends State<RehearsalScreen> {
@@ -200,6 +97,14 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   /// 聞き取り再開の予約中フラグ（'notListening' と 'done' の二重カウント防止）。
   bool _restartPending = false;
 
+  /// この番でこれまでに確定した認識テキスト（セッション再開を跨いで蓄積）。
+  /// 途中で間を取って認識が確定しても、前半＋後半を合わせて照合できる。
+  String _turnHeard = '';
+
+  /// この番での認識エラー回数（高精度認識への切替提案に使う）。
+  int _listenErrors = 0;
+  bool _suggestedHighAccuracy = false;
+
   /// 言い終わり（無音）を検知するまでの待ち時間。
   /// 「話し終わってからトータル約1秒で返す」ため短く固定し、返しの間から差し引く。
   static const _silenceDetectMillis = 500;
@@ -244,7 +149,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       lines: _lines,
       myCharacter: s.myCharacter,
       readDirections: s.readDirections,
-      speaker: _PreparedLineSpeaker(
+      speaker: PreparedLineSpeaker(
         player: _player,
         engine: _engine,
         narrator: _narrator,
@@ -316,7 +221,9 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     // 自分の番に入った瞬間：聞き取り or 自動進行タイマーを開始。
     if (phase == RehearsalPhase.waitingForUser && _lastPhase != phase) {
       _heard = '';
+      _turnHeard = '';
       _listenRestarts = 0;
+      _listenErrors = 0;
       final line = _c.currentLine;
       if (line != null) _recorder.onMyTurnStart(line);
       if (_handsFree) {
@@ -521,6 +428,10 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     // （台本と一致しないまま確定した場合も聞き直す）。
     _recognizer.onStatus = (status) {
       if (!mounted || !_handsFree || _c.phase != RehearsalPhase.waitingForUser) return;
+      if (status == 'error') {
+        _listenErrors++;
+        _maybeSuggestHighAccuracy();
+      }
       final ended = status == 'done' || status == 'notListening' || status == 'error';
       // 1回のセッション終了で 'notListening' と 'done' が連続して届くことがある。
       // 二重に数えると再開回数が実質半減するため、再開予約中は無視する。
@@ -547,6 +458,35 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     await _startListening();
   }
 
+  /// 認識エラーが続く端末（オンデバイス認識非対応など）では、
+  /// 高精度認識（OSのクラウド認識）への切替を一度だけ提案する。
+  void _maybeSuggestHighAccuracy() {
+    final store = SettingsStore.instance;
+    if (_suggestedHighAccuracy ||
+        _listenErrors < 3 ||
+        store.settings.highAccuracyRecognition) {
+      return;
+    }
+    _suggestedHighAccuracy = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 8),
+        content: const Text('音声認識がうまく動かないようです。高精度認識（OSの認識サービス）に切り替えますか？'),
+        action: SnackBarAction(
+          label: '切り替える',
+          onPressed: () {
+            store.update(
+                store.settings.copyWith(highAccuracyRecognition: true));
+            if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
+              _listenRestarts = 0;
+              _startListening();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _startListening() async {
     final myLine = _c.currentLine;
     // 照合は声に出す部分だけと比べる（（）内の演技指示は発話されない）。
@@ -561,16 +501,22 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         // 前の行あての残留結果は無視（自分のセリフが連続すると
         // 停止直前のセッションから確定結果が遅れて届くことがある）。
         if (!identical(_c.currentLine, myLine)) return;
-        setState(() => _heard = text);
+        // セッション再開を跨いで発話を蓄積して照合する（セリフ途中で間を
+        // 取って認識が一度確定しても、前半＋後半を合わせて判定できる）。
+        final combined = _turnHeard.isEmpty ? text : '$_turnHeard $text';
+        setState(() => _heard = combined);
         // 発話中は安全ネットを張り直す（長ゼリフや芝居の間で、
         // まだ言っている最中に相手が返ってしまわないように）。
         if (text.isNotEmpty) _startHandsFreeSafetyNet(myLine);
         // 台本セリフと照合：語尾一致なら部分結果でも即進む。
         // 一致が弱いままの確定（雑音・言い直し）は進まず聞き直す。
-        if (_matcher.shouldAdvance(expected: expected, recognized: text, isFinal: isFinal)) {
+        if (_matcher.shouldAdvance(
+            expected: expected, recognized: combined, isFinal: isFinal)) {
           // 確定結果＝無音検出（約0.5秒）を経ている。部分結果＝言い終わりの
           // 瞬間なので無音は経過していない。返しの間の差し引きに使う。
           _advanceMine(silenceElapsedMs: isFinal ? _silenceDetectMillis : 0);
+        } else if (isFinal && text.isNotEmpty) {
+          _turnHeard = combined; // 未達の確定は蓄積して聞き直す
         }
       },
     );

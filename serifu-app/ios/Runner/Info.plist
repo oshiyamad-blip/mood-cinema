@@ -18,6 +18,11 @@
 			<string>cstr6suwn9.skadnetwork</string>
 		</dict>
 	</array>
+	<!-- 聞き流しモードを画面オフ/バックグラウンドでも再生し続けるため -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>セリフ練習のハンズフリー進行と、本読みの通し録音にマイクを使用します。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
