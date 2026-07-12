@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../data/script_repository.dart';
+import '../data/script_transfer.dart';
 import '../models/script.dart';
 import '../theme/app_theme.dart';
 import 'read_through_screen.dart';
@@ -20,6 +25,25 @@ class ScriptDetailScreen extends StatefulWidget {
 
 class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
   Script get s => widget.script;
+
+  /// 台本を .honyomi ファイルとして共有（バックアップ・共演者への受け渡し）。
+  Future<void> _exportScript() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/${ScriptTransfer.fileNameFor(s)}';
+      await File(path).writeAsString(ScriptTransfer.encode(s));
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(path, mimeType: 'application/json')],
+        text: '台本「${s.title}」（ホンヨミ形式・アプリの「台本を取り込む」で開けます）',
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('書き出しできませんでした。')),
+        );
+      }
+    }
+  }
 
   /// セクション見出し：左に4pxのインディゴバー＋太字。
   Widget _sectionHeading(String text, {Widget? trailing}) {
@@ -82,6 +106,13 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
       appBar: AppBar(
         title: Text(s.title),
         actions: [
+          // 書き出し（機種変バックアップ・共演者への共有）。モバイルのみ。
+          if (!kIsWeb)
+            IconButton(
+              icon: const Icon(Icons.ios_share),
+              tooltip: '台本を書き出す（共有・バックアップ）',
+              onPressed: _exportScript,
+            ),
           IconButton(
             icon: const Icon(Icons.edit_note),
             tooltip: '解析結果を修正',

@@ -1,3 +1,4 @@
+import 'dart:convert' show utf8;
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -8,6 +9,7 @@ import '../ads/ads.dart';
 import '../audio/read_through_store.dart';
 import '../data/sample_script.dart';
 import '../data/script_repository.dart';
+import '../data/script_transfer.dart';
 import '../data/settings_store.dart';
 import '../models/script.dart';
 import '../parser/rule_based_parser.dart';
@@ -52,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: const [
+          'honyomi', // ホンヨミ形式（書き出した台本の読み込み）
           'pdf',
           'docx',
           'txt',
@@ -68,6 +71,30 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       final picked = result?.files.single;
       if (picked == null) return;
+
+      // ホンヨミ形式（書き出した台本）はそのまま復元（解析不要）。
+      if (picked.name.toLowerCase().endsWith('.${ScriptTransfer.fileExtension}')) {
+        final String content;
+        if (kIsWeb) {
+          final bytes = picked.bytes;
+          if (bytes == null) return;
+          content = utf8.decode(bytes);
+        } else {
+          final path = picked.path;
+          if (path == null) return;
+          content = await File(path).readAsString();
+        }
+        final script = ScriptTransfer.decode(content);
+        _repo.add(script);
+        _snack('台本「${script.title}」を読み込みました。');
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => ScriptDetailScreen(script: script)),
+          );
+        }
+        return;
+      }
 
       final String raw;
       if (kIsWeb) {
@@ -115,6 +142,8 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
       }
+    } on FormatException catch (e) {
+      _snack('読み込めませんでした: ${e.message}');
     } on UnsupportedError catch (e) {
       _snack(e.message ?? '未対応の形式です。');
     } catch (e) {
