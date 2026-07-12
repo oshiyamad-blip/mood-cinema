@@ -21,20 +21,22 @@
 
 ■ 主な機能
 ・台本の自動解析：役名・セリフ・ト書きを自動で判別（手動修正もかんたん）
-・相手役の読み上げ：役ごとに男性/女性・テンポを調整。ト書きの読み上げON/OFF
-・待たない稽古：相手役の音声は先に準備。あなたが言い終えた瞬間に返ってきます
-・返しの間：相手が返すまでの「間」を0〜3秒で調整
-・台本表示モード：読み上げに合わせて現在のセリフへ自動スクロール
-・暗記モード：台本を隠して稽古。思い出せない時だけ「チラ見」
-・ハンズフリー（プロ）：あなたのセリフの言い終わりを検知して自動で進行
+・相手役の読み上げ：役ごとに男性/女性・テンポ。端末の高音質ボイスを自動選択
+・ハンズフリー：言い終わりを検知して、会話のテンポで相手が返ってきます
+・通し録音：共演者との本読みをまるごと録音。実際の声と「間」のまま練習
+・自分の声の聞き返し：つまずいたセリフの自分の演技をリザルトでチェック
+・つまずき検出＆部分練習：詰まった行だけを反復
+・練習の記録：仕上がり度と前回比で上達が見える
+・暗記サポート4段階：台本 → 伏せ字 → 頭文字 → 暗記（チラ見つき）
+・台本の書き出し/読み込み：バックアップや共演者への共有に
 
 ■ 台本は端末の外に出ません
-台本の解析・読み上げはすべて端末内で処理。サーバに送信されず、
+台本の解析・読み上げ・録音はすべて端末内で処理。サーバに送信されず、
 AIの学習に使われることもありません。安心して未発表の台本をお使いください。
 
-■ 無料ではじめて、必要ならプロへ
-無料：台本3件まで・読み上げ・両モードなど基本機能
-プロ（サブスクリプション）：台本無制限／ハンズフリー進行／声モデル選択 など
+■ 全機能無料
+すべての機能を無料で使えます。無料提供のため、練習中以外の画面
+（ホーム・練習結果）にだけ小さなバナー広告を表示します。
 ```
 
 ## Description (English)
@@ -46,18 +48,22 @@ and the app reads every other character's lines aloud.
 
 FEATURES
 • Automatic script parsing: roles, dialogue, and stage directions (easy manual fixes)
-• Scene partner playback: per-role voice (male/female) and tempo; toggle stage directions
-• Zero-wait rehearsal: partner lines are pre-synthesized and answer instantly
-• Reply pause: add a 0–3s beat before your partner responds
-• Script view with auto-scroll, or Memorize mode that hides the text (with peek)
-• Hands-free (Pro): detects when you finish your line and continues automatically
+• Scene partner playback: per-role voice and tempo; picks your device's best voice
+• Hands-free: detects when you finish your line and replies at conversation speed
+• Table-read recording: record a real read-through and rehearse with the real
+  voices — and the real pauses
+• Listen back: replay your own delivery of the lines you stumbled on
+• Stumble detection & focused drills on just the lines you missed
+• Progress tracking: readiness score and run-over-run comparison
+• 4-stage memorization: full script → masked → first-letter hints → hidden
+• Export / import scripts for backup or sharing with scene partners
 
 YOUR SCRIPT STAYS ON YOUR DEVICE
-Parsing and speech run entirely on-device. Scripts are never uploaded
-and never used to train AI.
+Parsing, speech, and recordings run entirely on-device. Scripts are never
+uploaded and never used to train AI.
 
-Free: up to 3 scripts and all core features.
-Pro (subscription): unlimited scripts, hands-free mode, voice model selection.
+Completely free. A small banner ad appears only outside practice
+(home and results screens) — never during rehearsal.
 ```
 
 ## キーワード（iOS 100字以内）

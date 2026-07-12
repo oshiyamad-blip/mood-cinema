@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/script.dart';
@@ -21,6 +24,21 @@ class DeviceSpeechEngine implements SpeechEngine {
     await _tts.setLanguage(languageCode);
     // speak() が完了するまで await できるようにする。
     await _tts.awaitSpeakCompletion(true);
+    // iOS: 再生カテゴリの共有オーディオセッションにする。
+    // 聞き流しモードを画面オフ/バックグラウンド（UIBackgroundModes=audio）でも
+    // 続けられ、本体横の消音スイッチでも音が出る。
+    if (!kIsWeb && Platform.isIOS) {
+      try {
+        await _tts.setSharedInstance(true);
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [IosTextToSpeechAudioCategoryOptions.mixWithOthers],
+          IosTextToSpeechAudioMode.spokenAudio,
+        );
+      } catch (_) {
+        // セッション設定に失敗しても読み上げ自体は続行できる。
+      }
+    }
     _initialized = true;
   }
 

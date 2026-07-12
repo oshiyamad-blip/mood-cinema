@@ -91,9 +91,17 @@ class LineMatcher {
     }
 
     final cov = coverage(expected, recognized);
-    if (cov >= partialCoverageThreshold) return true; // だいたい言えている
+    // 長ゼリフは部分結果の被覆率だけで進むと「言い切る前に相手が被る」ため、
+    // 文が長いほど部分進行の要求を上げる（30文字以上は9割）。
+    final partialThr =
+        ne.length >= longLineChars ? longLinePartialThreshold : partialCoverageThreshold;
+    if (cov >= partialThr) return true; // だいたい言えている
     return isFinal && cov >= finalCoverageThreshold; // 確定なら大まかな一致で可
   }
+
+  /// これ以上の長さ（正規化後）のセリフは部分進行の閾値を引き上げる。
+  static const longLineChars = 30;
+  static const longLinePartialThreshold = 0.9;
 
   static const _finalParticles = {'か', 'の', 'ね', 'よ', 'な', 'わ', 'さ', 'ぞ', 'ぜ'};
 
