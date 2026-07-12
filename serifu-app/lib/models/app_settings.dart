@@ -12,6 +12,7 @@ class AppSettings {
     this.useCloudVoices = false, // クラウド高品質音声（Pro・要設定）
     this.highAccuracyRecognition = false, // 音声認識にクラウドを許可（精度優先）
     this.seenHandsFreeHint = false, // ハンズフリーの初回ヒントを表示済みか
+    this.recordMyLines = true, // 自分のセリフを自動録音（聞き返し用）
   });
 
   /// 新規台本の相手役に適用する既定の声。
@@ -38,6 +39,10 @@ class AppSettings {
   /// 練習画面でハンズフリーの初回ヒントを出したか（1回だけ出す）。
   bool seenHandsFreeHint;
 
+  /// 自分の番の音声を自動録音してリザルトで聞き返せるようにするか
+  /// （ハンズフリーOFF時のみ動作。録音は端末内・直近1回分のみ保持）。
+  bool recordMyLines;
+
   AppSettings copyWith({
     Gender? defaultGender,
     double? defaultRate,
@@ -47,6 +52,7 @@ class AppSettings {
     bool? useCloudVoices,
     bool? highAccuracyRecognition,
     bool? seenHandsFreeHint,
+    bool? recordMyLines,
   }) {
     return AppSettings(
       defaultGender: defaultGender ?? this.defaultGender,
@@ -57,6 +63,7 @@ class AppSettings {
       useCloudVoices: useCloudVoices ?? this.useCloudVoices,
       highAccuracyRecognition: highAccuracyRecognition ?? this.highAccuracyRecognition,
       seenHandsFreeHint: seenHandsFreeHint ?? this.seenHandsFreeHint,
+      recordMyLines: recordMyLines ?? this.recordMyLines,
     );
   }
 
@@ -69,6 +76,7 @@ class AppSettings {
         'useCloudVoices': useCloudVoices,
         'highAccuracyRecognition': highAccuracyRecognition,
         'seenHandsFreeHint': seenHandsFreeHint,
+        'recordMyLines': recordMyLines,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -80,5 +88,6 @@ class AppSettings {
         useCloudVoices: (json['useCloudVoices'] as bool?) ?? false,
         highAccuracyRecognition: (json['highAccuracyRecognition'] as bool?) ?? false,
         seenHandsFreeHint: (json['seenHandsFreeHint'] as bool?) ?? false,
+        recordMyLines: (json['recordMyLines'] as bool?) ?? true,
       );
 }

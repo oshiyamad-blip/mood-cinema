@@ -1,6 +1,8 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
+import '../audio/my_take_store.dart';
 import '../models/script.dart';
 import '../rehearsal/take_recorder.dart';
 import '../theme/app_theme.dart';
@@ -11,7 +13,7 @@ import 'rehearsal_screen.dart';
 /// 広告ポリシー：練習「中」ではなくなったこの画面にのみ、
 /// ホームと同じ控えめなバナーを下部に1枠置く（無視して操作できる配置。
 /// ボタン群とは離し、読み込めない場合は何も出ない）。
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   const ResultScreen({
     super.key,
     required this.script,
@@ -26,6 +28,56 @@ class ResultScreen extends StatelessWidget {
 
   /// 詰まった可能性の高いセリフ（確度順）。聞き流しモードでは常に空。
   final List<StuckLine> stuck;
+
+  @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> {
+  Script get script => widget.script;
+  Duration get duration => widget.duration;
+  bool get listenMode => widget.listenMode;
+  List<StuckLine> get stuck => widget.stuck;
+
+  /// この練習で自動録音された自分のセリフ（lineId → パス）。
+  Map<String, String> _myTakes = {};
+  final AudioPlayer _takePlayer = AudioPlayer();
+  String? _playingLineId;
+
+  @override
+  void initState() {
+    super.initState();
+    MyTakeStore().loadAll(script.id).then((map) {
+      if (mounted && map.isNotEmpty) setState(() => _myTakes = map);
+    });
+    _takePlayer.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingLineId = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _takePlayer.dispose();
+    super.dispose();
+  }
+
+  /// 自分の演技の再生/停止（つまずいた行の聞き返し）。
+  Future<void> _togglePlay(String lineId) async {
+    if (_playingLineId == lineId) {
+      await _takePlayer.stop();
+      setState(() => _playingLineId = null);
+      return;
+    }
+    final path = _myTakes[lineId];
+    if (path == null) return;
+    await _takePlayer.stop();
+    setState(() => _playingLineId = lineId);
+    try {
+      await _takePlayer.play(DeviceFileSource(path));
+    } catch (_) {
+      if (mounted) setState(() => _playingLineId = null);
+    }
+  }
 
   String get _durationLabel {
     final m = duration.inMinutes;
@@ -80,7 +132,12 @@ class ResultScreen extends StatelessWidget {
           ),
           if (stuck.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xl),
-            _StuckSection(stuck: stuck),
+            _StuckSection(
+              stuck: stuck,
+              myTakes: _myTakes,
+              playingLineId: _playingLineId,
+              onTogglePlay: _togglePlay,
+            ),
             const SizedBox(height: AppSpacing.md),
             // つまずいた行＋直前のキューだけを反復する部分練習。
             FilledButton.tonalIcon(
@@ -151,9 +208,19 @@ class _StatCard extends StatelessWidget {
 
 /// 「詰まったかも」一覧。芝居の間との区別は完全ではないため断定しない。
 class _StuckSection extends StatelessWidget {
-  const _StuckSection({required this.stuck});
+  const _StuckSection({
+    required this.stuck,
+    required this.myTakes,
+    required this.playingLineId,
+    required this.onTogglePlay,
+  });
 
   final List<StuckLine> stuck;
+
+  /// 自分のセリフの自動録音（lineId → パス）。あれば行に再生ボタンを出す。
+  final Map<String, String> myTakes;
+  final String? playingLineId;
+  final void Function(String lineId) onTogglePlay;
 
   String _reasonLabel(StuckReason r) => switch (r) {
         StuckReason.peeked => 'チラ見',
