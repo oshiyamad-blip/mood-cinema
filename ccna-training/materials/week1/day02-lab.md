@@ -65,6 +65,7 @@
 ```
 Router(config)# hostname R1
 R1(config)# enable secret cisco123
+R1(config)# enable password cisco456
 R1(config)# banner motd #Authorized access only#
 ```
 
@@ -133,6 +134,7 @@ Admin-PC のロールオーバーケーブルを SW1 の Console ポートへつ
 ```
 Switch(config)# hostname SW1
 SW1(config)# enable secret cisco123
+SW1(config)# enable password cisco456
 SW1(config)# banner motd #Authorized access only#
 SW1(config)# line console 0
 SW1(config-line)# password consolepw
@@ -183,15 +185,17 @@ R1・SW1・SW2 それぞれで設定を保存します。
 copy running-config startup-config
 ```
 
-SW1 で `show running-config` を実行し、`enable secret` や `line` 配下の `password`
-の表示を確認したら、続けて次のコマンドを実行して差分を観察します。
+SW1 で `show running-config` を実行し、`enable password`・`enable secret`・
+`line` 配下の `password` の表示を確認したら、続けて次のコマンドを実行して差分を
+観察します。
 
 ```
 SW1(config)# service password-encryption
 ```
 
-再度 `show running-config` を実行し、コンソール/VTY の `password` の表示が
-どう変化したか、また `enable secret` の行に変化があったかを記録します。
+再度 `show running-config` を実行し、`enable password` とコンソール/VTY の
+`password` の表示がどう変化したか、また `enable secret` の行に変化があったかを
+記録します。
 
 ## 手順 12: PC の IP 設定と疎通確認（10 分）
 

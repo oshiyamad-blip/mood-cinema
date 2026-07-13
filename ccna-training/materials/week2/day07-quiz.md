@@ -62,13 +62,27 @@ VLAN30 を追加で許可したい。正しいコマンドはどれか。
 - C. `switchport trunk allowed vlan add 30`
 - D. `switchport trunk allowed vlan none 30`
 
-**Q8.** DTP のポートモードのうち、`dynamic auto` 同士を接続した場合の結果は
-どれか。
+**Q8.** SW1 のポートを `dynamic desirable`、SW2 のポートを `dynamic auto`
+に設定して接続したところトランクが成立した。この状態で SW1 の
+`show interfaces trunk` を実行すると、次の出力が得られた。
 
-- A. トランクが成立する
-- B. アクセスポートのままになる
-- C. リンクがダウンする
-- D. 自動的に `dynamic desirable` に変わる
+```
+Port      Mode         Encapsulation  Status        Native vlan
+Fa0/24    desirable    802.1q         trunking      99
+
+Port      Vlans allowed on trunk
+Fa0/24    10,20
+```
+
+この出力から読み取れる記述として正しいものはどれか。
+
+- A. `dynamic desirable` と `dynamic auto` の組み合わせではトランクは成立
+  しないため、この出力はあり得ない
+- B. トランクは成立しており、ネイティブ VLAN は 99、VLAN30 のトラフィックは
+  このトランクを通過できない
+- C. トランクは成立しているが、ネイティブ VLAN は既定値の VLAN1 のままである
+- D. Status が `trunking` であっても、Mode が `desirable` のままでは実際には
+  アクセスポートとして動作している
 
 **Q9.** 未使用ポートやエンドユーザー端末を接続するアクセスポートに対して、
 DTP の悪用によるトランク乗っ取りを防ぐための設定として最も適切なものは
@@ -96,7 +110,7 @@ DTP の悪用によるトランク乗っ取りを防ぐための設定として�
 | Q5 | D | ネイティブ VLAN 不一致は CDP により検出され `%CDP-4-NATIVE_VLAN_MISMATCH` ログが出力される。異なる VLAN 間でトラフィックが漏れる VLAN リークも起こり得る |
 | Q6 | B | 2960 は 802.1Q 専用機のため `switchport trunk encapsulation` コマンド自体が存在せず、`switchport mode trunk` のみで設定できる。encapsulation 指定が必要なのは 3560 など ISL/dot1q 両対応機 |
 | Q7 | C | 既存の許可 VLAN リストに追加するには `add` キーワードが必須。`add` を付けずに実行するとリストが上書きされ、既存の VLAN10・VLAN20 が許可から外れてしまう |
-| Q8 | B | `dynamic auto` はどちらも相手からの要求を待つ受け身のモードのため、両者が `auto` の組み合わせではトランクは成立せずアクセスポートのままとなる |
+| Q8 | B | `dynamic desirable`（積極的に働きかける）× `dynamic auto`（要求されれば応じる）はトランクが成立する組み合わせ。出力の Native vlan（99）と Vlans allowed on trunk（10,20）から、VLAN30 は許可 VLAN に含まれないため通過できないと読み取れる |
 | Q9 | B | `switchport mode access` でモードを固定し、`switchport nonegotiate` で DTP フレームの送受信自体を止めることで、DTP を悪用したトランク乗っ取りを防止できる |
 | Q10 | 例 | 「server は VLAN の作成・変更が可能で他へ広告する。client は同期を受けるのみで自身では VLAN を作成できない。transparent は同期に参加せず自身の VLAN データベースのみを保持するが、受け取った広告は転送する。VTP はリビジョン番号が高い広告を優先して反映するため、リビジョン番号の高い（古い）スイッチを誤って接続すると既存の VLAN データベースが上書き・消去されるリスクがある」等、3 モードの違いとリビジョン番号による上書きリスクの両方に触れていれば正解 |
 

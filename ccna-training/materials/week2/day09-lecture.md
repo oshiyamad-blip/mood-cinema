@@ -15,6 +15,29 @@
 
 ---
 
+## ウォームアップ（朝の想起クイズ）
+
+> 教材を見ずに、まず自力で思い出してください（分散学習: Day 2「Cisco IOS の基本操作とデバイス初期設定」 / Day 6「VLAN の基礎」 / Day 8「VLAN 間ルーティング」 の範囲から出題）。
+
+**W1.** running-config（実行コンフィグレーション）の内容を、再起動しても消えない
+startup-config（NVRAM）に保存するコマンドは何ですか。
+
+**W2.** 1 本の物理リンクで複数 VLAN のフレームを伝送できるようにするポートモードの
+名称と、そのタグ付けを規定する IEEE 標準規格の番号は何ですか。
+
+**W3.** Router on a Stick 構成で、ルータのサブインタフェースに特定の VLAN（例: VLAN20）
+のタグを紐付けるために使うコマンドは何ですか。
+
+<details><summary>解答</summary>
+
+W1. `copy running-config startup-config`（`write memory` でも可）
+W2. トランクポート／IEEE 802.1Q
+W3. `encapsulation dot1Q 20`
+
+</details>
+
+---
+
 ## 1. ブリッジングループと STP の必要性
 
 ### なぜ冗長リンクが問題になるのか
@@ -135,6 +158,14 @@ Switch# show spanning-tree vlan 10
 > 4096 の倍数でしか設定できない点、`spanning-tree vlan root primary` の使い方も
 > あわせて問われます。
 
+> 💼 **実務では**: ルートブリッジを既定任せ（＝ MAC アドレス最小のスイッチが自動
+> 当選）にすることはまずありません。それだと最も古い、多くの場合アクセス層の
+> 低スペック機がルートになり、トラフィックが遠回りします。設計段階でコア／
+> ディストリビューション機に `spanning-tree vlan <VLAN> root primary`、その冗長機に
+> `root secondary` を明示設定するのが定石です。新人は設定を忘れてルート位置が
+> 意図せぬ場所になり、後日「特定 VLAN だけ遅い」の原因調査で気づく、という
+> のがありがちなミスです。
+
 ## 3. ポートロールとポートステート・STP タイマ
 
 ルートブリッジが決まると、残りのすべてのスイッチ（非ルートブリッジ）は、
@@ -172,6 +203,31 @@ Switch# show spanning-tree vlan 10
 2. **送信元スイッチの最小 BID**
 3. **送信元スイッチの最小ポート ID**
 
+### 数値例で確認するポート選出
+
+次の 3 台構成で、非ルートスイッチのルートポートとブロッキングされるポートを
+実際に決定してみましょう。SWroot はすでにルートブリッジに選出されているものとします。
+
+```
+              SWroot
+             /      \
+     1Gbps(コスト4)  100Mbps(コスト19)
+           /            \
+        SW2 ──1Gbps(コスト4)── SW3
+```
+
+- **SW2**: SWroot への直接リンク（コスト 4）と、SW3 経由（4 + 4 = 8）を比較する
+  → **直接リンク（コスト 4）が最小** → SWroot 側のポートがルートポートになる
+- **SW3**: SWroot への直接リンク（コスト 19）と、SW2 経由（4 + 4 = 8）を比較する
+  → **SW2 経由（コスト 8）が最小** → SW2 側のポートがルートポートになり、
+  SWroot への直接リンクのポートは非指定（ブロッキング）になる
+- SW2 - SW3 間のセグメントでは、ルートへのパスコストが小さい SW2 側のポートが
+  指定ポート（DP）になる
+
+> ここではコストだけで決着しましたが、複数の経路でコストが同値になった場合は、
+> 次に**送信元スイッチの BID が小さい方**、それも同値なら**送信元スイッチの
+> ポート ID が小さい方**が優先されます（タイブレークの 2 番目・3 番目の基準）。
+
 ### 802.1D のポートステート遷移
 
 STP（802.1D）のポートは、次の 5 つの状態を順番に遷移します。
@@ -196,8 +252,17 @@ Disabled → Blocking → Listening → Learning → Forwarding
 | Forward Delay | 15 秒 | Listening・Learning の各ステートに留まる時間 |
 | Max Age | 20 秒 | BPDU を受信できなくなってから、その情報を無効と判断するまでの時間 |
 
-トポロジ変化後、あるポートが Blocking から Forwarding へ遷移するまでには、
-最大で約 **50 秒**（Listening 15 秒 + Learning 15 秒 + Max Age 20 秒）かかります。
+トポロジ変化後、あるポートが Blocking から Forwarding へ遷移するまでの時間は、
+障害の種類によって異なります。
+
+- **直接リンク障害**（自ポートに接続されたリンクそのものがダウンした場合）:
+  リンクダウンを即座に検知できるため Max Age を待つ必要がなく、
+  **2 × Forward Delay = 30 秒**で収束します
+- **間接障害**（自分から見えない離れた区間の障害で、古い BPDU 情報が Max Age まで
+  有効とみなされ続ける場合）: BPDU が届かなくなってから無効と判断するまでの
+  Max Age 20 秒を待ってから Forward Delay の 2 段階（15 秒 + 15 秒）を経るため、
+  最大で約 **50 秒**（Max Age 20 秒 + Listening 15 秒 + Learning 15 秒）かかります
+
 これは 802.1D の大きな弱点であり、次章で扱う RSTP が開発された理由の 1 つです。
 
 ### 確認コマンド
@@ -211,8 +276,10 @@ Switch# show spanning-tree vlan 10
 そのポートの役割と状態を判断できます。
 
 > **試験のポイント**: ポートロールとルートパスコスト（1 Gbps = 4、100 Mbps = 19）
-> をもとにしたポート選出の判定、802.1D のステート遷移順序と収束時間（約 50 秒）、
-> タイマ値（Hello 2 秒 / Forward Delay 15 秒 / Max Age 20 秒）は頻出です。
+> をもとにしたポート選出の判定、802.1D のステート遷移順序、タイマ値
+> （Hello 2 秒 / Forward Delay 15 秒 / Max Age 20 秒）は頻出です。収束時間は
+> **直接リンク障害なら 30 秒（2 × Forward Delay）、間接障害なら Max Age を含めて
+> 約 50 秒**と、状況に応じて使い分けて問われる点に注意してください。
 
 ## 4. RSTP（802.1w）と高速収束・PortFast / BPDU Guard
 
@@ -276,6 +343,15 @@ Switch(config-if)# spanning-tree portfast
 ```
 Switch(config-if)# spanning-tree bpduguard enable
 ```
+
+> 💼 **実務では**: BPDU Guard はポート個別ではなく
+> `spanning-tree portfast bpduguard default` でアクセスポート全体に一括適用する
+> のが定番です。狙いは、利用者が島ハブや安価なスイッチを勝手に挿してループや
+> ルート乗っ取りを起こすのを止めること。ただし err-disable になったポートは
+> 手動 `shutdown`/`no shutdown` か `errdisable recovery cause bpduguard` を
+> 設定しないと自動復旧しない点に注意してください。新人は「ポートが突然
+> 落ちた」と現場から呼ばれて、原因がユーザー持ち込み機器の BPDU だった、
+> という対応を必ず一度は経験します。
 
 ### 動作モードの設定
 
@@ -402,6 +478,29 @@ Switch# show etherchannel port-channel
 こちらでは、指定した Port-channel の詳細（束ねられているメンバーポートの一覧など）
 を確認できます。
 
+### L3 EtherChannel（ルーテッドポートの束ね）
+
+ここまで扱ってきたのはスイッチポート（L2）を束ねる EtherChannel ですが、
+CCNA 200-301 の出題範囲には **L3 EtherChannel**（ルーテッドポートを束ねる方式）
+も含まれます（L3 スイッチが対象で、2960 のような L2 専用スイッチでは使えません）。
+物理インタフェースを `no switchport` でルーテッドポート化してから `channel-group`
+で束ね、論理インタフェース側（`interface port-channel <番号>`）に `ip address`
+を設定すると L3 EtherChannel になります。
+
+```
+L3Switch(config)# interface range gigabitEthernet 0/1-2
+L3Switch(config-if-range)# no switchport
+L3Switch(config-if-range)# channel-group 2 mode active
+L3Switch(config-if-range)# exit
+L3Switch(config)# interface port-channel 2
+L3Switch(config-if)# no switchport
+L3Switch(config-if)# ip address 10.0.0.1 255.255.255.252
+```
+
+L2 と L3 の違いは `switchport` の有無だけです。L2 EtherChannel は `switchport
+mode trunk`（または access）を設定しますが、L3 EtherChannel は `no switchport`
+でルーテッドポート化し、論理インタフェースに直接 IP アドレスを付与します。
+
 > **試験のポイント**: LACP のモード組み合わせで束ねが成立する条件
 > （active/passive、passive-passive は不成立、静的 on）、EtherChannel がバンドル
 > されない原因（速度 / デュプレックス / トランク設定 / 許可 VLAN の不一致）、
@@ -415,7 +514,8 @@ Switch# show etherchannel port-channel
   プライオリティは 4096 の倍数でのみ設定できる
 - ポートロールはルートポート（各スイッチ 1 つ）・指定ポート（各セグメント 1 つ）・
   非指定ポートに分かれ、ルートパスコストの合計で決まる
-- 802.1D の収束には最大約 50 秒かかるが、RSTP（802.1w）は数秒で収束する
+- 802.1D の収束には直接リンク障害で 30 秒、間接障害で最大約 50 秒かかるが、
+  RSTP（802.1w）は数秒で収束する
 - PortFast はエッジポートを即 Forwarding にし、BPDU Guard は不正な BPDU 受信時に
   ポートを err-disable にしてループを防ぐ
 - EtherChannel は複数リンクを 1 本の論理リンクとして束ね、帯域集約と STP の

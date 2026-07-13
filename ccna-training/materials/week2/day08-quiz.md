@@ -31,13 +31,16 @@
 - C. `native vlan 1`
 - D. `encapsulation native dot1q 1`
 
-**Q4.** Router-on-a-Stick 構成で、ルータの物理インターフェース（例: Gi0/0）に
-対して行う設定として正しいものはどれか。
+**Q4.** Router-on-a-Stick 構成で、R1 のサブインターフェース `Gi0/0.10` に
+`encapsulation dot1q 100` が設定されている。接続先スイッチの該当ポートは
+アクセスポートで VLAN10 に割り当てられている。VLAN10 の PC からデフォルト
+ゲートウェイ（R1）への ping が失敗する。最も可能性の高い原因はどれか。
 
-- A. `ip address 192.168.10.1 255.255.255.0` を設定する
-- B. `switchport mode trunk` を設定する
-- C. `encapsulation dot1q 1` を設定する
-- D. `no shutdown` のみ実行し、IP アドレスは付与しない
+- A. `ip routing` が無効になっている
+- B. PC のデフォルトゲートウェイが未設定である
+- C. サブインターフェースの `encapsulation dot1q` の VLAN-ID（100）が、
+     スイッチのアクセス VLAN（10）と一致していない
+- D. スイッチ側の接続ポートがトランクになっていない
 
 **Q5.** L3 スイッチで VLAN 間ルーティングを有効にするために、グローバル
 コンフィギュレーションで入力する必要があるコマンドはどれか。
@@ -90,7 +93,7 @@
 | Q1 | B | VLAN は別サブネットであり、L2 スイッチは MAC アドレスしか見ないため、IP アドレスで転送判断する L3 機器が必要 |
 | Q2 | C | サブインターフェースでは `encapsulation dot1q <ID>` で VLAN を紐付けてから `ip address` を割り当てる |
 | Q3 | A | ネイティブ VLAN 用サブインターフェースには `encapsulation dot1q <ID> native` を使う |
-| Q4 | D | 物理インターフェースには通常 IP を付与せず、`no shutdown` のみでトランクリンクを有効化する |
+| Q4 | C | サブインターフェースの `encapsulation dot1q` はスイッチ側で送出される VLAN タグと一致している必要がある。ここでは VLAN10 のフレームに対し R1 側が VLAN100 を期待しているためタグが一致せず、ゲートウェイ宛の通信ができない（`ip routing` は L3 スイッチ側の設定で Router-on-a-Stick には無関係。他の選択肢は前提と矛盾する） |
 | Q5 | A | L3 スイッチはデフォルトで L2 動作のため、`ip routing` を有効化しないと VLAN 間ルーティングができない |
 | Q6 | B | SVI（`interface vlan`）に割り当てた IP がその VLAN のデフォルトゲートウェイになる |
 | Q7 | D | SVI が up/up になる条件は VLAN の存在・所属ポートの up・no shutdown の 3 つ。OSPF ネイバーは無関係 |

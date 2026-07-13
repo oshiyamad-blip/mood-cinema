@@ -16,13 +16,12 @@
 - C. グローバル設定モード
 - D. ユーザ EXEC モード
 
-**Q2.** 特権 EXEC モードからグローバル設定モードへ移行するコマンドとして正しいものは
-どれか。
+**Q2.** IOS のモード遷移に関する説明として正しいものはどれか。
 
-- A. enable
-- B. configure terminal
-- C. exit
-- D. end
+- A. 特権 EXEC から `configure terminal` を実行するとグローバル設定モードへ移行する
+- B. `Router(config-if)#` の状態で `end` を実行すると `Router(config)#` に戻る
+- C. 特権 EXEC で `exit` を実行すると、ユーザ EXEC モード（`Router>`）に戻る
+- D. `disable` はグローバル設定モードからユーザ EXEC へ直接戻るコマンドである
 
 **Q3.** `enable secret` と `enable password` に関する説明として正しいものはどれか。
 
@@ -49,7 +48,7 @@
 
 **Q6.** running-config と startup-config に関する説明として正しいものはどれか。
 
-- A. どちらも NVRAM に保存される
+- A. 設定変更を保存するには `copy startup-config running-config` を実行すればよい
 - B. running-config は RAM 上にある現在の稼働設定で、電源を切ると消える
 - C. startup-config は RAM 上にあり、電源を切ると消える
 - D. running-config は NVRAM に保存され不揮発性である
@@ -70,14 +69,13 @@
 - C. Telnet と SSH の両方が拒否される
 - D. SSH のみ許可され、Telnet は拒否される
 
-**Q9.** `show ip interface brief` を実行したところ、あるインタフェースの Status が
-`administratively down` と表示された。この状態を解消するために実行すべき操作は
-どれか。
+**Q9.** SW1 の管理 IP への `ping` は成功するが、SSH だけ接続できない
+（Connection refused 等）。最も可能性の高い原因はどれか。
 
-- A. インタフェースに対して `no shutdown` を実行する
-- B. `ip address` を再入力する
-- C. `copy running-config startup-config` を実行する
-- D. ケーブルを交換する
+- A. インタフェースに `no shutdown` を実行していない
+- B. `crypto key generate rsa` を実行しておらず、RSA 鍵ペアが生成されていない
+- C. デフォルトゲートウェイが未設定である
+- D. ケーブル種別（ストレート/クロス）を間違えている
 
 **Q10.**（記述）`enable secret`・`service password-encryption`・SSH 限定の VTY
 （`transport input ssh`）を用いてデバイスへのアクセスを保護する初期設定の手順を、
@@ -90,14 +88,14 @@
 | 問 | 解答 | 解説 |
 |---|---|---|
 | Q1 | A | `(config-if)#` はインタフェースのサブ設定モードのプロンプト。`#` だけなら特権EXEC、`(config)#` はグローバル設定モード |
-| Q2 | B | 特権EXECからは `configure terminal`（省略形 `conf t`）でグローバル設定モードへ移行する。`enable` はユーザEXEC→特権EXEC |
+| Q2 | A | `configure terminal`（省略形 `conf t`）は特権EXEC→グローバル設定モードへの遷移コマンド。`end`（Ctrl+Z）はどのサブモードからでも特権EXECまで一気に戻るため、config-ifからendするとRouter#になりBは誤り。特権EXECでの`exit`はユーザEXECに戻らずセッションそのものを終了するためCは誤り。`disable`は特権EXEC→ユーザEXECの遷移コマンドでグローバル設定モードからは使えないためDも誤り |
 | Q3 | C | `enable secret` はMD5相当のハッシュで保存され、`enable password`（平文）と両方設定されていれば `enable secret` が優先される |
 | Q4 | D | SSH有効化には hostname・ip domain-name・RSA鍵生成・ローカルユーザ・`transport input ssh` がすべて必要 |
 | Q5 | A | L2スイッチは物理ポートにIPを持たず、SVI（`interface vlan`）に管理IPを設定する |
-| Q6 | B | running-configはRAM上の現在の稼働設定で揮発性。startup-configはNVRAM上で不揮発性 |
+| Q6 | B | running-configはRAM上の現在の稼働設定で揮発性。startup-configはNVRAM上で不揮発性。保存コマンドは source→destination の順で `copy running-config startup-config` が正しく、Aはこれの逆方向（`copy startup-config running-config`）で、直前の未保存の変更を破棄してしまうため誤り |
 | Q7 | C | コンソール接続のデフォルトは9600bps・8-N-1（データ8・パリティなし・ストップ1）・フロー制御なし |
 | Q8 | D | `transport input ssh` を設定するとVTYで許可される接続プロトコルがSSHのみになり、Telnetは拒否される |
-| Q9 | A | `administratively down` はインタフェースが `shutdown` 状態であることを示す。`no shutdown` で解消する |
+| Q9 | B | pingが成功している時点でL1〜L3（ケーブル・IP到達性・ゲートウェイ）は問題ない。SSH固有の前提はhostname→ip domain-name→`crypto key generate rsa`→ローカルユーザ→VTYの`login local`/`transport input ssh`で、どれかが欠けるとSSHのみ失敗する。RSA鍵未生成は代表的な原因。A・C・Dはping自体が失敗する原因であり、pingが通っている本問には当てはまらない |
 | Q10 | 例 | 「`enable secret <pw>` で特権EXECパスワードをハッシュ保存する。`service password-encryption` で残る平文パスワード（enable passwordやline password）をType7で隠す。VTYは `line vty 0 4` → `transport input ssh` → `login local` でSSH接続のみ許可し、Telnetを排除する」等、3要素すべてに触れ、目的（ハッシュ化・平文の隠蔽・暗号化された接続への限定）を説明できていれば正解 |
 
 **採点**: 1 問 10 点、70 点未満は翌朝再テスト。Q10 は趣旨が合っていれば 10 点。

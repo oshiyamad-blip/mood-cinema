@@ -110,7 +110,9 @@
 ## 手順 3: トランクポートの設定（10 分）
 
 1. R1 側（Gi0/1）と WLC 側（Gi0/2）のポートを、VLAN10・VLAN100 の両方を許可した
-   トランクポートに設定する
+   トランクポートに設定する。WLC 側の Gi0/2 は、WLC の管理インタフェースが
+   タグなし（VLAN 識別子 0）で送受信する前提のため、ネイティブ VLAN を
+   管理 VLAN である VLAN100 に明示的に設定する
 
    ```
    SW1(config)# interface gigabitEthernet 0/1
@@ -120,7 +122,15 @@
    SW1(config)# interface gigabitEthernet 0/2
    SW1(config-if)# switchport mode trunk
    SW1(config-if)# switchport trunk allowed vlan 10,100
+   SW1(config-if)# switchport trunk native vlan 100
    ```
+
+   > Gi0/2 のネイティブ VLAN を VLAN100 に合わせることで、手順 5 で WLC の
+   > Management Interface VLAN Identifier に `0`（タグなし）を設定した場合に、
+   > その管理トラフィックが正しく VLAN100（192.168.100.0/24）として扱われます。
+   > ここが不一致のままだと、WLC の管理トラフィックが既定のネイティブ VLAN
+   > （VLAN1）に流れてしまい、R1 にも管理用 PC にも到達できず、手順 6 の
+   > GUI ログインが失敗します。
 
 ## 手順 4: R1 のサブインタフェースと DHCP サーバ設定（20 分）
 
@@ -186,7 +196,7 @@
    | Management Interface IP Address | `192.168.100.2` |
    | Management Interface Netmask | `255.255.255.0` |
    | Management Interface Default Router | `192.168.100.1` |
-   | Management Interface VLAN Identifier | `0`（ネイティブ VLAN 扱い。物理ポートは Fa0/2 のアクセス側で VLAN100 に相当） |
+   | Management Interface VLAN Identifier | `0`（タグなし＝ネイティブ VLAN 扱い。接続先は Gi0/2 のトランク側で、手順 3 で当該トランクのネイティブ VLAN を VLAN100 に設定済みのため、管理トラフィックは VLAN100 として扱われる） |
    | DHCP Server IP Address | `192.168.100.1`（R1 を DHCP リレー代わりに指定） |
 
 2. 設定完了後、WLC が再起動またはログインプロンプトに戻ることを確認する
@@ -318,6 +328,7 @@
 | 症状 | 確認すること |
 |---|---|
 | LAP が WLC に join しない（Registered にならない） | LAP が DHCP で IP を取得できているか、DHCP オプション 43 の値（16 進数）が WLC の管理 IP と一致しているか、SW1 の Fa0/1 が VLAN100 のアクセスポートかつ PoE 給電されているか |
+| 手順 6 で `https://192.168.100.2` に接続できない | SW1 Gi0/2 のネイティブ VLAN が VLAN100 に設定されているか（手順 3）。WLC の Management Interface VLAN Identifier が `0` のままネイティブ VLAN 側が不一致だと、管理トラフィックが VLAN1 に流れてしまい到達不能になる |
 | ノート PC が SSID を発見できない | LAP が Registered になっているか、WLAN の Status が Enabled になっているか、無線 NIC への切り替えが完了しているか |
 | ノート PC が接続できるが IP を取得できない | ダイナミックインタフェース `client-vlan10` の VLAN ID・IP 設定、SW1 の Gi0/2（WLC 側）トランクで VLAN10 が許可されているか |
 | ノート PC 間 / R1 への ping が通らない | R1 のサブインタフェースの encapsulation dot1Q 番号と VLAN 番号の対応、SW1 の各トランクで VLAN10・VLAN100 が許可されているか |

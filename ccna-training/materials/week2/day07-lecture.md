@@ -15,6 +15,33 @@
 
 ---
 
+## ウォームアップ（朝の想起クイズ）
+
+> 教材を見ずに、まず自力で思い出してください（分散学習: Day 4「IPv6 アドレッシング」 /
+> Day 6「VLAN の基礎」 の範囲から出題）。
+
+**W1.** （Day 4）EUI-64 方式で MAC アドレスをインターフェース ID に変換する際に
+行う 2 つの操作（挿入する 16 進数の値と、反転するビット）を答えよ。
+
+**W2.** （Day 6）標準範囲 VLAN と拡張範囲 VLAN の境界となる番号はいくつか。また、
+FDDI / トークンリング用に予約され通常は使用しない VLAN 番号の範囲はいくつか。
+
+**W3.** （Day 6）1 つのアクセスポートにデータ VLAN と音声 VLAN を共存させる
+典型的な物理接続構成と、その目的を 1 文で述べよ。
+
+<details><summary>解答</summary>
+
+- W1: MAC アドレスの上位 24 ビットと下位 24 ビットの間に `FFFE` を挿入し、
+  上位バイトの 7 ビット目（U/L ビット）を反転する
+- W2: 標準範囲は 1〜1005、拡張範囲は 1006〜4094 で境界は 1005/1006。予約 VLAN は
+  1002〜1005（FDDI / トークンリング用）
+- W3: PC → IP 電話 → スイッチという構成で、PC のデータはデータ VLAN、IP 電話の
+  音声は音声 VLAN として分離し、音声品質を保つための QoS をかけやすくするため
+
+</details>
+
+---
+
 ## 1. トランクが必要になる理由と 802.1Q タギング
 
 Day 6 で学んだアクセスポート（access port）は、1 本のリンクにつき **1 つの VLAN**
@@ -71,11 +98,16 @@ TCI はさらに次のように分かれます。
 
 VID は 12 ビットのフィールドなので、表現できる値は 2^12 = **4096 通り**
 （0〜4095）です。ただし、VLAN 0 と VLAN 4095 は予約されており、実際に
-ユーザーが使用できる VLAN 番号は **1〜4094** です。
+ユーザーが使用できる VLAN 番号は **1〜4094** です。このうち **1〜1005** を
+**ノーマルレンジ（標準範囲）**、**1006〜4094** を**エクステンデッドレンジ
+（拡張範囲）**と呼びます。また **1002〜1005** は FDDI / トークンリング用に
+予約された既定 VLAN で、通常のイーサネット VLAN としては使いません
+（Day 6 で扱った内容の再確認です）。
 
 > **試験のポイント**: 「VLAN ID は 12 ビットで、使用可能な VLAN は 1〜4094」
 > という数字は頻出です。ビット数（12）と使用可能範囲（1〜4094）を
-> セットで覚えてください。
+> セットで覚えてください。予約: `0`・`4095`（VID フィールド自体の予約）と
+> `1002〜1005`（既定の予約 VLAN）を区別できるようにしましょう。
 
 ### フレームサイズへの影響
 
@@ -133,17 +165,32 @@ Switch(config-if)# switchport trunk native vlan 99
 %CDP-4-NATIVE_VLAN_MISMATCH: Native VLAN mismatch discovered on FastEthernet0/24 (99), with Switch2 FastEthernet0/24 (1).
 ```
 
-### セキュリティ上の推奨
+### セキュリティ上の推奨 — VLAN ホッピング攻撃
 
-ネイティブ VLAN（既定の VLAN 1）は、**VLAN ホッピング攻撃**（攻撃者が
-細工したフレームでネイティブ VLAN を偽装し、本来アクセスできないはずの
-VLAN に侵入する攻撃）の踏み台にされることがあります。対策として、
-ネイティブ VLAN を**未使用の VLAN 番号に変更**し、ユーザーの実データが
-流れる VLAN とは分離しておくことが推奨されます。
+**VLAN ホッピング攻撃**とは、本来アクセスできないはずの VLAN へ不正に
+侵入する攻撃の総称で、CCNA では次の 2 方式の区別が問われます。
+
+1. **スイッチスプーフィング（switch spoofing）**: 攻撃者の PC が DTP の
+   ネゴシエーションフレームを送りつけ、自分のポートを相手にトランクとして
+   認識させてしまう手法です。トランクが成立すると、そのポートから
+   すべての VLAN へアクセスできてしまいます。対策は `switchport mode
+   access` と `switchport nonegotiate` の併用で、DTP そのものを無効化する
+   ことです。
+2. **ダブルタギング（double tagging）**: 攻撃者が、外側にネイティブ VLAN の
+   タグ、内側に侵入したい標的 VLAN のタグという **2 重の 802.1Q タグ**を
+   付けたフレームを送信する手法です。最初のスイッチはネイティブ VLAN の
+   タグ（外側）だけを外してトランクへ転送するため、次のスイッチには
+   内側の標的 VLAN タグだけが残ったフレームが届き、標的 VLAN へ越境
+   してしまいます。この手法は仕組み上**攻撃者からスイッチへ向かう片方向
+   のみ**で成立します。対策は、ネイティブ VLAN を**ユーザーが使わない
+   未使用の VLAN 番号に変更**し、かつそのネイティブ VLAN をどのアクセス
+   ポートにも割り当てないことです。
 
 > **試験のポイント**: 「ネイティブ VLAN のトラフィックはタグなしで送信される」
 > こと、「既定値は VLAN 1」であること、そして不一致時の症状（CDP ログ・
-> VLAN リーク）は頻出テーマです。
+> VLAN リーク）は頻出テーマです。加えて、VLAN ホッピングの 2 方式
+> （スイッチスプーフィング／ダブルタギング）とそれぞれの対策の対応関係も
+> 問われます。
 
 ## 3. トランクの設定と許可 VLAN 制御
 
@@ -196,6 +243,14 @@ Switch(config-if)# switchport trunk allowed vlan 10,20,30
 > 「追加のつもりが他の VLAN を全部止めてしまった」という事故につながる
 > ため、既存リストへの追加時は必ず `add` を付けましょう。
 
+> 💼 **実務では**: 稼働中トランクでの `add` 付け忘れは、本番 VLAN を丸ごと
+> 落とす代表的な事故です。多くの現場では変更前に必ず `show interfaces trunk`
+> の Allowed VLANs を控え、`add` / `remove` だけで差分変更し、上書きになる
+> 素の `allowed vlan <list>` は初期構築時以外使わないルールにしています。
+> 特にリモートから SSH 中のトランクで管理 VLAN を許可リストから外すと
+> 自分の接続ごと切れて復旧に現地対応が必要になるため、新人は変更対象の
+> トランクに管理経路が乗っていないかを先に確認する習慣を付けましょう。
+
 運用上は、必要な VLAN のみをトランク上に許可することで、不要な
 ブロードキャストトラフィックの拡散やセキュリティリスクを最小限に絞る
 運用がベストプラクティスとされています。
@@ -210,6 +265,34 @@ Switch# show interfaces trunk
 encapsulation の種類、ネイティブ VLAN、許可 VLAN のリスト、実際にトラフィックが
 転送されている VLAN（Vlans allowed and active in management domain）を
 一覧表示します。トランクの状態を確認する際の**第一手**となる重要なコマンドです。
+
+実際の出力例（一部）は次のとおりです。
+
+```
+Port      Mode         Encapsulation  Status        Native vlan
+Fa0/24    on           802.1q         trunking      1
+
+Port      Vlans allowed on trunk
+Fa0/24    1-4094
+
+Port      Vlans allowed and active in management domain
+Fa0/24    1,10,20
+
+Port      Vlans in spanning tree forwarding state and not pruned
+Fa0/24    1,10,20
+```
+
+各セクションの意味は次のとおりです。
+
+- **Native vlan**: そのトランクのネイティブ VLAN（この例では `1`）
+- **Vlans allowed on trunk**: `switchport trunk allowed vlan` で**許可設定**
+  されている VLAN の範囲（この例では既定のまま `1-4094`）
+- **Vlans allowed and active in management domain**: 許可設定の中で、実際に
+  スイッチ上に**存在し active な VLAN だけ**（`vlan.dat` に定義されていない
+  VLAN や shutdown 中の VLAN は、許可されていてもここには出ません）
+- **Vlans in spanning tree forwarding state and not pruned**: 上記のうち、
+  **STP によって実際に転送（forwarding）状態にある VLAN**（STP でブロック
+  中の VLAN はここから外れます）
 
 ```
 Switch# show interfaces fastEthernet 0/24 switchport
@@ -265,10 +348,26 @@ DTP のネゴシエーションフレーム自体の送受信を止めたい場�
 Switch(config-if)# switchport nonegotiate
 ```
 
-`switchport nonegotiate` は、対向のポートを静的にトランク（`switchport mode
-trunk`）またはアクセス（`switchport mode access`）に固定したうえで使用します。
-モードが `dynamic auto` や `dynamic desirable` のままだと、DTP フレームを
-受け取れなくなり、意図した状態にならないことがあるためです。
+`switchport nonegotiate` は、**そのポート自身が静的モード**（`switchport
+mode access` または `switchport mode trunk`）に設定されている場合のみ
+適用できます。ポートのモードが `dynamic auto` や `dynamic desirable` の
+ままで `switchport nonegotiate` を設定しようとすると、IOS はコマンドを
+**拒否**します。
+
+```
+Switch(config-if)# switchport nonegotiate
+Command rejected: Conflict between nonegotiate and dynamic status of interface FastEthernet0/24.
+```
+
+したがって、必ず先に `switchport mode access` か `switchport mode trunk`
+でモードを固定してから `switchport nonegotiate` を実行する順序を守って
+ください。加えて、意図せぬ不整合を避けるため、対向のポートも静的モードに
+固定しておくことが推奨されます。
+
+> **試験のポイント**: `switchport nonegotiate` は dynamic モードのポートには
+> **そもそも設定できない**（Command rejected）点が問われます。「DTP フレームを
+> 受け取れなくなる」のではなく「コマンド自体が拒否される」という挙動を
+> 正確に覚えておきましょう。
 
 ### セキュリティのベストプラクティス
 
@@ -287,6 +386,17 @@ Switch(config-if)# switchport nonegotiate
 > **試験のポイント**: `switchport nonegotiate` と `switchport mode access`
 > の組み合わせによる DTP 悪用防止は、セキュリティ関連の問題として
 > 頻出です。
+
+> 💼 **実務では**: 「トランクは全ポートで手動固定・DTP は全面無効」が
+> 定石です。アクセスポートは `switchport mode access` + `switchport
+> nonegotiate`、スイッチ間トランクは `switchport mode trunk` +
+> `switchport nonegotiate` と両端を静的化し、`dynamic auto` /
+> `dynamic desirable` の自動ネゴシエーションには依存しません。理由は
+> ネゴシエーション遅延・意図しないトランク化・DTP 悪用の 3 点です。新人が
+> やりがちなのは、既定の `dynamic auto` のままポートを放置し、相手が
+> `desirable` のポートやハブ経由で意図せずトランクが立ち上がり VLAN が
+> 越境してしまう事故です。構築時には「このポートは access か trunk か」を
+> 必ず明示する運用を身につけましょう。
 
 ## 5. VTP（VLAN Trunking Protocol）の概要
 
