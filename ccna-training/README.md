@@ -15,7 +15,7 @@ Nulab **Backlog** 上に構築するための設計ドキュメント・教材�
 | [`05-instructor-guide.md`](./05-instructor-guide.md) | 講師用運用ガイド（開講前チェックリスト・日次運用・採点基準。受講者非公開） |
 | [`06-rolling-operations.md`](./06-rolling-operations.md) | ローリング型運用ガイド（随時入学・卒業のプロジェクト構成、入学/卒業手順、負荷目安） |
 | [`materials/`](./materials/) | 教材本体（Day 1〜20 の講義・ラボ手順書・小テスト） |
-| [`scripts/`](./scripts/) | Backlog API スクリプト（課題一括投入 / Wiki 教材投入 / 小テスト採点支援） |
+| [`scripts/`](./scripts/) | 運用スクリプト（課題一括投入 / Wiki 教材投入 / 選択式の機械採点 / AI 一次採点） |
 | [`samples/`](./samples/) | Day 1 のサンプル教材（講義ドキュメント・ラボ手順書・小テスト） |
 
 ## 使い方（構築フロー）

@@ -1,0 +1,12 @@
+{
+  "name": "ccna-training-scripts",
+  "private": true,
+  "type": "module",
+  "description": "CCNA研修運用スクリプト（Backlog課題投入・Wiki投入・採点支援・AI一次採点）",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0"
+  }
+}
