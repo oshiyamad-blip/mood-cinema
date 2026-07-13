@@ -1,0 +1,41 @@
+# CCNA 研修プログラム（Backlog 構築用）
+
+CCNA 200-301 v1.1 に準拠した 1 ヶ月（20 営業日 / 140 時間）の社内研修を、
+Nulab **Backlog** 上に構築するための設計ドキュメント・教材・ツール一式です。
+
+## 構成
+
+| ファイル / ディレクトリ | 内容 |
+|---|---|
+| [`00-feasibility.md`](./00-feasibility.md) | 実現可能性調査の結果（リサーチレポート） |
+| [`01-curriculum.md`](./01-curriculum.md) | 20 日間のカリキュラム表（日次テーマ・ラボ・小テスト） |
+| [`02-backlog-design.md`](./02-backlog-design.md) | Backlog プロジェクト構成設計（種別・カテゴリー・マイルストーン・課題テンプレート・ドキュメント構成・小テスト運用） |
+| [`03-packet-tracer-manual.md`](./03-packet-tracer-manual.md) | 仮想環境（Cisco Packet Tracer）導入・操作マニュアル（受講者配布用） |
+| [`scripts/`](./scripts/) | Backlog API で課題を一括投入するスクリプト |
+| [`samples/`](./samples/) | Day 1 のサンプル教材（講義ドキュメント・ラボ手順書・小テスト） |
+
+## 使い方（構築フロー）
+
+1. Backlog に研修用プロジェクト（例: キー `CCNA`）を作成する
+2. `02-backlog-design.md` に従い、ドキュメント機能に教材フォルダを作成する
+3. `scripts/create-backlog-issues.mjs` で 20 日分の課題（講義・ラボ・小テスト）を一括投入する
+
+   ```bash
+   BACKLOG_SPACE_URL=https://your-space.backlog.jp \
+   BACKLOG_API_KEY=xxxxxxxx \
+   node ccna-training/scripts/create-backlog-issues.mjs --project CCNA --start 2026-08-03 --dry-run
+   ```
+
+   `--dry-run` を外すと実際に投入されます。
+
+4. `03-packet-tracer-manual.md` を Backlog ドキュメントに掲載（または PDF 化して添付）する
+5. `samples/` の Day 1 教材をフォーマットの基準として、Day 2 以降の教材を執筆する
+
+## 注意事項
+
+- 教材はすべて **オリジナル執筆** です。Cisco NetAcad・市販書籍・他者の教材の転載は
+  著作権上できません（試験トピック一覧そのものの参照は可）。
+- Backlog の**ドキュメント機能には現時点で API がありません**。教材の自動投入は
+  Wiki API → ドキュメント移行機能を経由するか、手動で貼り付けます。
+- 準拠試験: CCNA 200-301 **v1.1**（2024 年 8 月改訂）。Cisco による改訂があった場合は
+  カリキュラムの見直しが必要です。
