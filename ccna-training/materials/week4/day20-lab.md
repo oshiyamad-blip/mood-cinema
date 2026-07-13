@@ -304,13 +304,21 @@ R1(config-router)# exit
 
 ## 手順 7: DHCP サーバの構成と PC の設定（15 分）
 
-R1・R2 の両方を DHCP サーバとして構成し、冗長化します（`default-router`
-には HSRP の仮想 IP を指定するため、どちらのルータが応答しても同じ
-ゲートウェイ情報が配布されます）。
+R1・R2 の両方を DHCP サーバとして構成し、冗長化します。ただし DHCP は
+サーバ間でリース情報を共有しないため、両ルータに**同一の配布範囲**を
+設定すると、それぞれが独立に空き先頭アドレスから払い出してしまい、
+同一 IP アドレスが 2 台の PC に重複割当されるおそれがあります。これを
+避けるため、配布範囲を上位/下位で分割する**スプリットスコープ**を
+採用します。R1 が `.4`〜`.128` を、R2 が `.129`〜`.254` を担当するように
+`excluded-address` を非対称に設定してください（`default-router` には
+HSRP の仮想 IP を指定するため、どちらのルータが応答しても同じゲートウェイ
+情報が配布されます）。
 
 ```
 R1(config)# ip dhcp excluded-address 192.168.10.1 192.168.10.3
+R1(config)# ip dhcp excluded-address 192.168.10.129 192.168.10.254
 R1(config)# ip dhcp excluded-address 192.168.20.1 192.168.20.3
+R1(config)# ip dhcp excluded-address 192.168.20.129 192.168.20.254
 R1(config)# ip dhcp excluded-address 192.168.99.1 192.168.99.3
 R1(config)# ip dhcp pool VLAN10-EIGYO
 R1(dhcp-config)# network 192.168.10.0 255.255.255.0
@@ -324,11 +332,14 @@ R1(dhcp-config)# dns-server 8.8.8.8
 R1(dhcp-config)# exit
 ```
 
-R2 にも同一内容を設定します。
+R2 には、配布範囲が R1 と重ならないよう**下位半分を除外**した設定を
+行います。
 
 ```
 R2(config)# ip dhcp excluded-address 192.168.10.1 192.168.10.3
+R2(config)# ip dhcp excluded-address 192.168.10.4 192.168.10.128
 R2(config)# ip dhcp excluded-address 192.168.20.1 192.168.20.3
+R2(config)# ip dhcp excluded-address 192.168.20.4 192.168.20.128
 R2(config)# ip dhcp excluded-address 192.168.99.1 192.168.99.3
 R2(config)# ip dhcp pool VLAN10-EIGYO
 R2(dhcp-config)# network 192.168.10.0 255.255.255.0
@@ -380,9 +391,13 @@ R1(config)# ip nat inside source list 1 interface GigabitEthernet0/2 overload
 経理 VLAN（VLAN20）からサーバへの通信を **HTTP のみ**に制限する名前付き
 拡張 ACL を作成します。拡張 ACL は「送信元にできるだけ近いインターフェース」
 に適用する原則に従い、R1 の Gi0/0.20（経理 VLAN の入口）に適用します。
+先頭の `permit udp` 行は、経理 VLAN の DHCP DISCOVER/REQUEST（ブロード
+キャスト、宛先 UDP67）が ACL によって遮断され、リースの取得・更新に失敗
+することを防ぐためのものです。
 
 ```
 R1(config)# ip access-list extended KEIRI-TO-SRV
+R1(config-ext-nacl)# permit udp any host 255.255.255.255 eq 67
 R1(config-ext-nacl)# permit tcp 192.168.20.0 0.0.0.255 host 8.8.8.8 eq 80
 R1(config-ext-nacl)# deny ip any any log
 R1(config-ext-nacl)# exit
@@ -393,6 +408,23 @@ R1(config-subif)# exit
 
 `deny ip any any log` は暗黙の deny と同じ効果ですが、明示的に書くことで
 `show access-lists` のヒットカウンタから拒否された通信を後で確認できます。
+
+この設定は R1 が HSRP Active のときには要件4（経理 VLAN は HTTP のみ許可）
+を満たしますが、DHCP は R1・R2 の両系で冗長化している一方 ACL は R1 側にしか
+無いため、HSRP フェイルオーバーで R2 が Active になった間は経理 VLAN の
+通信が無制限に R2 経由で通ってしまいます。冗長構成でも要件4を維持するため、
+同一 ACL を R2 の Gi0/0.20 にも適用してください。
+
+```
+R2(config)# ip access-list extended KEIRI-TO-SRV
+R2(config-ext-nacl)# permit udp any host 255.255.255.255 eq 67
+R2(config-ext-nacl)# permit tcp 192.168.20.0 0.0.0.255 host 8.8.8.8 eq 80
+R2(config-ext-nacl)# deny ip any any log
+R2(config-ext-nacl)# exit
+R2(config)# interface GigabitEthernet0/0.20
+R2(config-subif)# ip access-group KEIRI-TO-SRV in
+R2(config-subif)# exit
+```
 
 ## 手順 10: ルータ管理の SSH 化（10 分）
 
@@ -450,7 +482,11 @@ SW2 の Fa0/1・Fa0/2 にも同じ設定を行います。
 2. 各 PC が DHCP でアドレスを取得できていることを確認します（[Desktop] →
    **Command Prompt** → `ipconfig`）
 3. 同一 VLAN 内（PC1 ⇔ PC3、PC2 ⇔ PC4）で ping が成功することを確認します
-4. VLAN 間（PC1 ⇔ PC2）で ping が成功することを確認します
+4. 経理 VLAN（PC2/PC4）は手順9で適用した ACL『KEIRI-TO-SRV』により、
+   8.8.8.8 宛 HTTP 以外の通信がすべて遮断されます。そのため PC1 ⇔ PC2 の
+   VLAN 間 ping は**失敗するのが正しい動作**です（ACL の効果確認）。VLAN
+   間ルーティング自体の疎通を確認したい場合は、手順9で ACL を適用する前に
+   このping を実施してください
 5. インターネット（模擬）への到達を確認します
 
    ```
@@ -476,6 +512,7 @@ R1# show ip route
 R1# show standby brief
 R1# show ip nat translations
 R1# show access-lists
+R2# show access-lists
 SW1# show vlan brief
 SW1# show port-security interface FastEthernet0/1
 ```
@@ -486,8 +523,8 @@ SW1# show port-security interface FastEthernet0/1
 - `show standby brief`: VLAN10・VLAN20 とも R1 が Active、R2 が Standby
 - `show ip nat translations`: PC からの通信がポート番号付きで変換されている
   （PAT の動作）
-- `show access-lists`: KEIRI-TO-SRV の permit/deny 行にヒットカウンタが
-  記録されている
+- `show access-lists`: R1・R2 双方の KEIRI-TO-SRV の permit/deny 行に
+  ヒットカウンタが記録されている
 - `show vlan brief` / `show port-security interface`: VLAN 割当とポート
   セキュリティの状態（Secure-up、学習した MAC アドレス数）
 
@@ -527,7 +564,8 @@ R2# copy running-config startup-config
 | HSRP が両方とも Active（または両方 Standby）になる | `standby <グループ> ip` の仮想 IP が両ルータで一致しているか、VLAN10/20 のグループ番号が重複していないか |
 | PC が DHCP でアドレスを取得できない | `ip dhcp excluded-address` の範囲誤り、`network` コマンドのアドレス/マスク誤り、サブインターフェースがトランクに乗っているか |
 | インターネットへの ping が全て失敗する（営業 VLAN も） | R1 の `ip route 0.0.0.0 0.0.0.0 203.0.113.2`、`ip nat inside`/`outside` の付け忘れ、`access-list 1` の範囲誤り |
-| 経理 VLAN から HTTP も失敗する | ACL の記述順序、`eq 80` の誤記、ACL の適用インターフェース（Gi0/0.20）・方向（in）の誤り |
+| 経理 VLAN から HTTP も失敗する | ACL の記述順序、`eq 80` の誤記、ACL の適用インターフェース（R1・R2 双方の Gi0/0.20）・方向（in）の誤り |
+| 経理 VLAN が DHCP でアドレスを取得できない（ACL 適用後） | ACL 先頭の `permit udp any host 255.255.255.255 eq 67` の記述漏れ（DHCP DISCOVER/REQUEST が deny されている） |
 | PC がリンクダウンしてしまう | ポートセキュリティの `maximum` を超える MAC アドレスが学習されていないか（`violation shutdown` により errdisable 状態になっている可能性） |
 | SSH で接続できない | `crypto key generate rsa` の未実行、`transport input ssh` の設定漏れ、`login local` の設定漏れ、`ip domain-name` の未設定 |
 
