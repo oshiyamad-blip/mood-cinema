@@ -5,12 +5,19 @@
 // 使い方:
 //   BACKLOG_SPACE_URL=https://your-space.backlog.jp \
 //   BACKLOG_API_KEY=xxxxxxxx \
-//   node create-backlog-issues.mjs --project CCNA --start 2026-08-03 [--assignee <userId>] [--dry-run]
+//   node create-backlog-issues.mjs --project CCNA --start 2026-08-03 [--trainee 山田] [--assignee <userId>] [--dry-run]
 //
 //   --project   Backlog プロジェクトキー（必須）
 //   --start     Day 1 の日付 YYYY-MM-DD（必須）。土日はスキップして期限日を採番する
+//   --trainee   受講者名（省略可）。単一プロジェクトに複数受講者を同居させる場合に指定。
+//               課題名に [名前] プレフィックス、マイルストーン名に「名前-」が付き、
+//               受講者ごとに独立した課題セット・マイルストーンが作られる。
+//               受講者ごとにプロジェクトを分ける運用（推奨）では指定不要。
 //   --assignee  課題の担当者のユーザー ID（数値、省略可）
 //   --dry-run   API を呼ばず作成予定の内容を表示する
+//
+// ローリング型（受講者が随時入学）の運用では、受講者の入学ごとに本スクリプトを
+// その受講者の開始日で 1 回実行する。種別・カテゴリーは既存があれば再利用される（冪等）。
 //
 // 必要権限: API キーのユーザーがプロジェクト管理者であること（種別等の作成に必要）。
 // Node.js 18 以上（fetch 内蔵）で動作。依存パッケージなし。
@@ -29,8 +36,13 @@ function argValue(name) {
 }
 const PROJECT_KEY = argValue('--project')
 const START = argValue('--start')
+const TRAINEE = argValue('--trainee')
 const ASSIGNEE = argValue('--assignee')
 const DRY_RUN = args.includes('--dry-run')
+
+// 受講者名によるプレフィックス（単一プロジェクト同居モード用）
+const summaryPrefix = TRAINEE ? `[${TRAINEE}] ` : ''
+const milestonePrefix = TRAINEE ? `${TRAINEE}-` : ''
 
 const SPACE_URL = (process.env.BACKLOG_SPACE_URL ?? '').replace(/\/$/, '')
 const API_KEY = process.env.BACKLOG_API_KEY
@@ -152,6 +164,7 @@ async function main() {
       versions,
       MILESTONES.map((m) => ({
         ...m,
+        name: milestonePrefix + m.name,
         startDate: addBusinessDays(START, (m.week - 1) * 5),
         releaseDueDate: addBusinessDays(START, (m.week - 1) * 5 + 4),
       })),
@@ -174,7 +187,7 @@ async function main() {
 
   // Day 0: 環境構築（期限 = 開講前日）
   const day00 = {
-    summary: '[Day00] 環境構築: Packet Tracer セットアップ',
+    summary: `${summaryPrefix}[Day00] 環境構築: Packet Tracer セットアップ`,
     dueDate: prevBusinessDay(START),
     description: [
       '## ゴール',
@@ -205,7 +218,7 @@ async function main() {
       issueTypeId: issueTypeIds.get('ラボ'),
       priorityId,
       dueDate: day00.dueDate,
-      'milestoneId[]': [milestoneIds.get(MILESTONES.find((m) => m.week === 1).name)],
+      'milestoneId[]': [milestoneIds.get(milestonePrefix + MILESTONES.find((m) => m.week === 1).name)],
       ...(ASSIGNEE ? { assigneeId: ASSIGNEE } : {}),
     })
     created++
@@ -217,14 +230,14 @@ async function main() {
     const dueDate = addBusinessDays(START, d.day - 1)
     const quizType = d.weeklyTest ? '週次テスト' : '小テスト'
     const quizTitle = d.finalTest
-      ? `[Day${dd}] 修了テスト: 全範囲（60問/120分）`
+      ? `${summaryPrefix}[Day${dd}] 修了テスト: 全範囲（60問/120分）`
       : d.weeklyTest
-        ? `[Day${dd}] 週次テスト: ${d.quiz}`
-        : `[Day${dd}] 小テスト: ${d.quiz}`
+        ? `${summaryPrefix}[Day${dd}] 週次テスト: ${d.quiz}`
+        : `${summaryPrefix}[Day${dd}] 小テスト: ${d.quiz}`
 
     const issues = [
-      { type: '講義', summary: `[Day${dd}] 講義: ${d.theme}`, description: lectureDescription(d) },
-      { type: 'ラボ', summary: `[Day${dd}] ラボ: ${d.lab}`, description: labDescription(d) },
+      { type: '講義', summary: `${summaryPrefix}[Day${dd}] 講義: ${d.theme}`, description: lectureDescription(d) },
+      { type: 'ラボ', summary: `${summaryPrefix}[Day${dd}] ラボ: ${d.lab}`, description: labDescription(d) },
       { type: quizType, summary: quizTitle, description: quizDescription(d) },
     ]
 
@@ -242,7 +255,7 @@ async function main() {
         priorityId,
         dueDate,
         'categoryId[]': d.categories.map((c) => categoryIds.get(c)),
-        'milestoneId[]': [milestoneIds.get(MILESTONES.find((m) => m.week === d.week).name)],
+        'milestoneId[]': [milestoneIds.get(milestonePrefix + MILESTONES.find((m) => m.week === d.week).name)],
         ...(ASSIGNEE ? { assigneeId: ASSIGNEE } : {}),
       })
       created++

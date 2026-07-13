@@ -13,6 +13,7 @@ Nulab **Backlog** 上に構築するための設計ドキュメント・教材�
 | [`03-packet-tracer-manual.md`](./03-packet-tracer-manual.md) | 仮想環境（Cisco Packet Tracer）導入・操作マニュアル（受講者配布用） |
 | [`04-guidance.md`](./04-guidance.md) | 受講者向けガイダンス「研修の進め方」（Backlog `00_ガイダンス` 用） |
 | [`05-instructor-guide.md`](./05-instructor-guide.md) | 講師用運用ガイド（開講前チェックリスト・日次運用・採点基準。受講者非公開） |
+| [`06-rolling-operations.md`](./06-rolling-operations.md) | ローリング型運用ガイド（随時入学・卒業のプロジェクト構成、入学/卒業手順、負荷目安） |
 | [`materials/`](./materials/) | 教材本体（Day 1〜20 の講義・ラボ手順書・小テスト） |
 | [`scripts/`](./scripts/) | Backlog API スクリプト（課題一括投入 / Wiki 教材投入 / 小テスト採点支援） |
 | [`samples/`](./samples/) | Day 1 のサンプル教材（講義ドキュメント・ラボ手順書・小テスト） |
