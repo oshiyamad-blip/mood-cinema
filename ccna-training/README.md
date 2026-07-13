@@ -11,7 +11,10 @@ Nulab **Backlog** 上に構築するための設計ドキュメント・教材�
 | [`01-curriculum.md`](./01-curriculum.md) | 20 日間のカリキュラム表（日次テーマ・ラボ・小テスト） |
 | [`02-backlog-design.md`](./02-backlog-design.md) | Backlog プロジェクト構成設計（種別・カテゴリー・マイルストーン・課題テンプレート・ドキュメント構成・小テスト運用） |
 | [`03-packet-tracer-manual.md`](./03-packet-tracer-manual.md) | 仮想環境（Cisco Packet Tracer）導入・操作マニュアル（受講者配布用） |
-| [`scripts/`](./scripts/) | Backlog API で課題を一括投入するスクリプト |
+| [`04-guidance.md`](./04-guidance.md) | 受講者向けガイダンス「研修の進め方」（Backlog `00_ガイダンス` 用） |
+| [`05-instructor-guide.md`](./05-instructor-guide.md) | 講師用運用ガイド（開講前チェックリスト・日次運用・採点基準。受講者非公開） |
+| [`materials/`](./materials/) | 教材本体（Day 1〜20 の講義・ラボ手順書・小テスト） |
+| [`scripts/`](./scripts/) | Backlog API スクリプト（課題一括投入 / Wiki 教材投入 / 小テスト採点支援） |
 | [`samples/`](./samples/) | Day 1 のサンプル教材（講義ドキュメント・ラボ手順書・小テスト） |
 
 ## 使い方（構築フロー）
@@ -28,8 +31,18 @@ Nulab **Backlog** 上に構築するための設計ドキュメント・教材�
 
    `--dry-run` を外すと実際に投入されます。
 
-4. `03-packet-tracer-manual.md` を Backlog ドキュメントに掲載（または PDF 化して添付）する
-5. `samples/` の Day 1 教材をフォーマットの基準として、Day 2 以降の教材を執筆する
+4. 教材を投入する: `scripts/upload-wiki.mjs` で `materials/` と各マニュアルを
+   Wiki へ一括投入し、Backlog の「Wiki → ドキュメント移行機能」でドキュメント化する
+
+   ```bash
+   BACKLOG_SPACE_URL=... BACKLOG_API_KEY=... \
+   node ccna-training/scripts/upload-wiki.mjs --project CCNA --dry-run
+   ```
+
+   小テスト（解答・解説を含む）は既定で投入対象外です。設問部分のみ毎日、
+   小テスト課題の本文へ貼る運用にしてください（詳細は `05-instructor-guide.md`）。
+
+5. 研修開始後の採点は `scripts/grade-quiz.mjs` で支援できます（コメント解答の自動採点）
 
 ## 注意事項
 
