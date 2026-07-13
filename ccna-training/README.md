@@ -1,3 +1,7 @@
+> **⚠️ このフォルダは専用リポジトリへ移行しました**
+> 最新版・今後の開発は **[oshiyamad-blip/ccna-training](https://github.com/oshiyamad-blip/ccna-training)** で管理します。
+> このフォルダは移行時点のスナップショット（履歴保存用）です。
+
 # CCNA 研修プログラム（Backlog 構築用）
 
 CCNA 200-301 v1.1 に準拠した 1 ヶ月（20 営業日 / 140 時間）の社内研修を、
