@@ -217,14 +217,15 @@ R3(config-router)# exit
 
 1. R1・R3 で `show ip ospf neighbor` を確認する。R1-R3 間のネイバーが
    **EXSTART** または **EXCHANGE** のまま停滞していないか確認する
-2. 両ルータのインターフェース MTU を比較する
+2. 両ルータの IP MTU を比較する（OSPF の DBD MTU チェックは IP MTU を見るため、
+   L2 の `show interfaces` ではなく `show ip interface` で確認します）
 
    ```
-   R1# show interfaces GigabitEthernet0/1 | include MTU
-   R3# show interfaces GigabitEthernet0/0 | include MTU
+   R1# show ip interface GigabitEthernet0/1 | include MTU
+   R3# show ip interface GigabitEthernet0/0 | include MTU
    ```
 
-3. **確認**: R1 側の MTU が `1400`（既定の 1500 から変更されている）になっており、
+3. **確認**: R1 側の IP MTU が `1400`（既定の 1500 から変更されている）になっており、
    R3 側と一致していないことを特定する
 4. R1 側の MTU を既定値へ戻す
 
@@ -383,7 +384,7 @@ R2(config-if)# exit
 | R1-R3 間のネイバーが Init のまま進まない | `show ip ospf interface` で両側の Hello/Dead interval を比較（手順 3 の修正漏れ） |
 | R2-R3 間にネイバーが全く現れない（設定直後） | `show ip protocols` で R2 の `network` 文に `10.0.23.0/30` が含まれているか（手順 4） |
 | network 文を追加してもまだネイバーが現れない | R3 側の `show ip protocols` で Passive Interface に該当リンクが入っていないか（手順 5） |
-| R1-R3 間が Exstart／Exchange で停滞する | `show interfaces \| include MTU` で両側の MTU が 1500 で揃っているか（手順 6） |
+| R1-R3 間が Exstart／Exchange で停滞する | `show ip interface \| include MTU` で両側の IP MTU が 1500 で揃っているか（手順 6。`show interfaces` の MTU は L2 の値のため `ip mtu` の変更を反映しません） |
 | PC1-PC3 の ping が通らない | 全リンクの `show ip ospf neighbor` が FULL か、`show ip route ospf` に経路があるか |
 | `O*E2` が学習されない | R3 で `ip route 0.0.0.0 0.0.0.0 Null0` と `default-information originate` の両方が投入されているか |
 | `show standby brief` で Active/Standby が逆 | R1 の priority が 110 になっているか、`standby 1 ip` の仮想 IP が両ルータで一致しているか |

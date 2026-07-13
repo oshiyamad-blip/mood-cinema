@@ -19,6 +19,34 @@
 
 ---
 
+## ウォームアップ（朝の想起クイズ）
+
+> 教材を見ずに、まず自力で思い出してください（分散学習: Day 6「VLAN の基礎」 /
+> Day 10「無線 LAN と検出プロトコル」 / Day 12「OSPFv2（シングルエリア）」 の
+> 範囲から出題）。
+
+**W1.** （Day 6）スイッチにおける VLAN の通常範囲（Normal Range）と拡張範囲
+（Extended Range）の番号帯はそれぞれ何番から何番か。
+
+**W2.** （Day 10）CDP の既定のアドバタイズ間隔（Hello）とホールドタイムは
+何秒か。また、業界標準の検出プロトコルの名称と、それを規定する IEEE 規格番号は
+何か。
+
+**W3.** （Day 12）OSPF のインターフェースコストを求める既定の計算式と、
+Cisco IOS における既定の基準帯域幅（reference bandwidth）はいくらか。
+
+<details><summary>解答</summary>
+
+- W1: 通常範囲は 1〜1005、拡張範囲は 1006〜4094
+- W2: CDP は既定で Hello 60 秒・ホールドタイム 180 秒。業界標準は LLDP
+  （IEEE 802.1AB）
+- W3: コスト = 基準帯域幅 ÷ インターフェース帯域幅。Cisco IOS の既定の
+  基準帯域幅は 10^8（100Mbps）
+
+</details>
+
+---
+
 ## 1. OSPF ネイバー確立の条件と状態遷移（復習）
 
 Day12 で学んだ OSPF のネイバー確立条件と状態遷移を、トラブルシューティングの
@@ -170,8 +198,9 @@ Router(config-router)# default-information originate
 ```
 
 `default-information originate` を実行すると、そのルータ自身が持つデフォルト
-ルートを OSPF の**外部経路（Type 2 External LSA）**としてドメイン全体へ
-広告します。
+ルートを OSPF の**外部 LSA（Type 5 / AS-External LSA）**としてドメイン全体へ
+広告します。受信側では既定でメトリックタイプ **E2（外部タイプ 2）** の経路として
+学習されます。
 
 ### 前提条件と always キーワード
 
@@ -194,6 +223,15 @@ Router(config-router)# default-information originate always
 広告し続けてしまうため、**誤設定によるブラックホール化（経路はあるが実際には
 届かない状態）に注意**が必要です。
 
+> 💼 **実務では**: `always` を安易に付けると重大障害の温床になります。上位
+> ISP 回線が実際に落ちても「常にデフォルトルートを広告し続ける」ため、配下
+> エリア全体がその出口へトラフィックを送り続けブラックホール化する事故が
+> 起きます。現場では `always` 単体ではなく、IP SLA と object tracking で
+> 実際の ISP 側疎通を監視し、疎通 NG 時に static デフォルト（や広告）を
+> 引っ込める構成にするのが定石です。「`default-information originate` した
+> のに疎通しない」という一次切り分けでは、まず広告元ルータ自身がその出口へ
+> 本当に到達できているかを確認しましょう。
+
 > **試験のポイント**: `default-information originate` の動作と、`always`
 > キーワードが必要になる条件（自身にデフォルトルートが存在しない場合でも
 > 常に広告したいとき）を問う問題が頻出です。
@@ -212,6 +250,9 @@ O*E2  0.0.0.0/0 [110/1] via <next-hop>, GigabitEthernet0/1
   広告時に設定されたメトリック値のまま変わりません
 - `metric-type 1` を指定すると **E1（累積メトリック）** に変更でき、
   ドメイン内を経由するコストが加算されるようになります
+- 表示例の `[110/1]` は、左側が **管理距離（AD、Administrative Distance）**
+  で OSPF は内部・外部経路のいずれも既定で **AD 110**、右側が
+  **メトリック（コスト）** を表します
 
 ```
 Router(config-router)# default-information originate metric-type 1
@@ -225,8 +266,9 @@ Router(config-router)# default-information originate metric-type 1
 | `show ip ospf database external` | 配布元ルータ | 広告している外部 LSA の内容 |
 
 > **試験のポイント**: 受信側での外部デフォルトルートの表示コード（`O*E2`）と、
-> それが ASBR からの Type 2 External LSA によるものであることを問う問題が
-> 頻出です。
+> それが ASBR からの Type 5 External LSA（メトリックタイプは既定で E2）に
+> よるものであることを問う問題が頻出です。あわせて AD（経路選択の優先度）と
+> メトリック（同一プロトコル内のコスト）を混同しないようにしましょう。
 
 ## 4. FHRP の目的と 3 方式の比較（HSRP / VRRP / GLBP）
 
@@ -251,7 +293,7 @@ FHRP が解決する課題は、デフォルトゲートウェイが 1 台のル
 | 標準化 | シスコ独自 | 業界標準（RFC 5798） | シスコ独自 |
 | 役割の呼び方 | Active / Standby | Master / Backup | AVG（Active Virtual Gateway）/ AVF（Active Virtual Forwarder） |
 | 転送するルータ数 | Active の 1 台のみ | Master の 1 台のみ | 複数台で同時に転送可能（負荷分散） |
-| プリエンプト既定 | 無効 | 有効 | 有効 |
+| プリエンプト既定 | 無効 | 有効 | 無効（AVG のプリエンプトは既定で無効） |
 
 - **HSRP**（Hot Standby Router Protocol）: シスコ独自方式。Active / Standby の
   1 台構成で、Active のみが転送を行う
@@ -288,6 +330,12 @@ v1 の仮想 MAC アドレスの末尾 `XX` は、**グループ番号を 16 進
 ```
 Router(config-if)# standby version 2
 ```
+
+> **試験のポイント**: HSRP v1→v2 の変更点は次の 4 点をワンセットで
+> 覚えましょう。マルチキャストアドレス（v1: `224.0.0.2` → v2:
+> `224.0.0.102`）、UDP ポート（v1・v2 とも変わらず 1985）、グループ番号の
+> 範囲（v1: 0〜255 → v2: 0〜4095 に拡張）、仮想 MAC アドレス（v1:
+> `0000.0c07.acXX` → v2: `0000.0c9f.fXXX`）。
 
 ### プライオリティと Active の選出
 
@@ -337,6 +385,16 @@ Router(config-if)# standby 1 track GigabitEthernet0/1 20
 ```
 
 （上位リンクがダウンした場合、プライオリティを 20 減算する設定例）
+
+> 💼 **実務では**: HSRP はルータ単体よりも L3 スイッチの SVI 上で組むことが
+> 圧倒的に多く、アップリンク（WAN／コア）側を track し、priority を減算して
+> から preempt で自動フェイルオーバー／フェイルバックさせる構成が定石です。
+> 新人がやりがちなミスは、(1) preempt を付け忘れて計画メンテ後に本来 Active
+> にしたい機器が戻らない、(2) 2 台で仮想 IP・グループ番号・HSRP バージョンが
+> 食い違っていて片方がずっと Active になる、(3) トラッキングを入れず上位
+> リンク断でもゲートウェイが切り替わらず片系がブラックホール化する、の 3 つ
+> です。`show standby brief` で Active／Standby と仮想 IP を必ず両系で
+> 突き合わせる癖をつけると事故が減ります。
 
 ### 端末側から見た挙動
 

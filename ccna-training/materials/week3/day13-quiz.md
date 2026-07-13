@@ -2,7 +2,8 @@
 
 > 運用: 設問部分を小テスト課題の本文（またはドキュメント）に掲載。
 > 「解答・解説」は講師用フォルダに保管し、**翌日 9:00** に受講者へ公開する。
-> ルール: 10 問 / 30 分 / 教材参照なし。解答はコメントに「Q1: A」形式で提出。
+> ルール: 11 問 / 30 分 / 教材参照なし。解答はコメントに「Q1: A」形式で提出。
+> 配点: 選択式（Q1〜Q10）各 9 点、記述式（Q11）10 点（合計 100 点）。
 
 ---
 
@@ -82,7 +83,14 @@
   IP アドレスが小さい方が優先される
 - D. プライオリティの既定値はグループ番号と同じ値になる
 
-**Q10.**（記述）あるルータの OSPF ネイバーが確立せず、`show ip ospf
+**Q10.** HSRP v1・グループ番号 10 で使われる仮想 MAC アドレスはどれか。
+
+- A. `0000.0C07.AC10`
+- B. `0000.0C07.AC0A`
+- C. `0000.0C9F.F00A`
+- D. `0000.5E00.010A`
+
+**Q11.**（記述）あるルータの OSPF ネイバーが確立せず、`show ip ospf
 neighbor` に対象ネイバーが一切表示されないと報告された。考えられる原因を、
 **下位層から上位層への切り分けの手順**に沿って列挙し、それぞれをどの
 `show`（または `debug`）コマンドで確認し、どのように修正するかを説明せよ。
@@ -102,6 +110,7 @@ neighbor` に対象ネイバーが一切表示されないと報告された。�
 | Q7 | B | FHRP は複数ルータで仮想 IP / 仮想 MAC を共有し、デフォルトゲートウェイの単一障害点（Single Point of Failure）を排除する仕組み |
 | Q8 | C | GLBP は AVG（Active Virtual Gateway）が複数の AVF（Active Virtual Forwarder）に負荷を分散させ、複数台のルータが同時に転送できる点が HSRP・VRRP と異なる。HSRP・GLBP はシスコ独自、VRRP が業界標準（RFC 5798）で、HSRP のプリエンプトは既定で無効 |
 | Q9 | A | HSRP のプライオリティ既定値は 100（範囲 0〜255）。値が高いルータが Active になり、同値の場合は IP アドレスが大きい方が優先される |
-| Q10 | 例 | (1) 物理／データリンク層: リンクが up か（`show ip interface brief`）。(2) インターフェースが OSPF に参加しているか: `network` 漏れや `passive-interface` 誤設定の有無（`show ip protocols`、`show ip ospf interface brief`）。(3) タイマー一致: Hello/Dead interval（`show ip ospf interface`）。(4) サブネット／エリア ID／認証の一致（`show ip ospf interface`、`show running-config`）。(5) MTU 一致（`show interfaces`）。(6) 詳細確認が必要な場合は `debug ip ospf adj` / `debug ip ospf hello` で Hello パケットの送受信やネゴシエーションの過程を確認する。原因と確認コマンド・修正方法が対応し、下位層から上位層の順序で述べられていれば正解 |
+| Q10 | B | HSRP v1 の仮想 MAC アドレスは `0000.0C07.ACXX`（XX はグループ番号を 16 進数 2 桁で表したもの）。グループ番号 10 は 16 進で `0A` になるため `0000.0C07.AC0A`。A は 10 進の「10」をそのまま置いた誤り、C は HSRP v2 の形式（`0000.0C9F.FXXX`）との混同、D は VRRP の仮想 MAC 形式（`0000.5E00.01XX`）との混同 |
+| Q11 | 例 | (1) 物理／データリンク層: リンクが up か（`show ip interface brief`）。(2) インターフェースが OSPF に参加しているか: `network` 漏れや `passive-interface` 誤設定の有無（`show ip protocols`、`show ip ospf interface brief`）。(3) タイマー一致: Hello/Dead interval（`show ip ospf interface`）。(4) サブネット／エリア ID／認証の一致（`show ip ospf interface`、`show running-config`）。(5) MTU 一致（`show ip interface`）。(6) 詳細確認が必要な場合は `debug ip ospf adj` / `debug ip ospf hello` で Hello パケットの送受信やネゴシエーションの過程を確認する。原因と確認コマンド・修正方法が対応し、下位層から上位層の順序で述べられていれば正解 |
 
-**採点**: 1 問 10 点、70 点未満は翌朝再テスト。Q10 は趣旨が合っていれば 10 点。
+**採点**: 選択式（Q1〜Q10）各 9 点、記述式（Q11）は趣旨が合っていれば 10 点（合計 100 点）。70 点未満は翌朝再テスト。
