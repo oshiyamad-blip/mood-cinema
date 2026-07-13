@@ -23,7 +23,7 @@
 // Node.js 18 以上（fetch 内蔵）で動作。依存パッケージなし。
 
 import {
-  ISSUE_TYPES, CATEGORIES, MILESTONES, DAYS,
+  ISSUE_TYPES, CATEGORIES, MILESTONES, DAYS, EXAM_PHASE_ISSUES,
   lectureDescription, labDescription, quizDescription,
 } from './curriculum-data.mjs'
 
@@ -261,6 +261,29 @@ async function main() {
       created++
       console.log(`課題を作成しました: ${issue.summary} (期限 ${dueDate})`)
     }
+  }
+
+  // 試験対策フェーズ（Day 21〜25）: 模試サイクルの課題
+  for (const e of EXAM_PHASE_ISSUES) {
+    const dueDate = addBusinessDays(START, e.day - 1)
+    const summary = summaryPrefix + e.summary
+    if (DRY_RUN) {
+      console.log(`[dry-run] 課題: ${summary}  期限=${dueDate} 種別=${e.type} 週=Week5`)
+      created++
+      continue
+    }
+    await api('POST', '/issues', {
+      projectId,
+      summary,
+      description: e.description,
+      issueTypeId: issueTypeIds.get(e.type),
+      priorityId,
+      dueDate,
+      'milestoneId[]': [milestoneIds.get(milestonePrefix + MILESTONES.find((m) => m.week === 5).name)],
+      ...(ASSIGNEE ? { assigneeId: ASSIGNEE } : {}),
+    })
+    created++
+    console.log(`課題を作成しました: ${summary} (期限 ${dueDate})`)
   }
 
   console.log(`\n完了: ${created} 件の課題を${DRY_RUN ? '作成予定として表示' : '作成'}しました。`)

@@ -2,7 +2,7 @@
 
 > 運用: 設問部分を小テスト課題の本文（またはドキュメント）に掲載。
 > 「解答・解説」は講師用フォルダに保管し、**翌日 9:00** に受講者へ公開する。
-> ルール: 10 問 / 30 分 / 教材参照なし。解答はコメントに「Q1: A」形式で提出。
+> ルール: 16 問 / 40 分 / 教材参照なし。解答はコメントに「Q1: A」形式で提出。
 
 ---
 
@@ -81,6 +81,55 @@ GigabitEthernet インターフェース（1000 Mbps）の既定コストはい�
 にそのネイバーが現れない場合、原因として考えられる要素を**最低 4 つ**挙げ、
 それぞれをどの `show` コマンドで確認するかを説明せよ。
 
+**Q11.** ネットワーク `10.1.4.0/30` を area 0 に参加させる `network` 文として
+正しいものはどれか。
+
+- A. network 10.1.4.0 255.255.255.252 area 0
+- B. network 10.1.4.0 0.0.0.3 area 0
+- C. network 10.1.4.0 0.0.0.63 area 0
+- D. network 10.1.4.3 0.0.0.3 area 0
+
+**Q12.** ブロードキャストネットワークにおける OSPF の既定の Hello タイマーと
+Dead タイマーの組み合わせとして正しいものはどれか。
+
+- A. 5 秒 / 15 秒
+- B. 10 秒 / 40 秒
+- C. 30 秒 / 120 秒
+- D. 10 秒 / 30 秒
+
+**Q13.** OSPF に関する記述として正しいものはどれか。
+
+- A. IP 上に直接プロトコル番号 89 として載り、全 OSPF ルータ宛に `224.0.0.5`、
+  DR/BDR 宛に `224.0.0.6` のマルチキャストアドレスを使用する
+- B. UDP ポート 89 を使用し、マルチキャスト `224.0.0.9` を使用する
+- C. TCP ポート 89 を使用し、ブロードキャストのみで通信する
+- D. IP プロトコル番号 88 を使用し、EIGRP と同じマルチキャストアドレスを使う
+
+**Q14.** `show ip ospf neighbor` でネイバーが **ExStart** の状態のまま **FULL**
+に進まない。最も可能性が高い原因はどれか。
+
+- A. エリア ID の不一致
+- B. MTU の不一致
+- C. 該当インターフェースがパッシブに設定されている
+- D. Router ID の重複
+
+**Q15.** ルータ 2 台だけを直結する P2P（シリアルなど）リンクで、OSPF の
+DR/BDR は選出されるか。
+
+- A. 選出される。プライオリティが高い側が DR になる
+- B. 選出されない。P2P リンクでは DR/BDR という概念自体が存在しない
+- C. 選出されるが、常に BDR のみが決まる
+- D. Router ID が小さい側が自動的に DR になる
+
+**Q16.** 既に DR が選出されている区間に、後からより高いプライオリティを設定した
+ルータを追加した場合、DR はどうなるか。
+
+- A. 即座に新しいルータへ交代する
+- B. 交代しない。DR の選出は非プリエンプティブのため、既存の DR が健在な限り
+  そのまま維持され、交代させるには再選出（`clear ip ospf process` など）が必要
+- C. BDR だけが交代する
+- D. 両方のルータが DR になる
+
 ---
 
 ## 解答・解説（翌日公開・講師用）
@@ -96,6 +145,12 @@ GigabitEthernet インターフェース（1000 Mbps）の既定コストはい�
 | Q7 | C | コスト = 参照帯域幅（既定 10^8）÷ 帯域幅。Gigabit は 10^8 ÷ 10^9 = 0.1 だが切り上げにより 1 となり、FastEthernet と同じコストになってしまう |
 | Q8 | D | ワイルドカードマスクはサブネットマスクの反転。/24（255.255.255.0）は 0.0.0.255 になる |
 | Q9 | A | passive-interface は Hello の送信（＝ネイバー形成）だけを止め、ネットワークの広告自体は継続する |
-| Q10 | 例 | エリア ID 不一致（`show ip ospf interface` / `show running-config`）、Hello/Dead タイマー不一致（`show ip ospf interface`）、サブネット不一致（`show ip interface brief` や `show running-config`）、Router ID 重複（`show ip protocols` や `show ip ospf`）、MTU 不一致（`show interfaces`）、認証不一致（`show running-config`）、該当 IF が passive 設定になっている（`show ip protocols` の Passive Interface 欄や `show ip ospf interface`）などから最低 4 つ、原因と確認コマンドが正しく対応していれば正解 |
+| Q10 | 例 | エリア ID 不一致（`show ip ospf interface` / `show running-config`）、Hello/Dead タイマー不一致（`show ip ospf interface`）、サブネット不一致（`show ip interface brief` や `show running-config`）、Router ID 重複（`show ip protocols` や `show ip ospf`）、認証不一致（`show running-config`）、該当 IF が passive 設定になっている（`show ip protocols` の Passive Interface 欄や `show ip ospf interface`）などから最低 4 つ、原因と確認コマンドが正しく対応していれば正解。※ MTU 不一致は「ネイバーが現れない」原因ではなく「現れるが ExStart/Exchange で FULL にならない」原因なので、本問の正解には含めない（Q14 参照） |
+| Q11 | B | ワイルドカードマスクは `255.255.255.255 − サブネットマスク` で求める。/30（255.255.255.252）は `0.0.0.3` になる |
+| Q12 | B | ブロードキャスト網／P2P 網での既定値は Hello = 10 秒、Dead = 40 秒（Hello の 4 倍） |
+| Q13 | A | OSPF は TCP/UDP を使わず IP プロトコル番号 89 として直接動作し、全 OSPF ルータ宛 `224.0.0.5`、DR/BDR 宛 `224.0.0.6` のマルチキャストを使用する |
+| Q14 | B | MTU 不一致は 2-Way までは影響しないが、DBD 交換（Exchange）以降で食い違いが表面化し ExStart/Exchange で停止する。`show ip ospf neighbor` で状態を、`show interfaces` で MTU を確認する |
+| Q15 | B | DR/BDR の選出はブロードキャストや NBMA などのマルチアクセス網でのみ行われ、P2P リンクでは選出自体が行われない |
+| Q16 | B | DR 選出は非プリエンプティブ。既存 DR が健在なうちは、より高いプライオリティのルータが後から参加しても交代しない。交代させるには両ルータで `clear ip ospf process` 等により選出をやり直す必要がある（ラボ手順 9 参照） |
 
-**採点**: 1 問 10 点、70 点未満は翌朝再テスト。Q10 は趣旨が合っていれば 10 点。
+**採点**: 1 問 10 点、正答率 70% 未満は翌朝再テスト。Q10 は趣旨が合っていれば 10 点。
