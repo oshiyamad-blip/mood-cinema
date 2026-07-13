@@ -130,7 +130,7 @@ Switch(config)# errdisable recovery cause psecure-violation
 | コマンド | 内容 |
 |---|---|
 | `show port-security` | スイッチ全体のポートセキュリティ状況の一覧 |
-| `show port-security interface <if>` | 該当ポートの違反数・Port Status（Secure-up/Secure-down）などの詳細 |
+| `show port-security interface <if>` | 該当ポートの違反数・Port Status などの詳細。**Port Status: Secure-up=正常稼働 / Secure-shutdown=違反による err-disabled 停止 / Secure-down=リンクダウン（未接続・admin down）** |
 | `show port-security address` | 学習・登録された MAC アドレスの一覧 |
 
 ## 3. DHCP スヌーピング

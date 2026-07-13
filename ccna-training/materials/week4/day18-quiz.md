@@ -38,7 +38,7 @@
 復旧する操作として正しいものはどれか。
 
 - A. インターフェースで `no switchport port-security` を実行する
-- B. スイッチ全体を reload する
+- B. `clear mac address-table dynamic` を実行する
 - C. 該当インターフェースで `shutdown` → `no shutdown` を実行する
 - D. 該当インターフェースの VLAN を変更する
 

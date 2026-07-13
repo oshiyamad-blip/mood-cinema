@@ -97,11 +97,15 @@ R1(config-line)# login local
 R1(config-line)# exit
 R1(config)# line vty 0 4
 R1(config-line)# login local
+R1(config-line)# password Vty@12345
 R1(config-line)# exit
 ```
 
 `login local` により、`username ... secret` で登録したローカルアカウント（今回は
-ローカル AAA）で認証されるようになります。
+ローカル AAA）で認証されるようになります。VTY に追加した `password Vty@12345` は
+`login local` が優先されるため実際の認証には使用されません。次の手順 4 で
+`service password-encryption` による **Type 7** 難読化の挙動を実際に観察するための
+デモ用の平文パスワードです。SW1・SW2 の VTY にも同様に設定してください。
 
 ## 手順 4: service password-encryption の有効化（10 分）
 
@@ -109,14 +113,18 @@ R1(config-line)# exit
 R1(config)# service password-encryption
 ```
 
-設定後、`show running-config` を実行し、平文パスワードが `password 7 ...` のような
-**Type 7** 表示に変わっていることを確認してください。
+設定後、`show running-config` を実行し、`enable secret` と `username admin secret`
+が **Type 5**（`secret 5 ...`）のハッシュとして、手順 3 で VTY に追加した
+`password Vty@12345` が **Type 7**（`password 7 ...`）の難読化として、それぞれ
+表示が変わっていることを確認してください。
 
 ```
-R1# show running-config | include password
+R1# show running-config | include (secret|password)
 ```
 
-> Type 7 は可逆で強度が低い方式であることを、講義の内容とあわせて確認しておきましょう。
+> Type 5 はハッシュ化（一方向）、Type 7 は可逆な難読化で強度が低い方式です。
+> 同じコマンドの出力内で両者の表示形式を見比べ、講義の内容とあわせて確認して
+> おきましょう。
 
 ## 手順 5: SSH の有効化（15 分）
 
