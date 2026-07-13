@@ -147,7 +147,7 @@ Switch(config-vlan)# exit
 ### 確認コマンド
 
 複数の VLAN の状態をまとめて確認するには `show vlan brief` を使います（詳細は
-第 5 章で扱います）。
+第 5 節を参照してください）。
 
 > **試験のポイント**: VLAN 情報が `vlan.dat` に保存され、`running-config` とは
 > 別管理であることを問う問題が出ます。「`write memory` だけでは VLAN が消える／消えない」

@@ -162,7 +162,7 @@ SW1(config)# crypto key generate rsa
 
 ```
 SW1(config)# ip ssh version 2
-SW1(config)# username admin secret adminpw
+SW1(config)# username admin privilege 15 secret adminpw
 SW1(config)# line vty 0 4
 SW1(config-line)# transport input ssh
 SW1(config-line)# login local

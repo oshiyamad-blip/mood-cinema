@@ -43,11 +43,11 @@
 - D. 該当インターフェースの VLAN を変更する
 
 **Q5.** DHCP スヌーピングにおいて、untrusted ポートから受信した場合に
-破棄されるメッセージはどれか。
+破棄される代表的なサーバ発メッセージの組み合わせはどれか。
 
-- A. DHCPDISCOVER
-- B. DHCPOFFER
-- C. DHCPREQUEST
+- A. DHCPDISCOVER と DHCPREQUEST
+- B. DHCPOFFER、DHCPACK、DHCPNAK
+- C. DHCPREQUEST のみ
 - D. すべての ARP メッセージ
 
 **Q6.** DHCP スヌーピングを VLAN 10 で動作させるために必要なコマンドの
@@ -98,7 +98,7 @@ AH の役割の違いを説明せよ。
 | Q2 | D | sticky は動的に学習した MAC アドレスを running-config に自動的に書き込む機能。保存には `copy running-config startup-config` が必要 |
 | Q3 | A | `switchport port-security maximum` の既定値は 1。既定の violation（shutdown）では上限超過時にポートが err-disabled になりうる |
 | Q4 | C | err-disabled からの手動復旧は該当インターフェースでの `shutdown` → `no shutdown`。自動復旧には `errdisable recovery cause psecure-violation` を使う |
-| Q5 | B | untrusted ポートで破棄されるのはサーバ発のメッセージ（DHCPOFFER/DHCPACK/DHCPNAK）。クライアント発の DHCPDISCOVER/DHCPREQUEST は対象外 |
+| Q5 | B | untrusted ポートで破棄されるのはサーバ発のメッセージ（DHCPOFFER・DHCPACK・DHCPNAK）。クライアント発の DHCPDISCOVER/DHCPREQUEST は対象外 |
 | Q6 | D | `ip dhcp snooping`（グローバル）と `ip dhcp snooping vlan <VLAN>` の両方が揃って初めて該当 VLAN で動作する |
 | Q7 | A | DAI は DHCP スヌーピングバインディングテーブルの IP-MAC-ポート情報と ARP パケットを照合する。DHCP スヌーピングが前提として必要 |
 | Q8 | C | ARP スプーフィング対策は DAI。MAC フラッディング対策はポートセキュリティ、不正 DHCP サーバ対策は DHCP スヌーピング |
