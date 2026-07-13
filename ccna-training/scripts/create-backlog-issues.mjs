@@ -77,6 +77,16 @@ async function api(method, path, params = {}) {
 
 // ---------- 日付ユーティリティ（土日スキップ） ----------
 
+function prevBusinessDay(startYmd) {
+  // startYmd の直前の営業日（YYYY-MM-DD）を返す
+  const [y, m, d] = startYmd.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  do {
+    date.setUTCDate(date.getUTCDate() - 1)
+  } while (date.getUTCDay() === 0 || date.getUTCDay() === 6)
+  return date.toISOString().slice(0, 10)
+}
+
 function addBusinessDays(startYmd, n) {
   // startYmd を 0 営業日目として n 営業日後の YYYY-MM-DD を返す
   const [y, m, d] = startYmd.split('-').map(Number)
@@ -161,6 +171,47 @@ async function main() {
 
   // 課題の生成
   let created = 0
+
+  // Day 0: 環境構築（期限 = 開講前日）
+  const day00 = {
+    summary: '[Day00] 環境構築: Packet Tracer セットアップ',
+    dueDate: prevBusinessDay(START),
+    description: [
+      '## ゴール',
+      '- 研修で毎日使う Cisco Packet Tracer を自分の PC で使える状態にする',
+      '',
+      '## 手順書',
+      '- ドキュメント: 「00_ガイダンス > Day00 環境構築」を最初から最後まで実施する',
+      '',
+      '## 提出物',
+      '- ping 成功のスクリーンショットをコメントに貼る',
+      '- day00_氏名.pkt をこの課題に添付する',
+      '',
+      '## 完了条件',
+      '- [ ] NetAcad アカウントでログインできる',
+      '- [ ] Packet Tracer が起動する',
+      '- [ ] ミニ演習（PC2台+スイッチ）の ping が成功した',
+      '- [ ] スクリーンショットと .pkt を提出した',
+    ].join('\n'),
+  }
+  if (DRY_RUN) {
+    console.log(`[dry-run] 課題: ${day00.summary}  期限=${day00.dueDate} 種別=ラボ 週=Week1`)
+    created++
+  } else {
+    await api('POST', '/issues', {
+      projectId,
+      summary: day00.summary,
+      description: day00.description,
+      issueTypeId: issueTypeIds.get('ラボ'),
+      priorityId,
+      dueDate: day00.dueDate,
+      'milestoneId[]': [milestoneIds.get(MILESTONES.find((m) => m.week === 1).name)],
+      ...(ASSIGNEE ? { assigneeId: ASSIGNEE } : {}),
+    })
+    created++
+    console.log(`課題を作成しました: ${day00.summary} (期限 ${day00.dueDate})`)
+  }
+
   for (const d of DAYS) {
     const dd = String(d.day).padStart(2, '0')
     const dueDate = addBusinessDays(START, d.day - 1)
