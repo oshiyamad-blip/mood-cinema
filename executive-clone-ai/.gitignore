@@ -1,0 +1,32 @@
+# 依存関係
+node_modules/
+.pnp
+.pnp.js
+
+# ビルド成果物
+.next/
+out/
+dist/
+
+# 環境変数（機密情報を含む）
+.env*.local
+.env
+
+# デバッグログ
+npm-debug.log*
+yarn-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# 音声ライフログの一時ファイル（大容量）
+tmp/audio/

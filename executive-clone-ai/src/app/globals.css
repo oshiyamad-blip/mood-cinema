@@ -1,0 +1,217 @@
+/* ─── デザイントークン ─────────────────────────────────────── */
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a22;
+  --surface2: #252530;
+  --border: #2e2e3e;
+  --text: #e8e8f0;
+  --text-muted: #8888aa;
+  --accent: #7c6af7;
+  --accent-hover: #9380ff;
+  --signal-hypothesis: #4ade80;
+  --signal-key_person: #f59e0b;
+  --signal-idea: #60a5fa;
+  --signal-policy: #f43f5e;
+  --signal-market: #a78bfa;
+  --signal-other: #6b7280;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── リセット ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ─── レイアウト ───────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; }
+.topbar-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: var(--accent);
+  border-radius: 999px;
+  opacity: 0.85;
+}
+nav {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+}
+nav a {
+  display: block;
+  padding: 10px 20px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.15s, background 0.15s;
+}
+nav a:hover, nav a.active {
+  color: var(--text);
+  background: var(--surface2);
+}
+nav a.active { border-left: 3px solid var(--accent); padding-left: 17px; }
+main { padding: 28px 32px; overflow-y: auto; }
+
+/* ─── カード ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.card + .card { margin-top: 12px; }
+
+/* ─── ボタン ───────────────────────────────────────────────── */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 20px;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+/* ─── フォーム ─────────────────────────────────────────────── */
+textarea, input[type="text"] {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 10px 14px;
+  width: 100%;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+}
+textarea:focus, input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+/* ─── バッジ ───────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.badge-hypothesis { background: var(--signal-hypothesis); color: #000; }
+.badge-key_person { background: var(--signal-key_person); color: #000; }
+.badge-idea       { background: var(--signal-idea); color: #000; }
+.badge-policy     { background: var(--signal-policy); color: #fff; }
+.badge-market     { background: var(--signal-market); color: #000; }
+.badge-other      { background: var(--signal-other); color: #fff; }
+
+/* ─── ページ見出し ─────────────────────────────────────────── */
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 1.4rem; font-weight: 700; }
+.page-header p { color: var(--text-muted); font-size: 0.88rem; margin-top: 4px; }
+
+/* ─── ダッシュボード統計 ───────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  text-align: center;
+}
+.stat-card .value { font-size: 2rem; font-weight: 800; color: var(--accent); }
+.stat-card .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ─── チャット ─────────────────────────────────────────────── */
+.chat-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+.msg { max-width: 80%; }
+.msg.user { align-self: flex-end; }
+.msg.assistant { align-self: flex-start; }
+.msg-bubble {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.msg.user .msg-bubble {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant .msg-bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.chat-input-area {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.chat-input-area textarea { height: 80px; }
+
+/* ─── ユーティリティ ───────────────────────────────────────── */
+.text-muted { color: var(--text-muted); }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.flex { display: flex; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.font-bold { font-weight: 700; }
+.font-sm { font-size: 0.85rem; }
