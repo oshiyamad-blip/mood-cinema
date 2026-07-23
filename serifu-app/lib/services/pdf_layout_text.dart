@@ -73,6 +73,12 @@ class PdfLayoutText {
   }
 
   /// 縦書き：x座標で列を作り、右の列から左へ。
+  ///
+  /// **段組対応**: ワークショップ台本などでは1ページに上下2段
+  /// （それぞれが右→左の縦書きブロック）で組まれることがある。
+  /// ページ全体で列を作ると上下の段が同じ列に合流し、物語の前半と後半が
+  /// 行単位で交互に混ざってしまう。そこで先にy射影で「段」を分け、
+  /// 上の段→下の段の順に、段ごとに右→左で読む。
   static List<String> _verticalLines(List<GlyphRun> items) {
     // 横書きの混入物（ページ番号・ヘッダー等、幅が高さの2倍超のラン）は
     // 列に混ぜず、独立した行として先頭に出す（後段の定型除去で消える）。
@@ -86,6 +92,42 @@ class PdfLayoutText {
       }
     }
 
+    final lines = <String>[];
+    for (final g in horiz) {
+      lines.add(g.text.trim());
+    }
+    for (final band in _splitBands(vert)) {
+      lines.addAll(_bandToLines(band));
+    }
+    return lines;
+  }
+
+  /// y射影で上下の「段」に分ける。どの列にもグリフが無い縦方向の空きが
+  /// 文字セル約2つぶん以上あれば段の境界とみなす（1段組なら分割されない。
+  /// 列内の意図的な字下げ空きは他の列が同じy帯を埋めるため境界にならない）。
+  /// 段をまたぐ本文は連続した流れなので、段間に空行は入れない。
+  static List<List<GlyphRun>> _splitBands(List<GlyphRun> items) {
+    if (items.isEmpty) return const [];
+    final sorted = [...items]..sort((a, b) => a.y.compareTo(b.y));
+    final heights = [for (final g in sorted) g.height]..sort();
+    final cell = math.max(heights[heights.length ~/ 2], 1.0);
+
+    final bands = <List<GlyphRun>>[];
+    var bandEnd = double.negativeInfinity;
+    for (final g in sorted) {
+      if (bands.isEmpty || g.y > bandEnd + cell * 1.8) {
+        bands.add([g]);
+        bandEnd = g.y + g.height;
+      } else {
+        bands.last.add(g);
+        bandEnd = math.max(bandEnd, g.y + g.height);
+      }
+    }
+    return bands;
+  }
+
+  /// 1段ぶんの縦書きグリフを、右の列から左へ行に組み立てる。
+  static List<String> _bandToLines(List<GlyphRun> vert) {
     // 列クラスタリング：xを降順に並べ、間隔が閾値を超えたら新しい列。
     vert.sort((a, b) => b.x.compareTo(a.x));
     final columns = <List<GlyphRun>>[];
@@ -106,9 +148,6 @@ class PdfLayoutText {
     final pitch = _median(gaps);
 
     final lines = <String>[];
-    for (final g in horiz) {
-      lines.add(g.text.trim());
-    }
     for (var i = 0; i < columns.length; i++) {
       if (i > 0 && pitch > 0) {
         final gap = columns[i - 1].first.x - columns[i].first.x;
@@ -138,7 +177,44 @@ class PdfLayoutText {
   }
 
   /// 横書き：y座標で行を作り、上から下へ。
+  ///
+  /// **段組対応**: ワークショップ台本などでは1ページを左右2段
+  /// （それぞれが横書きブロック）で組むことがある。ページ全体で行を作ると
+  /// 左右の段が同じ行に合流し、物語の前半と後半が行単位で交互に混ざって
+  /// しまう。そこで先にx射影で「段」を分け、左の段→右の段の順に読む。
   static List<String> _horizontalLines(List<GlyphRun> items) {
+    final lines = <String>[];
+    for (final column in _splitHorizontalColumns(items)) {
+      lines.addAll(_rowsToLines(column));
+    }
+    return lines;
+  }
+
+  /// x射影で左右の「段」に分ける。どの行のx区間にも覆われない横方向の
+  /// 空き（段間の溝）が文字セル約1.5個ぶん以上あれば段の境界とみなす。
+  /// 1段組では長い行がページ幅を覆うため分割されない。
+  static List<List<GlyphRun>> _splitHorizontalColumns(List<GlyphRun> items) {
+    if (items.isEmpty) return const [];
+    final sorted = [...items]..sort((a, b) => a.x.compareTo(b.x));
+    final heights = [for (final g in sorted) g.height]..sort();
+    final cell = math.max(heights[heights.length ~/ 2], 1.0);
+
+    final columns = <List<GlyphRun>>[];
+    var colEnd = double.negativeInfinity;
+    for (final g in sorted) {
+      if (columns.isEmpty || g.x > colEnd + cell * 1.5) {
+        columns.add([g]);
+        colEnd = g.x + g.width;
+      } else {
+        columns.last.add(g);
+        colEnd = math.max(colEnd, g.x + g.width);
+      }
+    }
+    return columns;
+  }
+
+  /// 1段ぶんの横書きグリフを、上から下へ行に組み立てる。
+  static List<String> _rowsToLines(List<GlyphRun> items) {
     items.sort((a, b) => a.y.compareTo(b.y));
     final rows = <List<GlyphRun>>[];
     for (final g in items) {

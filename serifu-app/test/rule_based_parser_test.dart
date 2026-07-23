@@ -182,6 +182,82 @@ void main() {
     });
   });
 
+  group('ワークショップ審査台本形式（＜登場人物＞・◾柱・注記つき表紙）', () {
+    const wsScript = '【演技審査用台本】\n'
+        '\n'
+        '＜設定＞\n'
+        '遺産について話し合う姉妹。\n'
+        '\n'
+        '＜登場人物＞\n'
+        'アオイ：妹\n'
+        '会社員。独身。実家暮らし。\n'
+        '\n'
+        'ハル：姉\n'
+        '会社員。既婚。\n'
+        '\n'
+        '※キャラクターは自身で設けて演じてください。\n'
+        '\n'
+        '★どちらの役かは当日指名します。\n'
+        '\n'
+        '1\n'
+        '◾シーン台本(部屋)\n'
+        '\n'
+        '椅子に座っているアオイ。\n'
+        'ハル「ごめん遅くなって」\n'
+        'アオイ「・・・」\n'
+        'ハル「この家にお金あるの、知ってたんで\n'
+        'しょ？」\n'
+        'アオイ「どういうこと？」\n';
+
+    test('表紙（設定・人物表・※注記・★注意書き）は本編の柱までメタになる', () {
+      final r = parser.parse(wsScript);
+      final firstBody = r.lines.indexWhere((l) => l.text.contains('シーン台本'));
+      expect(firstBody, greaterThan(0));
+      for (var i = 0; i < firstBody; i++) {
+        expect(r.lines[i].type, LineType.meta,
+            reason: '表紙の行がメタでない: ${r.lines[i].text}');
+      }
+      expect(r.lines[firstBody].type, LineType.direction); // ◾柱
+    });
+
+    test('役名は人物表と本文から正しく拾われる（説明語は残らない）', () {
+      final r = parser.parse(wsScript);
+      expect(r.characters, ['アオイ', 'ハル']);
+    });
+
+    test('コロン形式の人物表エントリ（アオイ：妹）はセリフにならない', () {
+      final r = parser.parse(wsScript);
+      final d = r.lines.where((l) => l.type == LineType.dialogue).toList();
+      expect(d.every((l) => !l.text.contains('妹') && !l.text.contains('姉')),
+          isTrue);
+      expect(d, hasLength(4));
+    });
+
+    test('段をまたいで折り返されたセリフは1つに連結される', () {
+      final r = parser.parse(wsScript);
+      final wrapped = r.lines.firstWhere((l) => l.text.contains('知ってたんで'));
+      expect(wrapped.type, LineType.dialogue);
+      expect(wrapped.speaker, 'ハル');
+      expect(wrapped.text, 'この家にお金あるの、知ってたんでしょ？');
+    });
+
+    test('◾（黒四角）の柱もト書きになる', () {
+      final r = parser.parse('◾シーン台本(公園)\n太郎「やあ」');
+      expect(r.lines[0].type, LineType.direction);
+      expect(r.lines[1].type, LineType.dialogue);
+    });
+
+    test('＜登場人物＞【登場人物】などカッコ囲みの見出しも人物表と認識する', () {
+      final r = parser.parse('＜登場人物＞\n太郎\n花子\n\n太郎「やあ」\n花子「どうも」');
+      expect(r.characters, containsAll(['太郎', '花子']));
+      expect(r.lines[0].type, LineType.meta);
+
+      final r2 = parser.parse('【登場人物】\n太郎\n\n太郎「やあ」');
+      expect(r2.characters, ['太郎']);
+      expect(r2.lines[0].type, LineType.meta);
+    });
+  });
+
   group('空白区切り形式（カギ括弧なし・テレビ/映画台本の抜粋）', () {
     test('役名＋空白＋セリフを認識し、頻出しない先頭語は誤検出しない', () {
       final r = parser.parse('おじの平山の元に、姪であるニコが家出の最中。\n'

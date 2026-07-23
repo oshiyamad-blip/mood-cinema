@@ -53,6 +53,53 @@ void main() {
       expect(lines, ['○駅前・朝', '太郎「おはよう」']);
     });
 
+    test('縦書き2段組：上の段を読み切ってから下の段へ', () {
+      // 上下2段（各段が右→左の縦書きブロック）。ページ全体で列を作ると
+      // 同じxの上下の列が1本に合流してしまう。
+      final page = [
+        ...column(700, '上段の一行目です', startY: 60),
+        ...column(678, '上段の二行目です', startY: 60),
+        ...column(700, '下段の一行目です', startY: 300),
+        ...column(678, '下段の二行目です', startY: 300),
+      ]..shuffle();
+      final text = PdfLayoutText.reconstruct([page]);
+      final lines =
+          text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      expect(lines, ['上段の一行目です', '上段の二行目です', '下段の一行目です', '下段の二行目です']);
+    });
+
+    test('横書き2段組：左の段を読み切ってから右の段へ', () {
+      // 左右2段の横書き（ワークショップ台本の本文ページに多い）。
+      // ページ全体で行を作ると左右の段が同じ行に合流してしまう。
+      final page = [
+        run(30, 40, 'テーブルの椅子に座っているユウ。'),
+        run(30, 57, 'ユウ「おはよう」'),
+        run(300, 40, 'マコト「そうかもしれないけど」'),
+        run(300, 57, 'ユウ「私に押し付けてただけじゃん」'),
+      ]..shuffle();
+      final text = PdfLayoutText.reconstruct([page]);
+      final lines =
+          text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      expect(lines, [
+        'テーブルの椅子に座っているユウ。',
+        'ユウ「おはよう」',
+        'マコト「そうかもしれないけど」',
+        'ユウ「私に押し付けてただけじゃん」',
+      ]);
+    });
+
+    test('横書き1段組：長い行が全幅を覆えば段に分割されない', () {
+      final page = [
+        run(30, 40, 'これはページの幅いっぱいまで届く長い一行の文章です。'),
+        run(30, 57, '短い行'),
+        run(200, 74, '字下げされた行'),
+      ];
+      final text = PdfLayoutText.reconstruct([page]);
+      final lines =
+          text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      expect(lines, ['これはページの幅いっぱいまで届く長い一行の文章です。', '短い行', '字下げされた行']);
+    });
+
     test('全ページ先頭で繰り返されるヘッダーは除去される（数字違いも同一視）', () {
       List<GlyphRun> pageWith(String header, String body) => [
             run(100, 20, header),
