@@ -31,6 +31,37 @@
 
   <title>ホンヨミ</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    一部のアプリ内ブラウザ（LINE/SNSのリンク等）や特殊なブラウザ/OS設定では
+    navigator.language が空、または "en-US@posix" のような非BCP-47文字列になる。
+    その状態で Flutter を起動するとロケール解決が
+    「Incorrect locale information provided」で失敗し、画面が真っ白になる。
+    Flutter を読み込む前に、各言語タグから @修飾子(@posix等)や .エンコーディングを
+    取り除いて正規化し、正しい形が1つも無ければ 'ja' を補って回避する。
+    通常のブラウザ（ja-JP / en-US 等）はそのまま素通しするので影響しない。
+  -->
+  <script>
+    (function () {
+      try {
+        var clean = function (v) {
+          if (!v) return '';
+          v = String(v).split('@')[0].split('.')[0].trim(); // @posix / .UTF-8 を除去
+          return /^[A-Za-z0-9-]+$/.test(v) ? v : '';         // BCP-47らしい形のみ採用
+        };
+        var src = (navigator.languages && navigator.languages.length)
+          ? navigator.languages : [navigator.language];
+        var cleaned = [];
+        for (var i = 0; i < src.length; i++) {
+          var c = clean(src[i]);
+          if (c && cleaned.indexOf(c) === -1) cleaned.push(c);
+        }
+        if (cleaned.length === 0) cleaned = ['ja'];
+        Object.defineProperty(navigator, 'languages', { get: function () { return cleaned; }, configurable: true });
+        Object.defineProperty(navigator, 'language', { get: function () { return cleaned[0]; }, configurable: true });
+      } catch (e) { /* 失敗しても通常のブラウザには影響しない */ }
+    })();
+  </script>
 </head>
 <body>
   <!--

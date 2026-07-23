@@ -33,6 +33,8 @@ class SerifuApp extends StatelessWidget {
       title: 'ホンヨミ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      // UIは日本語固定（端末/ブラウザのロケールに依存しない）。
+      locale: const Locale('ja'),
       // 広告制御用：ホームが最前面かどうかを AdBanner が検知するため。
       navigatorObservers: [adRouteObserver],
       home: const HomeScreen(),
