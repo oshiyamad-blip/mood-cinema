@@ -33,7 +33,7 @@ export default function Article() {
     : undefined;
 
   useSeo({
-    title: article ? `${article.title} | mood-cinema` : t.article.notFound,
+    title: article ? `${article.title} | Scene Studio` : t.article.notFound,
     description: article?.summary,
     canonicalPath: article ? `${prefix}/article/${article.slug}` : undefined,
     jsonLd,

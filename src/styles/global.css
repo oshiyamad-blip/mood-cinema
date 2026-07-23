@@ -98,7 +98,7 @@ main {
   gap: var(--space-4);
   font-size: 0.9rem;
 }
-.site-nav a { color: var(--color-text-muted); transition: color 0.15s; }
+.site-nav a { color: var(--color-text-muted); transition: color 0.15s; white-space: nowrap; }
 .site-nav a:hover { color: var(--color-text); }
 .lang-switch {
   padding: 3px 10px;
@@ -217,6 +217,8 @@ main {
 @media (min-width: 640px) {
   .card-grid { grid-template-columns: 1fr 1fr; }
 }
+/* 参考作品ファインダーの導線カードと、その下のトーン別ショートカット群の間の余白 */
+.card-grid--tight { margin-top: var(--space-3); }
 
 /* ── Movie card ── */
 .movie-card {
@@ -697,6 +699,429 @@ main {
 .shortcut-item__emoji {
   font-size: 1.5rem;
   line-height: 1;
+}
+.shortcut-item__sub {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ── 箱書きエディタ ── */
+.hako-page {
+  padding-bottom: var(--space-8);
+}
+.hako-header {
+  padding: var(--space-6) 0 var(--space-4);
+  text-align: center;
+}
+.hako-header h1 {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 var(--space-2);
+  background: linear-gradient(135deg, #fff8f2 0%, #ffd4a8 50%, #d8b4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.01em;
+}
+.hako-header__sub {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 0.9rem;
+}
+.hako-title-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+}
+.hako-title-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.hako-title-input::placeholder { color: var(--color-text-muted); font-weight: 400; }
+
+.hako-structures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.hako-structures__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-right: var(--space-1);
+}
+.hako-struct-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.hako-struct-btn:hover {
+  border-color: rgba(255,255,255,0.24);
+  color: var(--color-text);
+}
+.hako-struct-btn--on {
+  border-color: var(--color-accent);
+  background: rgba(255, 168, 48, 0.14);
+  color: var(--color-accent);
+}
+
+.hako-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.hako-act {
+  margin-bottom: var(--space-5);
+}
+.hako-act__label {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid rgba(255, 168, 48, 0.18);
+}
+
+.hako-box {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  background: var(--color-bg-card);
+  border: 1px solid rgba(255, 168, 48, 0.12);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.hako-box__num {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 168, 48, 0.14);
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.hako-box__fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.hako-box__heading,
+.hako-box__body {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  padding: var(--space-2) var(--space-3);
+}
+.hako-box__heading { font-size: 0.98rem; font-weight: 600; }
+.hako-box__body {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 44px;
+}
+.hako-box__heading:focus,
+.hako-box__body:focus { outline: none; border-color: var(--color-accent); }
+.hako-box__heading::placeholder,
+.hako-box__body::placeholder { color: var(--color-text-muted); }
+
+.hako-box__actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hako-box__actions button {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: rgba(255,255,255,0.03);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+.hako-box__actions button:hover:not(:disabled) {
+  border-color: rgba(255,255,255,0.24);
+  color: var(--color-text);
+}
+.hako-box__actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+.hako-box__del:hover:not(:disabled) {
+  border-color: var(--color-danger) !important;
+  color: var(--color-danger) !important;
+}
+.hako-box__open {
+  color: var(--color-accent) !important;
+  border-color: rgba(255, 168, 48, 0.3) !important;
+}
+.hako-box__open:hover {
+  border-color: var(--color-accent) !important;
+  background: rgba(255, 168, 48, 0.1) !important;
+}
+
+.hako-add {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(255, 168, 48, 0.3);
+  background: rgba(255, 168, 48, 0.04);
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.hako-add:hover {
+  background: rgba(255, 168, 48, 0.1);
+  border-color: rgba(255, 168, 48, 0.5);
+}
+
+.hako-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+.hako-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.hako-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.hako-export .btn { width: auto; padding: var(--space-2) var(--space-4); font-size: 0.88rem; }
+.hako-reset {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.hako-reset:hover { background: rgba(239, 68, 68, 0.12); border-color: var(--color-danger); }
+
+.hako-toast {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100vw - 2 * var(--space-4));
+  background: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  animation: hako-toast-in 0.2s ease;
+}
+.hako-toast__undo {
+  flex-shrink: 0;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hako-toast__undo:hover { filter: brightness(1.05); }
+@keyframes hako-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── フォーカス執筆モード（箱を全画面で開いて書き切る） ── */
+.hako-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  animation: hako-focus-in 0.18s ease;
+}
+@keyframes hako-focus-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hako-focus__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.hako-focus__pos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.hako-focus__act {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+.hako-focus__done {
+  padding: 8px 20px;
+  min-height: 40px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-accent);
+  background: rgba(255, 168, 48, 0.14);
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.hako-focus__done:hover { background: rgba(255, 168, 48, 0.22); }
+.hako-focus__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.hako-focus__heading {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: var(--space-2) 0;
+}
+.hako-focus__heading:focus { outline: none; border-color: var(--color-accent); }
+.hako-focus__heading::placeholder { color: var(--color-text-muted); font-weight: 400; }
+.hako-focus__text {
+  width: 100%;
+  flex: 1 0 auto;
+  min-height: 46vh;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  padding: 0;
+  resize: none;
+  overflow: hidden;
+}
+.hako-focus__text:focus { outline: none; }
+.hako-focus__text::placeholder { color: var(--color-text-muted); }
+.hako-focus__nav {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.hako-focus__nav button {
+  flex: 1 1 0;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(255,255,255,0.03);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.hako-focus__nav button:hover:not(:disabled) {
+  border-color: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.06);
+}
+.hako-focus__nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── モバイル調整（SP版） ── */
+@media (max-width: 640px) {
+  /* ヘッダーのナビが幅に収まらず「箱書き」等が1文字ずつ折り返す問題を解消。
+     ナビ全体を2段目のフル幅行へ落とし、各項目は改行させない。 */
+  .site-header__inner { flex-wrap: wrap; row-gap: var(--space-2); }
+  .site-nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    font-size: 0.85rem;
+  }
+  .lang-switch { margin-left: auto; }
+
+  /* 箱の操作ボタン（↑↓✕）を下段のフル幅行へ回し、44px 以上のタップ領域を確保。 */
+  .hako-box { flex-wrap: wrap; }
+  .hako-box__actions {
+    flex: 1 1 100%;
+    flex-direction: row;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+  .hako-box__actions button {
+    flex: 1 1 auto;
+    height: 44px;
+    font-size: 1.05rem;
+  }
 }
 
 /* ── Loading / error ── */

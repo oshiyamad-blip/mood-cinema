@@ -33,13 +33,25 @@ export default function Home() {
           ))}
         </p>
         <div className="hero__cta">
-          <Link to={`${prefix}/mood`} className="btn btn--primary">{t.home.heroCta}</Link>
+          <Link to={`${prefix}/hako`} className="btn btn--primary">{t.home.heroCta}</Link>
         </div>
       </section>
 
       <section className="section">
+        <h2>{t.home.workspaceHeading}</h2>
+        <Link to={`${prefix}/hako`} className="shortcut-item">
+          <span className="shortcut-item__emoji">📝</span>
+          <span>{t.hako.heading}<small className="shortcut-item__sub">{t.hako.sub}</small></span>
+        </Link>
+      </section>
+
+      <section className="section">
         <h2>{t.home.shortcutsHeading}</h2>
-        <div className="card-grid">
+        <Link to={`${prefix}/mood`} className="shortcut-item">
+          <span className="shortcut-item__emoji">🎞️</span>
+          <span>{t.home.referenceFinder.label}<small className="shortcut-item__sub">{t.home.referenceFinder.sub}</small></span>
+        </Link>
+        <div className="card-grid card-grid--tight">
           {t.home.shortcuts.map((s) => (
             <Link key={s.balloons} to={`${prefix}/result?b=${s.balloons}`} className="shortcut-item">
               <span className="shortcut-item__emoji">{s.emoji}</span>

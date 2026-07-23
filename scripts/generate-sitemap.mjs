@@ -74,6 +74,7 @@ const entries = [
   // ── Japanese (root) ──────────────────────────────────
   url(`${SITE_URL}/`, { changefreq: 'weekly', priority: '1.0' }),
   url(`${SITE_URL}/mood`, { changefreq: 'monthly', priority: '0.9' }),
+  url(`${SITE_URL}/hako`, { changefreq: 'monthly', priority: '0.7' }),
   url(`${SITE_URL}/articles`, { changefreq: 'weekly', priority: '0.8' }),
   url(`${SITE_URL}/about`, { changefreq: 'yearly', priority: '0.3' }),
   url(`${SITE_URL}/privacy`, { changefreq: 'yearly', priority: '0.2' }),
@@ -87,6 +88,7 @@ const entries = [
   // ── English (/en/) ───────────────────────────────────
   url(`${SITE_URL}/en/`, { changefreq: 'weekly', priority: '1.0' }),
   url(`${SITE_URL}/en/mood`, { changefreq: 'monthly', priority: '0.9' }),
+  url(`${SITE_URL}/en/hako`, { changefreq: 'monthly', priority: '0.7' }),
   url(`${SITE_URL}/en/articles`, { changefreq: 'weekly', priority: '0.8' }),
   url(`${SITE_URL}/en/about`, { changefreq: 'yearly', priority: '0.3' }),
   url(`${SITE_URL}/en/privacy`, { changefreq: 'yearly', priority: '0.2' }),
