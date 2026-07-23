@@ -1,0 +1,14 @@
+# Android リリース署名の設定サンプル。
+# このファイルをコピーして android/key.properties を作り、値を埋める。
+#   cp android/key.properties.example android/key.properties
+# key.properties と .jks/.keystore は .gitignore 済み。絶対にコミットしないこと。
+#
+# アップロード鍵の作成（初回のみ・パスワードは安全に保管）:
+#   keytool -genkey -v -keystore ~/honyomi-upload.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# storeFile は .jks の絶対パス（例: /Users/you/honyomi-upload.jks）。
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=/absolute/path/to/honyomi-upload.jks
