@@ -27,6 +27,8 @@ Bはお金と本人確認が絡むため代行できない。**Bが律速**。B�
 - ✅ 権限の用途文字列（マイク・音声認識）を日本語で記載（Info.plist）
 - ✅ 輸出コンプライアンス `ITSAppUsesNonExemptEncryption=false`
 - ✅ 非パーソナライズ広告のみ（ATTダイアログ不要）・練習中は広告非表示
+- ✅ **全世界配信向けの同意管理（UMP/GDPR）**：起動時にEEA/UK等で同意フォーム、
+  同意前は広告を出さない。設定に「広告の同意設定」（必要地域のみ表示）
 - ✅ 台本・録音・設定は端末内のみ／OSバックアップ無効（allowBackup=false）
 - ✅ 公開ポリシー：プライバシー・利用規約・サポートページ（GitHub Pages）
 - ✅ **Android リリース署名の配線**（key.properties / CI環境変数 → 無ければdebug）
@@ -46,7 +48,7 @@ Bはお金と本人確認が絡むため代行できない。**Bが律速**。B�
   - 個人アカウントは公開前に**クローズドテスト 12名・14日間**が必須（手順6）
 - ☐ **Apple Developer Program**（年 $99）https://developer.apple.com/programs/
 
-### 2. AdMob 登録 → 本番ID発行
+### 2. AdMob 登録 → 本番ID発行 ＋ 同意メッセージ作成（全世界配信で必須）
 - ☐ https://admob.google.com でアプリを登録（Android/iOS 別々）
 - ☐ 発行される値を控える（4つ）：
   - アプリID（Android）`ca-app-pub-XXXX~XXXX`
@@ -54,6 +56,9 @@ Bはお金と本人確認が絡むため代行できない。**Bが律速**。B�
   - バナー ユニットID（Android）`ca-app-pub-XXXX/XXXX`
   - バナー ユニットID（iOS）`ca-app-pub-XXXX/XXXX`
 - ☐ この4つを共有いただければ、こちらで手順3の差し替えを行う
+- ☐ **AdMob →「プライバシーとメッセージ」→ GDPR** で同意メッセージを作成・公開
+  （全世界配信ではこれが無いとEEAで同意フォームが出ない）。CCPA/米国州法向けの
+  メッセージも同画面で作成できる。アプリ側の表示ロジックは実装済み。
 
 ### 3. 本番 AdMob ID への差し替え（手順2の値をもらったら こちらで実施）
 - アプリID → `AndroidManifest.xml`（APPLICATION_ID）と `Info.plist`（GADApplicationIdentifier）
@@ -107,7 +112,8 @@ Bはお金と本人確認が絡むため代行できない。**Bが律速**。B�
    → 内部テスト → クローズドテスト（12名/14日）→ 製品版申請
 3. **iOS**：同じタグで `serifu-testflight.yml` が IPA を TestFlight へアップロード
    → 内部テスト → 審査提出
-4. 公開範囲は**まず日本のみ**を推奨（UIが日本語のみ・GDPR回避。docs/14）
+4. 公開範囲は**全世界**（方針決定済み）。UIは日本語のみだが英語のストア説明文は
+   用意済み（docs/10）。EEA/UK向けの同意はUMPで対応済み（手順2のAdMob同意メッセージ必須）
 5. 段階的リリース（Android 5%→…→100% / iOS Phased Release）で様子を見る
 
 ---
