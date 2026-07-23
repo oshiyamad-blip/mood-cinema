@@ -950,10 +950,14 @@ main {
   bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100vw - 2 * var(--space-4));
   background: var(--color-surface);
   border: 1px solid var(--color-accent);
   color: var(--color-text);
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
   border-radius: var(--radius-pill);
   font-size: 0.88rem;
   font-weight: 600;
@@ -961,6 +965,18 @@ main {
   z-index: 200;
   animation: hako-toast-in 0.2s ease;
 }
+.hako-toast__undo {
+  flex-shrink: 0;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hako-toast__undo:hover { filter: brightness(1.05); }
 @keyframes hako-toast-in {
   from { opacity: 0; transform: translate(-50%, 8px); }
   to   { opacity: 1; transform: translate(-50%, 0); }

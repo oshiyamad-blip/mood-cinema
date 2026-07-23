@@ -25,7 +25,8 @@ export default function Hako() {
 
   const [outline, setOutline] = useState<Outline>(() => emptyOutline());
   const [loaded, setLoaded] = useState(false);
-  const [toast, setToast] = useState('');
+  // トーストは通知だけの場合と「元に戻す」操作つきの場合がある
+  const [toast, setToast] = useState<{ msg: string; undo?: () => void } | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
@@ -84,10 +85,11 @@ export default function Hako() {
     autoGrow(el);
   };
 
-  const flash = (msg: string) => {
-    setToast(msg);
+  // 「元に戻す」つきのトーストは、うっかり見逃さないよう長め（6 秒）に出す
+  const flash = (msg: string, undo?: () => void) => {
+    setToast({ msg, undo });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(''), 1800);
+    toastTimer.current = window.setTimeout(() => setToast(null), undo ? 6000 : 1800);
   };
 
   const patch = (p: Partial<Outline>) =>
@@ -116,9 +118,21 @@ export default function Hako() {
   const updateBox = (id: string, p: Partial<Box>) =>
     patch({ boxes: outline.boxes.map(b => (b.id === id ? { ...b, ...p } : b)) });
 
+  // 箱の削除は取り消せる：即座に消して「元に戻す」トーストを出す（設計理念：本文を静かに失わない）
   const deleteBox = (id: string) => {
-    if (!window.confirm(t.hako.deleteConfirm)) return;
+    const idx = outline.boxes.findIndex(b => b.id === id);
+    if (idx < 0) return;
+    const removed = outline.boxes[idx];
+    if (openId === id) setOpenId(null);
     patch({ boxes: outline.boxes.filter(b => b.id !== id) });
+    flash(t.hako.deleted, () =>
+      setOutline(prev => {
+        if (prev.boxes.some(b => b.id === removed.id)) return prev; // 二重復元を防ぐ
+        const boxes = [...prev.boxes];
+        boxes.splice(Math.min(idx, boxes.length), 0, removed); // 元の位置へ差し戻す
+        return { ...prev, boxes, updated: Date.now() };
+      }),
+    );
   };
 
   // 同じ幕に属する隣の箱と入れ替える
@@ -166,10 +180,13 @@ export default function Hako() {
   };
 
   const reset = () => {
+    if (outline.boxes.length === 0 && !outline.title.trim()) return;
     if (!window.confirm(t.hako.resetConfirm)) return;
+    const snapshot = outline; // 全消去も取り消せるよう、消す前の状態を控えておく
     clearOutline();
     setOutline(emptyOutline());
-    flash(t.hako.resetDone);
+    setOpenId(null);
+    flash(t.hako.resetDone, () => setOutline({ ...snapshot, updated: Date.now() }));
   };
 
   const renderBox = (box: Box, index: number, siblings: Box[]) => {
@@ -303,7 +320,20 @@ export default function Hako() {
         </div>
       </div>
 
-      {toast && <div className="hako-toast" role="status">{toast}</div>}
+      {toast && (
+        <div className="hako-toast" role="status">
+          <span>{toast.msg}</span>
+          {toast.undo && (
+            <button
+              type="button"
+              className="hako-toast__undo"
+              onClick={() => { toast.undo?.(); setToast(null); }}
+            >
+              {t.hako.undo}
+            </button>
+          )}
+        </div>
+      )}
 
       {openBox && (
         <div className="hako-focus" role="dialog" aria-modal="true" aria-label={t.hako.heading}>
