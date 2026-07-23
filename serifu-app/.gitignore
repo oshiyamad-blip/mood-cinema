@@ -81,3 +81,7 @@ app.*.map.json
 
 # OS
 .DS_Store
+
+# スクリーンショット生成の作業物（サンプルは scripts/screenshots/samples/ に別途コミット）
+/scripts/screenshots/node_modules/
+/scripts/screenshots/out/

@@ -1,8 +1,35 @@
 # リポジトリ切り出し手順（serifu-app → 専用リポジトリ）
 
 serifu-app は現在、映画レコメンドPWA（mood-cinema）のリポジトリに同居している。
-本格開発の前に専用リポジトリへ切り出す。**履歴ごと移す方法（推奨）**と、
-**現状スナップショットだけ移す簡単な方法**の2通りを示す。
+本格開発の前に専用リポジトリへ切り出す。
+
+## 推奨：自動スクリプト `scripts/extract-to-standalone.sh`（検証済み）
+
+履歴ごと切り出し、CIをルート基準に書き換え、ルート用 README / CLAUDE.md まで
+生成する。生成後は `flutter analyze` が通る独立リポジトリの中身ができる
+（このリポジトリで検証済み）。
+
+```bash
+# mood-cinema のどこかで
+bash serifu-app/scripts/extract-to-standalone.sh   # → ../serifu-app-standalone
+
+# 表示される手順に従って（各自の環境で）:
+#   1) GitHub で空リポジトリを作成（Private 推奨）
+#   2) cd ../serifu-app-standalone
+#      git remote add origin https://github.com/<owner>/serifu-app.git
+#      git push -u origin main
+#   3) 新リポジトリに Secrets 登録（docs/16-go-live.md）
+#   4) GitHub Pages 有効化 → 公開URLを新URLに差し替え
+#   5) mood-cinema から serifu-app/ と serifu-*.yml を削除するPR
+```
+
+スクリプトは `git subtree split` で serifu-app/ をルートへ持ち上げ、
+`.github/workflows/serifu-*.yml` を `ci/testflight/play/pages.yml` に変換
+（`working-directory` 除去・パスのルート化・トリガーブランチ main 化）する。
+**最後の「リポジトリ作成＋push」だけは各自の環境で実行**（サンドボックスの
+ネットワーク/権限の都合で自動化できないため）。
+
+以下は、スクリプトが内部で行っていることの手動版（参考）。
 
 ## 事前に決めること
 - リポジトリ名（例：`serifu-app`）
