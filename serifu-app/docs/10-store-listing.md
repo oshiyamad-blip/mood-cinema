@@ -76,8 +76,20 @@ Completely free. A small banner ad appears only outside practice
 
 - カテゴリ：教育（サブ：エンターテインメント）
 - 年齢：4+ / 全年齢（ユーザー生成コンテンツはあるが共有機能なし）
-- App Privacy / データセーフティ：**「データ収集なし」**（購入=RevenueCatは
-  「アプリの機能に必要な購入履歴」として申告。docs/04 §5 参照）
+- App Privacy / データセーフティ：広告（AdMob・非パーソナライズ）による
+  「デバイスID/広告ID」の申告のみ。音声・台本データは「収集しない」。
+  詳細は docs/14 §データセーフティ 参照
+
+## サポート・各種URL（ストア登録用）
+
+| 項目 | 値 |
+|---|---|
+| サポートURL | `https://oshiyamad-blip.github.io/mood-cinema/support.html` |
+| プライバシーポリシーURL | `https://oshiyamad-blip.github.io/mood-cinema/privacy.html` |
+| 利用規約URL | `https://oshiyamad-blip.github.io/mood-cinema/terms.html` |
+| サポートメール | `oshiyamad@gmail.com` |
+
+問い合わせ運用のフローと負荷分散の設計は docs/15-ops-support.md 参照。
 
 ## スクリーンショット計画（6.7インチ / 6.5インチ / iPad, Android各種）
 
@@ -95,8 +107,7 @@ Figma/Canva等でコピーを載せる（テンプレは design/ のトークン
 
 ## 審査の注意（本アプリ固有）
 
-- マイク権限の使用理由がUI上で分かること（ハンズフリーONの時だけ要求）→ 実装済み
-- サブスクの価格・期間・解約方法の明示（ペイウォールに記載済み）＋
-  利用規約/プライバシーポリシーへのリンク（アプリ内 設定→法的情報。
-  **ストア側にも公開URLの登録が必要** → roadmap 1-7）
+- マイク権限の使用理由がUI上で分かること（初回起動時にまとめて説明）→ 実装済み
+- 利用規約/プライバシーポリシーへのリンク（アプリ内 設定→法的情報）＋
+  **ストア側にも公開URL・サポートURLの登録が必要**（上表のURLを使用）
 - 「AIが学習しない」訴求は事実に基づく（docs/02 §3-8）— 誇大表現にしない

@@ -5,6 +5,7 @@ import '../models/app_settings.dart';
 import '../models/script.dart';
 import '../speech/cloud_tts_client.dart';
 import '../theme/app_theme.dart';
+import 'help_screen.dart';
 import 'legal_screen.dart';
 
 /// 設定画面：既定の声・ト書き・自動進行・データ取り扱い。
@@ -48,7 +49,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _cloudVoiceSection(),
           ],
           const SizedBox(height: AppSpacing.md),
+          _supportSection(),
+          const SizedBox(height: AppSpacing.md),
           _privacySection(),
+        ],
+      ),
+    );
+  }
+
+  /// サポート窓口（FAQ・お問い合わせ）。
+  Widget _supportSection() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading('サポート'),
+          const SizedBox(height: AppSpacing.xs),
+          TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HelpScreen()),
+            ),
+            icon: const Icon(Icons.help_outline, size: 18),
+            label: const Text('ヘルプ・お問い合わせ'),
+          ),
         ],
       ),
     );

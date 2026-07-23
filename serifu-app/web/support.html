@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!-- ストア申請用の公開サポートページ（サポートURLとして登録する）。
+     FAQの内容はアプリ内 lib/screens/help_screen.dart と同期させること。 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>サポート | ホンヨミ</title>
+  <style>
+    body { font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+           max-width: 720px; margin: 0 auto; padding: 24px 20px 64px;
+           color: #1a1c2e; line-height: 1.9; background: #fafbff; }
+    h1 { font-size: 1.4rem; border-bottom: 3px solid #3652e1; padding-bottom: 8px; }
+    h2 { font-size: 1.05rem; margin-top: 2em; color: #26307a; }
+    .date { color: #666; font-size: .85rem; }
+    ul { padding-left: 1.3em; }
+    a { color: #3652e1; }
+    dt { font-weight: 600; margin-top: 1.2em; }
+    dd { margin-left: 0; color: #3a3d52; }
+    .contact { background: #eef1ff; border-radius: 10px; padding: 16px 18px; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h1>ホンヨミ サポート</h1>
+  <p class="date">最終更新日: 2026年7月23日</p>
+
+  <p>「ホンヨミ」は、台本を読み込むとアプリが相手役を読み上げてくれるセリフ練習アプリです。
+  お困りの際は、まず下のよくある質問をご確認ください。</p>
+
+  <h2>よくある質問</h2>
+  <dl>
+    <dt>Q. 台本がうまく読み込めない・セリフが崩れる</dt>
+    <dd>解析結果は取り込み後の確認画面でいつでも手動修正できます（行の種類・話者・本文の編集）。
+    PDFは縦書き・横書き・2段組に対応していますが、特殊なレイアウトでは崩れることがあります。
+    写真から取り込む場合は、明るい場所で1ページずつ正面から撮影すると精度が上がります。
+    うまくいかない形式があれば、レイアウトの形式（縦書き/横書き・段組・役名の書き方など）を
+    お問い合わせで教えていただけると対応を検討できます。</dd>
+
+    <dt>Q. ハンズフリーで次に進まない・反応が悪い</dt>
+    <dd>マイクの使用許可がONになっているかご確認ください（端末の設定 → ホンヨミ）。
+    静かな場所で、セリフの語尾まではっきり話すと検知されやすくなります。
+    改善しない場合は、アプリの設定 → 音声認識の「高精度認識を使う」をONにすると精度が上がります。
+    ハンズフリーが使えなくても「言えた・次へ」ボタンで練習できます。</dd>
+
+    <dt>Q. 相手役の声が機械っぽい</dt>
+    <dd>端末に高品質の音声データを追加すると、アプリが自動で最も高音質な声を選びます。
+    iOS: 設定 → アクセシビリティ → 読み上げコンテンツ → 声 → 日本語 から拡張版/プレミアムをダウンロード。
+    Android: 設定 → システム → テキスト読み上げ から音声データをインストールしてください。</dd>
+
+    <dt>Q. 認識の開始時に効果音（ポン）が鳴る</dt>
+    <dd>Androidの一部端末では、OSの音声認識が開始・終了時に通知音を鳴らします。
+    OS側の仕様のためアプリからは消せません。気になる場合はハンズフリーをOFFにして手動進行をご利用ください。</dd>
+
+    <dt>Q. 台本や録音のデータはどこに保存される？</dt>
+    <dd>すべて端末内にのみ保存され、サーバへ送信されることはありません。
+    アプリを削除するとデータも消えます。大切な台本は台本画面の書き出し（.honyomi ファイル）で
+    バックアップしておくと安心です。</dd>
+
+    <dt>Q. 機種変更でデータを引き継ぎたい</dt>
+    <dd>台本ごとに書き出し（共有ボタン → .honyomi ファイル）を行い、新しい端末でそのファイルを
+    取り込んでください。練習の記録と録音は端末内にのみ保存されるため引き継がれません。</dd>
+
+    <dt>Q. 広告を消したい・料金はかかる？</dt>
+    <dd>全機能を無料で使えます。無料提供のため、ホームと練習結果の画面にだけ小さなバナー広告を
+    表示しています（練習中の画面には表示しません）。</dd>
+  </dl>
+
+  <h2>お問い合わせ</h2>
+  <div class="contact">
+    <p>FAQで解決しない場合は、メールでご連絡ください。数日以内の返信を心がけていますが、
+    内容によりお時間をいただくことがあります。</p>
+    <p><strong>メール:</strong> <a href="mailto:oshiyamad@gmail.com">oshiyamad@gmail.com</a></p>
+    <p>調査のため、次の情報を添えていただけるとスムーズです：</p>
+    <ul>
+      <li>ご利用端末（例: iPhone 15 / Pixel 8）とOSバージョン</li>
+      <li>アプリのバージョン</li>
+      <li>どの画面で・何をしたら・どうなったか</li>
+    </ul>
+    <p>※台本の内容を送っていただく必要はありません。</p>
+  </div>
+
+  <h2>関連ページ</h2>
+  <ul>
+    <li><a href="./privacy.html">プライバシーポリシー</a></li>
+    <li><a href="./terms.html">利用規約</a></li>
+  </ul>
+</body>
+</html>
