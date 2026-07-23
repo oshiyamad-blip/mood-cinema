@@ -36,9 +36,14 @@
 
 ## ⚠️ 判断が必要／リリース時にやること
 
-1. **GDPR/UMP（EU向け同意）**: 非パーソナライズでもEEA/UKでは同意取得が原則必要。
-   **v1は配信地域を日本（＋必要なら米国等）に限定**し、UMP SDK導入は海外展開時に行うのが最小構成。
-   → ストアの配信国設定で対応（コード変更不要）
+1. **GDPR/UMP（EU向け同意）**: ✅ **実装済み**（全世界配信の方針を採用）。
+   起動時に UMP（`google_mobile_ads` の ConsentInformation / ConsentForm）で
+   同意情報を更新し、EEA/UK 等では同意フォームを表示、`canRequestAds()` が真に
+   なってからバナーをロードする（`lib/ads/ads_mobile.dart`）。設定→データの取り扱いに
+   「広告の同意設定」（UMPが要求する地域でのみ表示）を用意。**要作業**: AdMob 管理画面で
+   「プライバシーとメッセージ」→ GDPR 同意メッセージ（IABフレームワーク）を作成・公開すること
+   （フォームの内容は AdMob 側で設定する。未作成だとフォームが出ない）。テスト時は
+   実機を EEA 相当にする（AdMob のテストデバイス設定 or DebugGeography）。
 2. **AdMob本番ID差し替え**: 現在はGoogle公式テストID。AdMob管理画面でアプリ登録→
    アプリID（AndroidManifest.xml / Info.plist）とユニットID（--dart-define）を差し替え
 3. **特定商取引法の表記**: 現状は課金なしのため**不要**。有料機能（サブスク等）を

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ads/ads.dart';
 import '../data/settings_store.dart';
 import '../models/app_settings.dart';
 import '../models/script.dart';
@@ -332,6 +333,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             icon: const Icon(Icons.menu_book_outlined, size: 18),
             label: const Text('オープンソースライセンス'),
+          ),
+          // 広告の同意設定（UMPが要求する地域＝EEA/英国等でのみ表示）。
+          FutureBuilder<bool>(
+            future: AdsService.privacyOptionsRequired(),
+            builder: (context, snap) {
+              if (snap.data != true) return const SizedBox.shrink();
+              return TextButton.icon(
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                onPressed: () => AdsService.showPrivacyOptions(),
+                icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+                label: const Text('広告の同意設定'),
+              );
+            },
           ),
         ],
       ),
