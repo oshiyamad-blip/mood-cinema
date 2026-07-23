@@ -1,8 +1,26 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// リリース署名情報の解決。優先順位は次のとおり：
+//   1) android/key.properties（ローカル開発。gitignore 済み・コミット厳禁）
+//   2) 環境変数（CI。GitHub Secrets から注入。ANDROID_KEYSTORE_* / ANDROID_KEY_*）
+//   3) どちらも無ければ debug 鍵で署名（`flutter run --release` や
+//      実機レビュー用APCビルドを壊さないためのフォールバック。ストア配布は不可）
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasKeystoreFile = keystorePropertiesFile.exists()
+if (hasKeystoreFile) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+val envKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
+val hasEnvKeystore = !envKeystorePath.isNullOrBlank() && file(envKeystorePath).exists()
+val useReleaseSigning = hasKeystoreFile || hasEnvKeystore
 
 android {
     namespace = "jp.honyomi.app"
@@ -27,11 +45,33 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (useReleaseSigning) {
+            create("release") {
+                if (hasKeystoreFile) {
+                    keyAlias = keystoreProperties["keyAlias"] as String?
+                    keyPassword = keystoreProperties["keyPassword"] as String?
+                    storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
+                    storePassword = keystoreProperties["storePassword"] as String?
+                } else {
+                    keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                    keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                    storeFile = file(envKeystorePath!!)
+                    storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 署名鍵があれば本番署名、無ければ debug 署名にフォールバックする
+            // （フォールバック時のビルドはストア配布不可・実機レビュー専用）。
+            signingConfig = if (useReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

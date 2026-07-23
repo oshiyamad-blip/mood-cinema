@@ -1,0 +1,90 @@
+name: serifu-app Play AAB
+
+# Google Play 提出用の署名済み AAB（App Bundle）を生成する。
+# 手動実行 or serifu-v* タグで起動。署名情報は GitHub Secrets に設定すること
+# （設定方法は serifu-app/docs/16-go-live.md）。生成物はアーティファクトとして
+# ダウンロードでき、初回は Play Console へ手動アップロードする。
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'serifu-v*'
+
+jobs:
+  aab:
+    name: Build signed AAB
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: serifu-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 必要な Secrets を確認
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD \
+                   ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Secret $v が未設定です"; missing=1; fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "docs/16-go-live.md に従って署名 Secrets を設定してください。"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - name: 署名鍵（keystore）を復元
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/honyomi-upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/honyomi-upload.jks" >> "$GITHUB_ENV"
+
+      - run: flutter pub get
+
+      # AdMob のバナーユニットIDは Secrets/Variables があれば注入、無ければ
+      # アプリ側のテストID既定を使う（本番リリースでは必ず設定すること）。
+      # ※AdMob の「アプリID」は AndroidManifest.xml / Info.plist 側の手動差し替えが
+      #   別途必要（docs/16-go-live.md 参照）。
+      - name: 署名済み AAB をビルド
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ADMOB_BANNER_ANDROID: ${{ vars.ADMOB_BANNER_ANDROID }}
+        run: |
+          DEFINES=""
+          if [ -n "$ADMOB_BANNER_ANDROID" ]; then
+            DEFINES="--dart-define=ADMOB_BANNER_ANDROID=$ADMOB_BANNER_ANDROID"
+          fi
+          flutter build appbundle --release $DEFINES
+
+      - name: AAB が debug 鍵で署名されていないことを確認
+        run: |
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          SIGNER=$(jarsigner -verify -verbose -certs "$AAB" 2>/dev/null | grep -i "CN=" | head -n1 || true)
+          echo "signer: $SIGNER"
+          if echo "$SIGNER" | grep -qi "Android Debug"; then
+            echo "::error::AAB が debug 鍵で署名されています。署名 Secrets を確認してください。"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serifu-app-release-aab
+          path: serifu-app/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
