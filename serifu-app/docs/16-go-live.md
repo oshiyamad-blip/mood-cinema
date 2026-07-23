@@ -118,6 +118,15 @@ Bはお金と本人確認が絡むため代行できない。**Bが律速**。B�
 
 ---
 
+## 便利ツール（こちらで用意済み）
+
+- **提出前セルフ点検**: `bash scripts/preflight.sh` — analyze/test・バージョン・
+  本番AdMob ID・署名配線・暗号化申告・UMP・公開ページ・秘密混入を一括点検。
+  FAIL が0なら致命的な問題なし、WARN は公開直前の差し替え項目。
+- **ストア用スクショ生成**: `scripts/screenshots/`（`flutter build web` →
+  `node capture.mjs`）。ホーム・設定・台本準備の高解像度キャプチャを再現可能に生成。
+  参考出力は `scripts/screenshots/samples/`。
+
 ## いま着手できる最短の一歩
 
 **手順1（アカウント登録）と手順2（AdMob登録）**があなたの最初のアクション。
