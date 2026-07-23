@@ -45,7 +45,12 @@ class RuleBasedParser {
   /// 柱・見出し。例: ○駅前・朝 / 〇スーパー（夕） / 第2場
   /// 「〇」（漢数字ゼロ）で書かれる台本も多い。
   static final RegExp _pillar = RegExp(
-      r'^[\s　]*(?:[○◯〇●◎□■△▲☆★×※]|第[0-9０-９一二三四五六七八九十]+[場幕景])');
+      r'^[\s　]*(?:[○◯〇●◎□■◾◼▪△▲☆★×※]|第[0-9０-９一二三四五六七八九十]+[場幕景])');
+
+  /// 場面の柱として確度の高い形（※注記・★注意書きを含まない）。
+  /// 表紙の終わり（本編の開始）を探すときに使う。
+  static final RegExp _scenePillar = RegExp(
+      r'^[\s　]*(?:[○◯〇●◎□■◾◼▪]|第[0-9０-９一二三四五六七八九十]+[場幕景])');
 
   /// 記号・罫線だけの飾り行（ページ区切りの点線など）→ メタ情報。
   static final RegExp _decoration =
@@ -55,9 +60,10 @@ class RuleBasedParser {
   static final RegExp _pageNumber =
       RegExp(r'^[\s　]*[-‐–—―ー]?[\s　]*[0-9０-９]{1,4}[\s　]*[-‐–—―ー]?[\s　]*$');
 
-  /// 「登場人物」見出し。飾り（点線など）付き・「登場人物表」も許容。
+  /// 「登場人物」見出し。飾り（点線など）付き・「登場人物表」・
+  /// カッコ囲み（＜登場人物＞【登場人物】等）も許容。
   static final RegExp _castHeader = RegExp(
-      r'^[\s　・．.…‥＊*―—－\-]*(登場人物|配役|キャスト)表?[:：]?[\s　]*$');
+      r'^[\s　・．.…‥＊*―—－\-]*[＜〈【〔]?(登場人物|配役|キャスト)表?[＞〉】〕]?[:：]?[\s　]*$');
 
   /// 表紙のクレジット行。例: 作：山田太郎 / 脚本 山田太郎
   static final RegExp _credit = RegExp(
@@ -71,6 +77,9 @@ class RuleBasedParser {
 
   /// 表紙とみなす行数の上限（安全弁）。応募用紙＋あらすじページ程度を想定。
   static const _maxCoverLines = 150;
+
+  /// 人物表の後ろに続く前書き（人物説明・※注記）を表紙に含めて探す行数。
+  static const _castLookahead = 40;
 
   ParsedScript parse(String raw) {
     final rawLines =
@@ -96,6 +105,21 @@ class RuleBasedParser {
         if (t.isEmpty || _pageNumber.hasMatch(t)) continue;
         if (_castHeader.hasMatch(t)) {
           if (i > 0) coverUntil = i;
+          // 人物表で表紙が終わる台本では、人物の説明や※注記などの前書きが
+          // 人物表のあとに続くことがある（ワークショップ審査台本など）。
+          // 近くに柱（〇シーン等）があればそこまでを表紙に含める。
+          // 柱が無い台本（人物表の直後に本文が始まる形）は従来どおり。
+          for (var j = i + 1;
+              j < rawLines.length && j <= i + _castLookahead;
+              j++) {
+            final u = rawLines[j].trim();
+            if (u.isEmpty) continue;
+            if (_bracketForm.hasMatch(u)) break; // セリフ開始 → 本編
+            if (_scenePillar.hasMatch(u)) {
+              coverUntil = j;
+              break;
+            }
+          }
           break;
         }
         final isFrontMatter =
@@ -125,7 +149,9 @@ class RuleBasedParser {
     final colonCounts = <String, int>{};
     final spaceCounts = <String, int>{};
     var inCast = false;
-    for (var i = coverUntil; i < rawLines.length; i++) {
+    // 表紙拡張により人物表が表紙区間に入ることがあるため、
+    // 人物表（見出し＋エントリ）だけは表紙区間でもスキャンする。
+    for (var i = 0; i < rawLines.length; i++) {
       final t = rawLines[i].trim();
       if (t.isEmpty) {
         inCast = false;
@@ -145,6 +171,7 @@ class RuleBasedParser {
         }
         inCast = false;
       }
+      if (i < coverUntil) continue; // 表紙は人物表以外を数えない
       final b = _bracketForm.firstMatch(t);
       if (b != null) {
         addName(b.group(1)!); // カギカッコ形式は高信頼
