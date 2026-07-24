@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import Home from './pages/Home';
 import Mood from './pages/Mood';
 import Hako from './pages/Hako';
+import Account from './pages/Account';
 import Result from './pages/Result';
 import SceneLanding from './pages/SceneLanding';
 import Article from './pages/Article';
@@ -13,6 +14,7 @@ import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import { I18nContext, translations } from './i18n';
 import type { Lang } from './i18n';
+import { useAuth } from './lib/auth';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -34,6 +36,18 @@ function LangSwitcher({ lang, prefix }: { lang: Lang; prefix: string }) {
   );
 }
 
+/** ヘッダーのログイン導線。Supabase 未設定なら何も出さない（縮退動作）。 */
+function AccountNav({ lang, prefix }: { lang: Lang; prefix: string }) {
+  const { configured, user } = useAuth();
+  const t = translations[lang];
+  if (!configured) return null;
+  return (
+    <NavLink to={`${prefix}/account`} className="site-nav__account">
+      {user ? (user.email ?? t.nav.login) : t.nav.login}
+    </NavLink>
+  );
+}
+
 function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
   const t = translations[lang];
   const value = { lang, t, prefix };
@@ -52,6 +66,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
             <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
             <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
             <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
+            <AccountNav lang={lang} prefix={prefix} />
             <LangSwitcher lang={lang} prefix={prefix} />
           </nav>
         </div>
@@ -62,6 +77,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           <Route path="/" element={<Home />} />
           <Route path="/mood" element={<Mood />} />
           <Route path="/hako" element={<Hako />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/quiz" element={<Navigate to={`${prefix}/mood`} replace />} />
           <Route path="/result" element={<Result />} />
           <Route path="/scene/:slug" element={<SceneLanding />} />
