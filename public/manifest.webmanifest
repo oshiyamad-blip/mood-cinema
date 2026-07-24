@@ -1,9 +1,9 @@
 {
-  "name": "Scene Studio — 脚本を組み立てる編集卓",
-  "short_name": "Scene Studio",
+  "name": "Tsumugi — 脚本を組み立てる編集卓",
+  "short_name": "Tsumugi",
   "description": "アイデア・人物・参考作品を素材に、シーンの箱で物語を構成する脚本開発の統合エディタ。",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a",
+  "theme_color": "#13131a",
+  "background_color": "#13131a",
   "display": "standalone",
   "lang": "ja",
   "start_url": "/",

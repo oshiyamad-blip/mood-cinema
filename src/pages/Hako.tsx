@@ -5,13 +5,20 @@ import {
   STRUCTURES,
   STRUCTURE_IDS,
   uid,
-  emptyOutline,
-  loadOutline,
-  saveOutline,
-  clearOutline,
+  loadWorkspace,
+  saveWorkspace,
+  listProjects,
+  listTrashed,
+  currentOutline,
+  upsertOutline,
+  createProject,
+  switchProject,
+  trashProject,
+  restoreProject,
+  purgeProject,
   outlineToText,
 } from '../lib/hakogaki';
-import type { Box, Outline, StructureId } from '../lib/hakogaki';
+import type { Box, Outline, StructureId, Workspace } from '../lib/hakogaki';
 
 export default function Hako() {
   const { t, prefix, lang } = useI18n();
@@ -23,7 +30,7 @@ export default function Hako() {
     lang,
   });
 
-  const [outline, setOutline] = useState<Outline>(() => emptyOutline());
+  const [ws, setWs] = useState<Workspace>(() => ({ currentId: null, outlines: [] }));
   const [loaded, setLoaded] = useState(false);
   // トーストは通知だけの場合と「元に戻す」操作つきの場合がある
   const [toast, setToast] = useState<{ msg: string; undo?: () => void } | null>(null);
@@ -33,18 +40,23 @@ export default function Hako() {
   const headingRefs = useRef(new Map<string, HTMLInputElement>());
   const focusBodyRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // 初回マウントで保存済みアウトラインを復元
+  // 初回マウントで保存済みワークスペースを復元（旧単一作品は自動移行）。
+  // 現在作品が無ければ、生きている最新作品へ切替 or 空の作品を1件用意する。
   useEffect(() => {
-    const saved = loadOutline();
-    if (saved) setOutline(saved);
+    let w = loadWorkspace();
+    if (!currentOutline(w)) {
+      const alive = listProjects(w);
+      w = alive.length > 0 ? switchProject(w, alive[0].id) : createProject(w).workspace;
+    }
+    setWs(w);
     setLoaded(true);
   }, []);
 
   // 変更を localStorage へ自動保存（初回復元後のみ）
   useEffect(() => {
     if (!loaded) return;
-    saveOutline(outline);
-  }, [outline, loaded]);
+    saveWorkspace(ws);
+  }, [ws, loaded]);
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
@@ -92,13 +104,49 @@ export default function Hako() {
     toastTimer.current = window.setTimeout(() => setToast(null), undo ? 6000 : 1800);
   };
 
+  const outline = currentOutline(ws);
+  const projects = listProjects(ws);
+  const trashed = listTrashed(ws);
+
+  // 現在作品を不変更新する（本文編集はすべてここを通す）
+  const patchOutline = (updater: (o: Outline) => Outline) =>
+    setWs(prev => {
+      const cur = currentOutline(prev);
+      return cur ? upsertOutline(prev, updater(cur)) : prev;
+    });
   const patch = (p: Partial<Outline>) =>
-    setOutline(prev => ({ ...prev, ...p, updated: Date.now() }));
+    patchOutline(o => ({ ...o, ...p, updated: Date.now() }));
 
-  const acts = STRUCTURES[outline.structure].acts;
+  // ── 作品（プロジェクト）操作 ──────────────────────────────
+  const newProject = () => setWs(prev => createProject(prev).workspace);
+  const selectProject = (id: string) => setWs(prev => switchProject(prev, id));
 
+  const deleteCurrentProject = () => {
+    if (!outline) return;
+    const oid = outline.id;
+    setWs(prev => {
+      let next = trashProject(prev, oid);
+      // 最後の1件を消したら、常に書ける状態を保つため空の作品を用意
+      if (!currentOutline(next)) next = createProject(next).workspace;
+      return next;
+    });
+    setOpenId(null);
+    flash(t.hako.projectTrashed, () =>
+      setWs(prev => switchProject(restoreProject(prev, oid), oid)),
+    );
+  };
+
+  const restoreFromTrash = (id: string) =>
+    setWs(prev => switchProject(restoreProject(prev, id), id));
+
+  const purgeFromTrash = (id: string) => {
+    if (!window.confirm(t.hako.purgeConfirm)) return;
+    setWs(prev => purgeProject(prev, id));
+  };
+
+  // ── 箱（シーン）操作 ──────────────────────────────────────
   const setStructure = (structure: StructureId) => {
-    if (structure === outline.structure) return;
+    if (!outline || structure === outline.structure) return;
     const nextActs = STRUCTURES[structure].acts;
     // 箱は保持したまま、幕を新テンプレートに合わせて振り直す
     const boxes = outline.boxes.map(b =>
@@ -110,42 +158,48 @@ export default function Hako() {
   };
 
   const addBox = (act: string) => {
+    if (!outline) return;
     const id = uid();
     patch({ boxes: [...outline.boxes, { id, act, heading: '', body: '' }] });
     setFocusId(id);
   };
 
   const updateBox = (id: string, p: Partial<Box>) =>
-    patch({ boxes: outline.boxes.map(b => (b.id === id ? { ...b, ...p } : b)) });
+    patchOutline(o => ({ ...o, boxes: o.boxes.map(b => (b.id === id ? { ...b, ...p } : b)), updated: Date.now() }));
 
   // 箱の削除は取り消せる：即座に消して「元に戻す」トーストを出す（設計理念：本文を静かに失わない）
   const deleteBox = (id: string) => {
+    if (!outline) return;
+    const oid = outline.id;
     const idx = outline.boxes.findIndex(b => b.id === id);
     if (idx < 0) return;
     const removed = outline.boxes[idx];
     if (openId === id) setOpenId(null);
-    patch({ boxes: outline.boxes.filter(b => b.id !== id) });
+    patchOutline(o => ({ ...o, boxes: o.boxes.filter(b => b.id !== id), updated: Date.now() }));
     flash(t.hako.deleted, () =>
-      setOutline(prev => {
-        if (prev.boxes.some(b => b.id === removed.id)) return prev; // 二重復元を防ぐ
-        const boxes = [...prev.boxes];
+      setWs(prev => {
+        const cur = prev.outlines.find(o => o.id === oid);
+        if (!cur || cur.boxes.some(b => b.id === removed.id)) return prev; // 二重復元を防ぐ
+        const boxes = [...cur.boxes];
         boxes.splice(Math.min(idx, boxes.length), 0, removed); // 元の位置へ差し戻す
-        return { ...prev, boxes, updated: Date.now() };
+        return upsertOutline(prev, { ...cur, boxes, updated: Date.now() });
       }),
     );
   };
 
   // 同じ幕に属する隣の箱と入れ替える
   const moveBox = (id: string, dir: -1 | 1) => {
-    const boxes = [...outline.boxes];
-    const i = boxes.findIndex(b => b.id === id);
-    if (i < 0) return;
-    const act = boxes[i].act;
-    let j = i + dir;
-    while (j >= 0 && j < boxes.length && boxes[j].act !== act) j += dir;
-    if (j < 0 || j >= boxes.length) return;
-    [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
-    patch({ boxes });
+    patchOutline(o => {
+      const boxes = [...o.boxes];
+      const i = boxes.findIndex(b => b.id === id);
+      if (i < 0) return o;
+      const act = boxes[i].act;
+      let j = i + dir;
+      while (j >= 0 && j < boxes.length && boxes[j].act !== act) j += dir;
+      if (j < 0 || j >= boxes.length) return o;
+      [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
+      return { ...o, boxes, updated: Date.now() };
+    });
   };
 
   const exportLabels = {
@@ -155,6 +209,7 @@ export default function Hako() {
   };
 
   const copyText = async () => {
+    if (!outline) return;
     const text = outlineToText(outline, exportLabels);
     try {
       await navigator.clipboard.writeText(text);
@@ -166,6 +221,7 @@ export default function Hako() {
   };
 
   const downloadText = () => {
+    if (!outline) return;
     const text = outlineToText(outline, exportLabels);
     const name = (outline.title || t.hako.exportTitleFallback).replace(/[\\/:*?"<>|]/g, '_');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -179,14 +235,15 @@ export default function Hako() {
     URL.revokeObjectURL(href);
   };
 
+  // 現在作品の中身だけを空にする（作品自体は残す）。取り消し可能。
   const reset = () => {
+    if (!outline) return;
     if (outline.boxes.length === 0 && !outline.title.trim()) return;
     if (!window.confirm(t.hako.resetConfirm)) return;
-    const snapshot = outline; // 全消去も取り消せるよう、消す前の状態を控えておく
-    clearOutline();
-    setOutline(emptyOutline());
+    const snapshot = outline; // 消す前の状態を控えておく
+    patchOutline(o => ({ ...o, title: '', structure: 'three-act', boxes: [], updated: Date.now() }));
     setOpenId(null);
-    flash(t.hako.resetDone, () => setOutline({ ...snapshot, updated: Date.now() }));
+    flash(t.hako.resetDone, () => setWs(prev => upsertOutline(prev, { ...snapshot, updated: Date.now() })));
   };
 
   const renderBox = (box: Box, index: number, siblings: Box[]) => {
@@ -244,6 +301,20 @@ export default function Hako() {
     );
   };
 
+  // 復元前・ロード前は最小限だけ描画する（現在作品が確定してから本体を出す）
+  if (!outline) {
+    return (
+      <div className="container hako-page">
+        <div className="hako-header">
+          <h1>{t.hako.heading}</h1>
+          <p className="hako-header__sub">{t.hako.sub}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const acts = STRUCTURES[outline.structure].acts;
+
   // 幕ごと（自由構成なら 1 グループ）に箱をまとめる
   let counter = 0;
   const groups =
@@ -271,6 +342,29 @@ export default function Hako() {
       <div className="hako-header">
         <h1>{t.hako.heading}</h1>
         <p className="hako-header__sub">{t.hako.sub}</p>
+      </div>
+
+      <div className="hako-projects" role="group" aria-label={t.hako.projectLabel}>
+        <label className="hako-projects__pick">
+          <span className="hako-projects__label">{t.hako.projectLabel}</span>
+          <select
+            className="hako-projects__select"
+            value={outline.id}
+            onChange={e => selectProject(e.target.value)}
+          >
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.title || t.hako.exportTitleFallback}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="hako-projects__new" onClick={newProject}>
+          {t.hako.newProject}
+        </button>
+        {projects.length > 1 && (
+          <button type="button" className="hako-projects__del" onClick={deleteCurrentProject}>
+            {t.hako.deleteProject}
+          </button>
+        )}
       </div>
 
       <input
@@ -319,6 +413,23 @@ export default function Hako() {
           <button type="button" className="hako-reset" onClick={reset}>{t.hako.reset}</button>
         </div>
       </div>
+
+      {trashed.length > 0 && (
+        <details className="hako-trash">
+          <summary className="hako-trash__summary">{t.hako.trashTitle(trashed.length)}</summary>
+          {trashed.map(tp => (
+            <div className="hako-trash__row" key={tp.id}>
+              <span className="hako-trash__name">{tp.title || t.hako.exportTitleFallback}</span>
+              <button type="button" className="hako-trash__restore" onClick={() => restoreFromTrash(tp.id)}>
+                {t.hako.restore}
+              </button>
+              <button type="button" className="hako-trash__purge" onClick={() => purgeFromTrash(tp.id)}>
+                {t.hako.purge}
+              </button>
+            </div>
+          ))}
+        </details>
+      )}
 
       {toast && (
         <div className="hako-toast" role="status">

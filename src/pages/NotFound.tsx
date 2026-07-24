@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 
 export default function NotFound() {
-  useSeo({ title: '404 - ページが見つかりません | Scene Studio' });
+  useSeo({ title: '404 - ページが見つかりません | Tsumugi' });
   return (
     <div className="container" style={{ padding: '64px 16px', textAlign: 'center' }}>
       <h1 style={{ fontSize: '2rem', marginBottom: 16 }}>404</h1>

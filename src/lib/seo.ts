@@ -96,7 +96,7 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
     const defaultJsonLd: Record<string, unknown> = {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'Scene Studio',
+      name: 'Tsumugi',
       url: SITE_URL,
       description: '脚本を組み立てる編集卓',
       potentialAction: {
@@ -132,7 +132,7 @@ export function buildArticleJsonLd(opts: {
     dateModified: opts.publishedAt,
     publisher: {
       '@type': 'Organization',
-      name: 'Scene Studio',
+      name: 'Tsumugi',
       url: SITE_URL,
     },
     mainEntityOfPage: {

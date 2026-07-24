@@ -2,8 +2,8 @@ import { useSeo } from '../lib/seo';
 
 export default function Contact() {
   useSeo({
-    title: 'お問い合わせ | Scene Studio',
-    description: 'Scene Studio へのお問い合わせはこちら。ご意見・ご要望・取材依頼などをお寄せください。',
+    title: 'お問い合わせ | Tsumugi',
+    description: 'Tsumugi へのお問い合わせはこちら。ご意見・ご要望・取材依頼などをお寄せください。',
   });
   return (
     <div className="container article">

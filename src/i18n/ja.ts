@@ -5,6 +5,7 @@ export const ja = {
     hako: 'エディタ',
     about: '運営',
     langSwitch: 'English',
+    login: 'ログイン',
   },
   footer: {
     about: '運営者情報',
@@ -12,8 +13,32 @@ export const ja = {
     contact: 'お問い合わせ',
     tmdb: 'データ提供: TMDB (The Movie Database)。',
   },
+  account: {
+    title: 'アカウント | Tsumugi',
+    heading: 'アカウント',
+    intro: 'ログインすると、書いた作品を複数の端末で同期できます。パスワードは不要 — メールに届くコードでログインします。',
+    emailLabel: 'メールアドレス',
+    emailPlaceholder: 'you@example.com',
+    sendCode: 'コードを送る',
+    sending: '送信中…',
+    codeSent: (email: string) =>
+      `${email} にログイン用のコードを送りました。メールの6桁コードを入力してください（メール内のリンクからも入れます）。`,
+    codeLabel: '6桁のコード',
+    codePlaceholder: '123456',
+    verify: 'ログイン',
+    verifying: '確認中…',
+    back: '← メールを入れ直す',
+    signedInAs: (email: string) => `${email} でログイン中`,
+    signOut: 'ログアウト',
+    signedOutNote: 'ログアウトしてもこの端末の作品は消えません。',
+    syncedNote: '作品はクラウドに同期され、他の端末でも開けます。',
+    unavailable: '同期は現在この環境では利用できません（未設定）。作品はこの端末に保存されています。',
+    errorSend: 'コードの送信に失敗しました。メールアドレスを確認してもう一度お試しください。',
+    errorVerify: 'コードが正しくないか期限切れです。もう一度お試しください。',
+    invalidEmail: 'メールアドレスの形式を確認してください。',
+  },
   home: {
-    title: 'Scene Studio | 脚本を組み立てる編集卓',
+    title: 'Tsumugi | 脚本を組み立てる編集卓',
     description:
       'アイデア・人物・参考作品を素材に、シーンの箱で物語を構成する脚本開発の統合エディタ。ブラウザだけで完結し、データはこの端末に保存されます。',
     heroHeading: 'あなたの映画を、\nここで組み立てる。',
@@ -39,7 +64,7 @@ export const ja = {
     historyTime: (ts: number) => new Date(ts).toLocaleString('ja-JP'),
   },
   mood: {
-    title: '参考作品を探す | Scene Studio',
+    title: '参考作品を探す | Tsumugi',
     description: 'トーンや気分を 2〜6 個選んで、書いている物語の参考になる作品を探そう。',
     heading: 'どんなトーンの作品を探す？',
     subheading: (min: number, max: number) => `気になるワードを ${min}〜${max} 個タップ`,
@@ -61,7 +86,7 @@ export const ja = {
     retryBtnFull: '最初から選びなおす',
   },
   articles: {
-    title: '特集記事 | Scene Studio',
+    title: '特集記事 | Tsumugi',
     description:
       '気分・シチュエーション別に映画の選び方を解説。失恋に効く映画、家族で観れる映画、ホラー特集など。',
     heading: '特集記事',
@@ -75,11 +100,19 @@ export const ja = {
     diagnosisBtn: '気分から参考作品を探す',
   },
   hako: {
-    title: '脚本の箱書きエディタ | Scene Studio',
+    title: '脚本の箱書きエディタ | Tsumugi',
     description:
       '三幕構成や起承転結のテンプレートで、物語をシーンごとの「箱」に分けて組み立てるプロット作成ツール。ブラウザだけで完結し、データはこの端末に保存されます。',
     heading: '脚本の箱書きエディタ',
     sub: 'シーンを「箱」に分けて、物語の骨組みをつくる。保存はこの端末だけ。',
+    projectLabel: '作品',
+    newProject: '＋ 新しい作品',
+    deleteProject: 'この作品を削除',
+    projectTrashed: '作品をゴミ箱に移動しました',
+    trashTitle: (n: number) => `ゴミ箱（${n}）`,
+    restore: '復元',
+    purge: '完全に削除',
+    purgeConfirm: 'この作品を完全に削除しますか？ これは取り消せません。',
     titlePlaceholder: '作品タイトル（例: 夏の終わりに）',
     structureLabel: '構成',
     structures: {

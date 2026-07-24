@@ -5,6 +5,7 @@ export const en = {
     hako: 'Editor',
     about: 'About',
     langSwitch: '日本語',
+    login: 'Log in',
   },
   footer: {
     about: 'About',
@@ -12,8 +13,32 @@ export const en = {
     contact: 'Contact',
     tmdb: 'Movie data provided by TMDB (The Movie Database).',
   },
+  account: {
+    title: 'Account | Tsumugi',
+    heading: 'Account',
+    intro: 'Log in to sync your work across devices. No password needed — we email you a code.',
+    emailLabel: 'Email',
+    emailPlaceholder: 'you@example.com',
+    sendCode: 'Send code',
+    sending: 'Sending…',
+    codeSent: (email: string) =>
+      `We sent a login code to ${email}. Enter the 6-digit code from the email (the link in the email works too).`,
+    codeLabel: '6-digit code',
+    codePlaceholder: '123456',
+    verify: 'Log in',
+    verifying: 'Verifying…',
+    back: '← Use a different email',
+    signedInAs: (email: string) => `Signed in as ${email}`,
+    signOut: 'Log out',
+    signedOutNote: 'Logging out never deletes the work on this device.',
+    syncedNote: 'Your work is synced to the cloud and available on your other devices.',
+    unavailable: 'Sync is not available in this environment yet. Your work is saved on this device.',
+    errorSend: 'Could not send the code. Check the email address and try again.',
+    errorVerify: 'That code is wrong or expired. Please try again.',
+    invalidEmail: 'Please check the email format.',
+  },
   home: {
-    title: 'Scene Studio | Assemble Your Screenplay',
+    title: 'Tsumugi | Assemble Your Screenplay',
     description:
       'An integrated screenwriting editor: gather ideas, characters, and reference films as materials, then shape your story scene by scene. Runs entirely in your browser — your data stays on this device.',
     heroHeading: 'Assemble your film,\nscene by scene.',
@@ -39,7 +64,7 @@ export const en = {
     historyTime: (ts: number) => new Date(ts).toLocaleString('en-US'),
   },
   mood: {
-    title: 'Find Reference Films | Scene Studio',
+    title: 'Find Reference Films | Tsumugi',
     description: 'Pick 2–6 tones or moods and find films to reference for the story you\'re writing.',
     heading: 'What tone are you looking for?',
     subheading: (min: number, max: number) => `Tap ${min}–${max} bubbles that match your mood`,
@@ -61,7 +86,7 @@ export const en = {
     retryBtnFull: 'Start over',
   },
   articles: {
-    title: 'Movie Articles | Scene Studio',
+    title: 'Movie Articles | Tsumugi',
     description:
       'Curated movie lists by mood and situation — tearjerkers, date night picks, horror nights, and more.',
     heading: 'Featured Articles',
@@ -75,11 +100,19 @@ export const en = {
     diagnosisBtn: 'Find reference films by mood',
   },
   hako: {
-    title: 'Screenplay Beat Sheet Editor | Scene Studio',
+    title: 'Screenplay Beat Sheet Editor | Tsumugi',
     description:
       'Build your story scene by scene with three-act or kishotenketsu templates. A step-outline (beat sheet) tool that runs entirely in your browser — your data stays on this device.',
     heading: 'Beat Sheet Editor',
     sub: 'Break your story into scene "boxes" and shape its skeleton. Saved on this device only.',
+    projectLabel: 'Project',
+    newProject: '＋ New project',
+    deleteProject: 'Delete project',
+    projectTrashed: 'Project moved to trash',
+    trashTitle: (n: number) => `Trash (${n})`,
+    restore: 'Restore',
+    purge: 'Delete permanently',
+    purgeConfirm: 'Permanently delete this project? This cannot be undone.',
     titlePlaceholder: 'Working title (e.g. End of Summer)',
     structureLabel: 'Structure',
     structures: {

@@ -34,8 +34,8 @@ export default function Result() {
 
   const titleLabels = labels.slice(0, 3).map(l => l.replace(/^./, ''));
   const seoTitle = lang === 'en'
-    ? `${titleLabels.join(' × ') || 'Movies'} — Top 5 Picks | Scene Studio`
-    : `${titleLabels.join(' × ') || '映画'} のおすすめ 5 選 | Scene Studio`;
+    ? `${titleLabels.join(' × ') || 'Movies'} — Top 5 Picks | Tsumugi`
+    : `${titleLabels.join(' × ') || '映画'} のおすすめ 5 選 | Tsumugi`;
   const seoDesc = lang === 'en'
     ? `Top 5 movie picks for ${balloons.slice(0, 3).map(b => t.balloonLabel[b.id] ?? b.label).join(', ')} mood.`
     : `「${balloons.slice(0, 3).map(b => t.balloonLabel[b.id] ?? b.label).join('・')}」の気分にぴったりな映画 5 本。`;

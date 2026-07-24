@@ -1,9 +1,14 @@
 /**
  * 脚本の「箱書き」エディタのデータモデルと永続化。
- * 完全クライアントサイド — アウトライン 1 件を localStorage に保存する。
+ * 完全クライアントサイド — 複数の作品（アウトライン）を localStorage に保存する。
+ *
+ * 設計理念「絶対にユーザーのデータを消さない」：
+ * - 旧フォーマット（単一作品）は起動時に自動移行し、決して失わない。
+ * - 作品の削除はソフト削除（deletedAt を立てる）。完全削除は明示操作でのみ。
  */
 
-const KEY = 'mc:hakogaki';
+const KEY = 'mc:hakogaki';          // 旧：単一作品（移行元。読むだけ）
+const WS_KEY = 'mc:hakogaki:ws';    // 新：複数作品ワークスペース
 
 export type StructureId = 'three-act' | 'kishotenketsu' | 'free';
 
@@ -15,10 +20,25 @@ export interface Box {
 }
 
 export interface Outline {
+  id: string;            // 作品 ID（複数作品を区別する）
   title: string;
   structure: StructureId;
   boxes: Box[];
   updated: number;
+  deletedAt?: number;    // ソフト削除の時刻（ゴミ箱行き）。未設定なら生きている。
+}
+
+/** 一覧表示用の軽量メタ（本文は含めない）。 */
+export interface ProjectMeta {
+  id: string;
+  title: string;
+  updated: number;
+}
+
+/** localStorage 上の複数作品ワークスペース。 */
+export interface Workspace {
+  currentId: string | null;
+  outlines: Outline[];   // ソフト削除済みも保持（一覧では除外）
 }
 
 /** 各構成テンプレートが持つ幕（セクション）の ID 一覧。ラベルは i18n 側。 */
@@ -35,37 +55,153 @@ export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+/** 新規の空作品を1件つくる。 */
 export function emptyOutline(): Outline {
-  return { title: '', structure: 'three-act', boxes: [], updated: Date.now() };
+  return { id: uid(), title: '', structure: 'three-act', boxes: [], updated: Date.now() };
 }
 
-export function loadOutline(): Outline | null {
+/** 壊れた保存データで UI が落ちないよう、最低限の妥当性チェックを通す。 */
+function isValidOutline(o: unknown): o is Outline {
+  if (!o || typeof o !== 'object') return false;
+  const c = o as Partial<Outline>;
+  return (
+    typeof c.id === 'string' &&
+    typeof c.title === 'string' &&
+    typeof c.structure === 'string' &&
+    !!c.structure &&
+    STRUCTURES[c.structure as StructureId] !== undefined &&
+    Array.isArray(c.boxes)
+  );
+}
+
+function emptyWorkspace(): Workspace {
+  return { currentId: null, outlines: [] };
+}
+
+/**
+ * ワークスペースを読み込む。無ければ旧フォーマットから移行し、それも無ければ空を返す。
+ * 移行はここで一度だけ行い、成功したら新フォーマットで保存する（旧キーは保険で残す）。
+ */
+export function loadWorkspace(): Workspace {
+  // 1) 新フォーマット
+  try {
+    const raw = localStorage.getItem(WS_KEY);
+    if (raw) {
+      const w = JSON.parse(raw) as Workspace;
+      if (w && Array.isArray(w.outlines)) {
+        const outlines = w.outlines.filter(isValidOutline);
+        const currentId =
+          typeof w.currentId === 'string' && outlines.some((o) => o.id === w.currentId)
+            ? w.currentId
+            : null;
+        return { currentId, outlines };
+      }
+    }
+  } catch {
+    /* 壊れていたら移行を試みる */
+  }
+  // 2) 旧フォーマット（単一作品）からの移行
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const o = JSON.parse(raw) as Outline;
-    // 最低限の妥当性チェック（壊れた保存データで UI が落ちないように）
-    if (!o || !Array.isArray(o.boxes) || !STRUCTURES[o.structure]) return null;
-    return o;
+    if (raw) {
+      const legacy = JSON.parse(raw) as Partial<Outline>;
+      if (legacy && Array.isArray(legacy.boxes) && STRUCTURES[legacy.structure as StructureId]) {
+        const migrated: Outline = {
+          id: uid(),
+          title: typeof legacy.title === 'string' ? legacy.title : '',
+          structure: legacy.structure as StructureId,
+          boxes: legacy.boxes as Box[],
+          updated: typeof legacy.updated === 'number' ? legacy.updated : Date.now(),
+        };
+        const w: Workspace = { currentId: migrated.id, outlines: [migrated] };
+        saveWorkspace(w); // 新フォーマットへ確定（旧キーは消さず保険に残す）
+        return w;
+      }
+    }
   } catch {
-    return null;
+    /* ignore */
   }
+  return emptyWorkspace();
 }
 
-export function saveOutline(o: Outline): void {
+export function saveWorkspace(w: Workspace): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(o));
+    localStorage.setItem(WS_KEY, JSON.stringify(w));
   } catch {
     /* quota / プライベートモードは無視 */
   }
 }
 
-export function clearOutline(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* ignore */
+/** 生きている作品の一覧（新しい順）。 */
+export function listProjects(w: Workspace): ProjectMeta[] {
+  return w.outlines
+    .filter((o) => !o.deletedAt)
+    .map((o) => ({ id: o.id, title: o.title, updated: o.updated }))
+    .sort((a, b) => b.updated - a.updated);
+}
+
+/** ゴミ箱（ソフト削除済み）の一覧（削除が新しい順）。 */
+export function listTrashed(w: Workspace): (ProjectMeta & { deletedAt: number })[] {
+  return w.outlines
+    .filter((o) => o.deletedAt)
+    .map((o) => ({ id: o.id, title: o.title, updated: o.updated, deletedAt: o.deletedAt as number }))
+    .sort((a, b) => b.deletedAt - a.deletedAt);
+}
+
+/** 現在の作品を取り出す（無ければ null）。 */
+export function currentOutline(w: Workspace): Outline | null {
+  return w.outlines.find((o) => o.id === w.currentId && !o.deletedAt) ?? null;
+}
+
+/** 作品を1件更新して差し替えた新しいワークスペースを返す（不変更新）。 */
+export function upsertOutline(w: Workspace, o: Outline): Workspace {
+  const i = w.outlines.findIndex((x) => x.id === o.id);
+  const outlines = i >= 0 ? w.outlines.map((x) => (x.id === o.id ? o : x)) : [...w.outlines, o];
+  return { ...w, outlines };
+}
+
+/** 新しい作品を作って現在作品にする。 */
+export function createProject(w: Workspace): { workspace: Workspace; outline: Outline } {
+  const o = emptyOutline();
+  return { workspace: { currentId: o.id, outlines: [...w.outlines, o] }, outline: o };
+}
+
+/** 現在作品を切り替える。 */
+export function switchProject(w: Workspace, id: string): Workspace {
+  if (!w.outlines.some((o) => o.id === id && !o.deletedAt)) return w;
+  return { ...w, currentId: id };
+}
+
+/**
+ * 作品をゴミ箱へ（ソフト削除）。本文は消さず deletedAt を立てるだけ。
+ * 現在作品を消したときは、生きている別の作品へ切り替える（無ければ null）。
+ */
+export function trashProject(w: Workspace, id: string): Workspace {
+  const outlines = w.outlines.map((o) => (o.id === id ? { ...o, deletedAt: Date.now() } : o));
+  let currentId = w.currentId;
+  if (currentId === id) {
+    const alive = outlines.filter((o) => !o.deletedAt).sort((a, b) => b.updated - a.updated);
+    currentId = alive[0]?.id ?? null;
   }
+  return { currentId, outlines };
+}
+
+/** ゴミ箱から復元する（deletedAt を外す）。 */
+export function restoreProject(w: Workspace, id: string): Workspace {
+  const outlines = w.outlines.map((o) => {
+    if (o.id !== id) return o;
+    const { deletedAt: _omit, ...rest } = o;
+    void _omit;
+    return rest;
+  });
+  return { ...w, outlines };
+}
+
+/** 完全削除（取り消し不可）。ゴミ箱からの明示操作でのみ呼ぶ。 */
+export function purgeProject(w: Workspace, id: string): Workspace {
+  const outlines = w.outlines.filter((o) => o.id !== id);
+  const currentId = w.currentId === id ? null : w.currentId;
+  return { currentId, outlines };
 }
 
 /**
