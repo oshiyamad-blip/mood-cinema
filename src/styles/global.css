@@ -732,6 +732,103 @@ main {
   margin: 0;
   font-size: 0.9rem;
 }
+/* ── 作品（プロジェクト）バー ── */
+.hako-projects {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.hako-projects__pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.hako-projects__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.hako-projects__select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.hako-projects__select:focus { outline: none; border-color: var(--color-accent); }
+.hako-projects__new,
+.hako-projects__del {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+}
+.hako-projects__new:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-projects__del { color: var(--color-text-muted); }
+.hako-projects__del:hover { border-color: var(--color-danger, #c0392b); color: var(--color-danger, #c0392b); }
+
+/* ── ゴミ箱（ソフト削除した作品の復元／完全削除） ── */
+.hako-trash {
+  margin-top: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-card);
+}
+.hako-trash__summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.hako-trash__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-2);
+}
+.hako-trash__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+.hako-trash__restore,
+.hako-trash__purge {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+.hako-trash__restore:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-trash__purge { color: var(--color-text-muted); }
+.hako-trash__purge:hover { border-color: var(--color-danger, #c0392b); color: var(--color-danger, #c0392b); }
+
 .hako-title-input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
