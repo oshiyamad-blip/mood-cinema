@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
+import { useAuth } from '../lib/auth';
+import { fullSync, pushOutlines, deleteRemote } from '../lib/cloudSync';
 import {
   STRUCTURES,
   STRUCTURE_IDS,
@@ -20,8 +23,11 @@ import {
 } from '../lib/hakogaki';
 import type { Box, Outline, StructureId, Workspace } from '../lib/hakogaki';
 
+const BANNER_KEY = 'mc:hako:syncBannerDismissed';
+
 export default function Hako() {
   const { t, prefix, lang } = useI18n();
+  const { user, configured } = useAuth();
 
   useSeo({
     title: t.hako.title,
@@ -40,6 +46,17 @@ export default function Hako() {
   const headingRefs = useRef(new Map<string, HTMLInputElement>());
   const focusBodyRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // ── クラウド同期（ログイン中のみ。未設定/未ログインでは何も起きない）──
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try { return localStorage.getItem(BANNER_KEY) === '1'; } catch { return false; }
+  });
+  const wsRef = useRef(ws);
+  const pushTimer = useRef<number | undefined>(undefined);
+  const lastPushed = useRef<Map<string, number>>(new Map()); // id→updated（送信済みの基準）
+  const mergeApplying = useRef(false); // マージ結果の setWs 由来では push しない
+  useEffect(() => { wsRef.current = ws; }, [ws]);
+
   // 初回マウントで保存済みワークスペースを復元（旧単一作品は自動移行）。
   // 現在作品が無ければ、生きている最新作品へ切替 or 空の作品を1件用意する。
   useEffect(() => {
@@ -57,6 +74,49 @@ export default function Hako() {
     if (!loaded) return;
     saveWorkspace(ws);
   }, [ws, loaded]);
+
+  // ログイン時・タブ復帰時に pull→マージ→差分push（ローカルは真実の源のまま）
+  useEffect(() => {
+    if (!loaded || !configured || !user) { setSyncState('idle'); return; }
+    let cancelled = false;
+    const run = async () => {
+      setSyncState('syncing');
+      try {
+        const res = await fullSync(wsRef.current);
+        if (cancelled) return;
+        if (!res) { setSyncState('idle'); return; }
+        if (res.changed) { mergeApplying.current = true; setWs(res.workspace); }
+        res.workspace.outlines.forEach((o) => lastPushed.current.set(o.id, o.updated));
+        setSyncState('synced');
+      } catch {
+        if (!cancelled) setSyncState('error'); // 失敗してもローカルは無傷
+      }
+    };
+    run();
+    const onFocus = () => { if (!document.hidden) run(); };
+    window.addEventListener('focus', onFocus);
+    return () => { cancelled = true; window.removeEventListener('focus', onFocus); };
+  }, [loaded, configured, user]);
+
+  // 編集のたび、変わった作品だけを 2 秒デバウンスで push
+  useEffect(() => {
+    if (!loaded || !configured || !user) return;
+    if (mergeApplying.current) { mergeApplying.current = false; return; } // マージ適用由来は送らない
+    const changed = ws.outlines.filter((o) => lastPushed.current.get(o.id) !== o.updated);
+    if (changed.length === 0) return;
+    window.clearTimeout(pushTimer.current);
+    setSyncState('syncing');
+    pushTimer.current = window.setTimeout(async () => {
+      try {
+        await pushOutlines(changed);
+        changed.forEach((o) => lastPushed.current.set(o.id, o.updated));
+        setSyncState('synced');
+      } catch {
+        setSyncState('error');
+      }
+    }, 2000);
+  }, [ws, loaded, configured, user]);
+  useEffect(() => () => window.clearTimeout(pushTimer.current), []);
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
@@ -142,6 +202,14 @@ export default function Hako() {
   const purgeFromTrash = (id: string) => {
     if (!window.confirm(t.hako.purgeConfirm)) return;
     setWs(prev => purgeProject(prev, id));
+    lastPushed.current.delete(id);
+    // サーバの行も消す（消さないと次回 pull で復活する）。オフライン時は best-effort。
+    if (user) deleteRemote([id]).catch(() => undefined);
+  };
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    try { localStorage.setItem(BANNER_KEY, '1'); } catch { /* ignore */ }
   };
 
   // ── 箱（シーン）操作 ──────────────────────────────────────
@@ -344,6 +412,19 @@ export default function Hako() {
         <p className="hako-header__sub">{t.hako.sub}</p>
       </div>
 
+      {configured && !user && !bannerDismissed && (
+        <div className="hako-syncbanner">
+          <span>{t.hako.syncBanner}</span>
+          <Link to={`${prefix}/account`} className="hako-syncbanner__cta">{t.hako.syncBannerCta}</Link>
+          <button
+            type="button"
+            className="hako-syncbanner__x"
+            aria-label={t.hako.syncBannerDismiss}
+            onClick={dismissBanner}
+          >×</button>
+        </div>
+      )}
+
       <div className="hako-projects" role="group" aria-label={t.hako.projectLabel}>
         <label className="hako-projects__pick">
           <span className="hako-projects__label">{t.hako.projectLabel}</span>
@@ -407,6 +488,15 @@ export default function Hako() {
 
       <div className="hako-footer">
         <span className="hako-meta">{t.hako.boxCount(outline.boxes.length)}</span>
+        {configured && user && (
+          <span className={`hako-sync hako-sync--${syncState}`}>
+            {syncState === 'syncing'
+              ? t.hako.syncSyncing
+              : syncState === 'error'
+                ? t.hako.syncError
+                : t.hako.syncSynced}
+          </span>
+        )}
         <div className="hako-export">
           <button type="button" className="btn btn--secondary" onClick={copyText}>{t.hako.copy}</button>
           <button type="button" className="btn btn--secondary" onClick={downloadText}>{t.hako.download}</button>

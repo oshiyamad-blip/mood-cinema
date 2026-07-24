@@ -796,6 +796,46 @@ main {
   margin: 0;
   font-size: 0.9rem;
 }
+/* ── 同期バナー／同期ステータス ── */
+.hako-syncbanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(255, 168, 48, 0.28);
+  background: rgba(255, 168, 48, 0.06);
+  border-radius: var(--radius-md);
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
+.hako-syncbanner__cta {
+  flex-shrink: 0;
+  color: var(--color-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.hako-syncbanner__cta:hover { text-decoration: underline; }
+.hako-syncbanner__x {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+.hako-syncbanner__x:hover { color: var(--color-text); }
+.hako-sync {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.hako-sync--synced { color: var(--color-accent); }
+.hako-sync--error { color: var(--color-danger, #ef4444); }
+
 /* ── 作品（プロジェクト）バー ── */
 .hako-projects {
   display: flex;
