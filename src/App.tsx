@@ -59,9 +59,15 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
         <div className="container site-header__inner">
           <Link to={`${prefix}/`} className="brand" aria-label="Tsumugi トップへ">
             <span className="brand__mark" aria-hidden>
-              <svg viewBox="0 0 48 48" width="26" height="26" fill="none">
-                <path d="M15 15 C30 15 18 33 33 33" stroke="#857f9a" stroke-width="3.4" stroke-linecap="round" />
-                <path d="M33 15 C18 15 30 33 15 33" stroke="#ffa830" stroke-width="3.4" stroke-linecap="round" />
+              <svg viewBox="0 26 120 68" width="34" height="19" fill="none">
+                <path
+                  fill="#ffa830"
+                  fillRule="evenodd"
+                  d="M 10 60 C 15 33 105 33 110 60 C 105 87 15 87 10 60 Z M 43 60 a 17 10.5 0 1 0 34 0 a 17 10.5 0 1 0 -34 0 Z"
+                />
+                <rect x="47" y="55.5" width="26" height="9" rx="4.5" fill="#d9770a" />
+                <line x1="6" y1="60" x2="12" y2="60" stroke="#d9770a" strokeWidth="5" strokeLinecap="round" />
+                <line x1="108" y1="60" x2="114" y2="60" stroke="#d9770a" strokeWidth="5" strokeLinecap="round" />
               </svg>
             </span>
             <span className="brand__name">Tsumugi</span>
