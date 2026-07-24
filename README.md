@@ -1,4 +1,4 @@
-# Scene Studio
+# Tsumugi
 
 脚本開発をスムーズにする統合エディタ PWA（旧 **mood-cinema**）。React 19 + Vite + TypeScript。
 
@@ -6,7 +6,7 @@
 コントロールし、一本の脚本に組み立てる。動画編集ソフトのように素材を束ねて作品にする、という
 発想を脚本に持ち込んでいる。旧レコメンド機能は「参考作品ファインダー」として、書いている物語の
 トーンに近い作品を気分から引く素材ツールに転生している。コンセプトの全体像は
-[`docs/scene-studio-concept.md`](docs/scene-studio-concept.md) を参照。
+[`docs/tsumugi-concept.md`](docs/tsumugi-concept.md) を参照。
 
 ## セットアップ
 
