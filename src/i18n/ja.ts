@@ -14,7 +14,7 @@ export const ja = {
     tmdb: 'データ提供: TMDB (The Movie Database)。',
   },
   account: {
-    title: 'アカウント | Scene Studio',
+    title: 'アカウント | Tsumugi',
     heading: 'アカウント',
     intro: 'ログインすると、書いた作品を複数の端末で同期できます。パスワードは不要 — メールに届くコードでログインします。',
     emailLabel: 'メールアドレス',
@@ -38,7 +38,7 @@ export const ja = {
     invalidEmail: 'メールアドレスの形式を確認してください。',
   },
   home: {
-    title: 'Scene Studio | 脚本を組み立てる編集卓',
+    title: 'Tsumugi | 脚本を組み立てる編集卓',
     description:
       'アイデア・人物・参考作品を素材に、シーンの箱で物語を構成する脚本開発の統合エディタ。ブラウザだけで完結し、データはこの端末に保存されます。',
     heroHeading: 'あなたの映画を、\nここで組み立てる。',
@@ -64,7 +64,7 @@ export const ja = {
     historyTime: (ts: number) => new Date(ts).toLocaleString('ja-JP'),
   },
   mood: {
-    title: '参考作品を探す | Scene Studio',
+    title: '参考作品を探す | Tsumugi',
     description: 'トーンや気分を 2〜6 個選んで、書いている物語の参考になる作品を探そう。',
     heading: 'どんなトーンの作品を探す？',
     subheading: (min: number, max: number) => `気になるワードを ${min}〜${max} 個タップ`,
@@ -86,7 +86,7 @@ export const ja = {
     retryBtnFull: '最初から選びなおす',
   },
   articles: {
-    title: '特集記事 | Scene Studio',
+    title: '特集記事 | Tsumugi',
     description:
       '気分・シチュエーション別に映画の選び方を解説。失恋に効く映画、家族で観れる映画、ホラー特集など。',
     heading: '特集記事',
@@ -100,7 +100,7 @@ export const ja = {
     diagnosisBtn: '気分から参考作品を探す',
   },
   hako: {
-    title: '脚本の箱書きエディタ | Scene Studio',
+    title: '脚本の箱書きエディタ | Tsumugi',
     description:
       '三幕構成や起承転結のテンプレートで、物語をシーンごとの「箱」に分けて組み立てるプロット作成ツール。ブラウザだけで完結し、データはこの端末に保存されます。',
     heading: '脚本の箱書きエディタ',

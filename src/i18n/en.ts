@@ -14,7 +14,7 @@ export const en = {
     tmdb: 'Movie data provided by TMDB (The Movie Database).',
   },
   account: {
-    title: 'Account | Scene Studio',
+    title: 'Account | Tsumugi',
     heading: 'Account',
     intro: 'Log in to sync your work across devices. No password needed — we email you a code.',
     emailLabel: 'Email',
@@ -38,7 +38,7 @@ export const en = {
     invalidEmail: 'Please check the email format.',
   },
   home: {
-    title: 'Scene Studio | Assemble Your Screenplay',
+    title: 'Tsumugi | Assemble Your Screenplay',
     description:
       'An integrated screenwriting editor: gather ideas, characters, and reference films as materials, then shape your story scene by scene. Runs entirely in your browser — your data stays on this device.',
     heroHeading: 'Assemble your film,\nscene by scene.',
@@ -64,7 +64,7 @@ export const en = {
     historyTime: (ts: number) => new Date(ts).toLocaleString('en-US'),
   },
   mood: {
-    title: 'Find Reference Films | Scene Studio',
+    title: 'Find Reference Films | Tsumugi',
     description: 'Pick 2–6 tones or moods and find films to reference for the story you\'re writing.',
     heading: 'What tone are you looking for?',
     subheading: (min: number, max: number) => `Tap ${min}–${max} bubbles that match your mood`,
@@ -86,7 +86,7 @@ export const en = {
     retryBtnFull: 'Start over',
   },
   articles: {
-    title: 'Movie Articles | Scene Studio',
+    title: 'Movie Articles | Tsumugi',
     description:
       'Curated movie lists by mood and situation — tearjerkers, date night picks, horror nights, and more.',
     heading: 'Featured Articles',
@@ -100,7 +100,7 @@ export const en = {
     diagnosisBtn: 'Find reference films by mood',
   },
   hako: {
-    title: 'Screenplay Beat Sheet Editor | Scene Studio',
+    title: 'Screenplay Beat Sheet Editor | Tsumugi',
     description:
       'Build your story scene by scene with three-act or kishotenketsu templates. A step-outline (beat sheet) tool that runs entirely in your browser — your data stays on this device.',
     heading: 'Beat Sheet Editor',

@@ -78,20 +78,29 @@ main {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-weight: 700;
-  color: transparent;
-  background: linear-gradient(90deg, #ffa830 0%, #ff7055 40%, #e055d8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  letter-spacing: 0em;
+  text-decoration: none;
 }
-.brand__icon { font-size: 1.4rem; filter: drop-shadow(0 0 8px rgba(255, 168, 48, 0.7)); }
+.brand__mark {
+  display: inline-flex;
+  filter: drop-shadow(0 0 6px rgba(255, 168, 48, 0.3));
+}
 .brand__name {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.28rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: transparent;
+  background: linear-gradient(90deg, #ffa830 0%, #ff7055 55%, #e055d8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.brand__jp {
+  align-self: flex-end;
+  padding-bottom: 0.16rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
 }
 .site-nav {
   display: flex;

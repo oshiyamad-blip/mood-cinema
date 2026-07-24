@@ -57,9 +57,15 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
       <ScrollToTop />
       <header className="site-header">
         <div className="container site-header__inner">
-          <Link to={`${prefix}/`} className="brand" aria-label="Scene Studio トップへ">
-            <span className="brand__icon" aria-hidden>🎬</span>
-            <span className="brand__name">Scene Studio</span>
+          <Link to={`${prefix}/`} className="brand" aria-label="Tsumugi トップへ">
+            <span className="brand__mark" aria-hidden>
+              <svg viewBox="0 0 48 48" width="26" height="26" fill="none">
+                <path d="M15 15 C30 15 18 33 33 33" stroke="#857f9a" stroke-width="3.4" stroke-linecap="round" />
+                <path d="M33 15 C18 15 30 33 15 33" stroke="#ffa830" stroke-width="3.4" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span className="brand__name">Tsumugi</span>
+            <span className="brand__jp" aria-hidden>紬</span>
           </Link>
           <nav className="site-nav">
             <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
@@ -99,7 +105,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           </nav>
           <p className="site-footer__meta">
             {t.footer.tmdb}<br />
-            © {new Date().getFullYear()} Scene Studio
+            © {new Date().getFullYear()} Tsumugi
           </p>
         </div>
       </footer>
