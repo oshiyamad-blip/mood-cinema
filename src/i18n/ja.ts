@@ -157,6 +157,20 @@ export const ja = {
     syncBanner: 'ログインすると、作品を複数の端末で同期できます。',
     syncBannerCta: 'ログイン →',
     syncBannerDismiss: '閉じる',
+    importBtn: '⬆ 逆ハコ',
+    importTitle: '逆ハコ — テキストから箱をつくる',
+    importHelp:
+      'あらすじや脚本を貼ると、シーンごとの箱に分けます。空行・番号（1. ①）・○（柱）で区切りを判定します。書き出したテキストを貼れば、そのまま元の構成に戻ります。',
+    importPlaceholder:
+      '例:\n○ 学校・教室（朝）\n生徒たちがざわめいている。\n\n○ 校庭\nボールが転がる。',
+    importFile: '📄 ファイルを選ぶ',
+    importDetected: (n: number) => `${n} 個の箱を検出`,
+    importNone: 'テキストを貼ると、ここに分割結果が出ます。',
+    importModeNew: '新しい作品として',
+    importModeAppend: '今の作品に追加',
+    importRun: '取り込む',
+    importCancel: 'キャンセル',
+    importDone: (n: number) => `${n} 個の箱を取り込みました`,
   },
   balloonLabel: {
     cry: '泣きたい',

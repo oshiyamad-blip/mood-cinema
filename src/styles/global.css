@@ -796,6 +796,101 @@ main {
   margin: 0;
   font-size: 0.9rem;
 }
+/* ── 逆ハコ（テキスト → 箱）取り込みダイアログ ── */
+.hako-import {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(10, 10, 14, 0.72);
+  backdrop-filter: blur(4px);
+  animation: hako-toast-in 0.16s ease;
+}
+.hako-import__panel {
+  width: min(38rem, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-bg-elev);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 14px);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
+}
+.hako-import__title { margin: 0; font-size: 1.15rem; }
+.hako-import__help { margin: 0; font-size: 0.84rem; line-height: 1.7; color: var(--color-text-muted); }
+.hako-import__text {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  padding: var(--space-3);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.hako-import__text:focus { outline: none; border-color: var(--color-accent); }
+.hako-import__row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.hako-import__file {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hako-import__file:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-import__count { font-size: 0.84rem; color: var(--color-text-muted); font-weight: 600; }
+.hako-import__preview {
+  margin: 0;
+  padding-left: 1.4rem;
+  max-height: 9rem;
+  overflow-y: auto;
+  font-size: 0.86rem;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.hako-import__preview .hako-import__more { list-style: none; color: var(--color-text-muted); margin-left: -1.4rem; }
+.hako-import__modes { display: flex; gap: var(--space-2); }
+.hako-import__mode {
+  flex: 1 1 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hako-import__mode--on { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-import__actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+.hako-import__actions .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.hako-import__cancel {
+  flex-shrink: 0;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+.hako-import__cancel:hover { color: var(--color-text); }
+
 /* ── 同期バナー／同期ステータス ── */
 .hako-syncbanner {
   display: flex;

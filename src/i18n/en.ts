@@ -157,6 +157,20 @@ export const en = {
     syncBanner: 'Log in to sync your work across devices.',
     syncBannerCta: 'Log in →',
     syncBannerDismiss: 'Dismiss',
+    importBtn: '⬆ Import',
+    importTitle: 'Reverse outline — turn text into boxes',
+    importHelp:
+      'Paste a synopsis or script and it will be split into scene boxes. Blank lines, numbering (1. ①) and ○ scene markers are used as breaks. Paste text you exported here and it comes back as the same outline.',
+    importPlaceholder:
+      'e.g.\n○ Classroom — morning\nThe students are restless.\n\n○ Schoolyard\nA ball rolls past.',
+    importFile: '📄 Choose a file',
+    importDetected: (n: number) => `${n} box${n === 1 ? '' : 'es'} detected`,
+    importNone: 'Paste some text and the split preview appears here.',
+    importModeNew: 'As a new project',
+    importModeAppend: 'Append to current',
+    importRun: 'Import',
+    importCancel: 'Cancel',
+    importDone: (n: number) => `Imported ${n} box${n === 1 ? '' : 'es'}`,
   },
   balloonLabel: {
     cry: 'Want to cry',

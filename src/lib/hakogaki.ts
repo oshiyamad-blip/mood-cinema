@@ -207,6 +207,91 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   return { currentId, outlines };
 }
 
+// ── 逆ハコ：テキスト → 箱の解析 ────────────────────────────────────────
+/** 解析で得られた 1 箱ぶん。actLabel は見出し行（## …）の生ラベル。 */
+export interface ParsedItem {
+  heading: string;
+  body: string;
+  actLabel: string | null;
+}
+export interface ParsedOutline {
+  title: string;
+  items: ParsedItem[];
+}
+
+/** 箱の始まりを示す行頭マーカー。先に一致したものを採用する。 */
+const BOX_MARKERS: RegExp[] = [
+  /^#{3,}\s+(.+)$/,                        // ### 見出し
+  /^\d+[.．、)）]\s*(.*)$/,                 // 1. / 1、/ 1)
+  /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*(.*)$/, // ①②③…
+  /^[○◯〇●]\s*(.*)$/,                      // ○柱（シーン見出しの慣習）
+  /^[-*]\s+(.+)$/,                          // - / * 箇条書き
+  /^・\s*(.+)$/,                            // ・箇条書き
+];
+
+function markerText(line: string): string | null {
+  for (const re of BOX_MARKERS) {
+    const m = line.match(re);
+    if (m) return (m[1] ?? '').trim();
+  }
+  return null;
+}
+
+/**
+ * あらすじ・脚本などのテキストを箱に分解する（逆ハコ）。
+ * 自前の書き出し形式（# 題名 / ## 幕 / 1. 見出し + 字下げ本文）を往復できることを第一に、
+ * 素のテキストでも「空行区切り＝1 箱・先頭行＝見出し」で拾う。破壊的な解釈はしない。
+ */
+export function parseOutlineText(text: string): ParsedOutline {
+  const lines = text.split(/\r?\n/);
+  let title = '';
+  let act: string | null = null;
+  let blank = false;
+  const items: ParsedItem[] = [];
+  let cur: { heading: string; body: string[]; act: string | null } | null = null;
+
+  const flush = () => {
+    if (!cur) return;
+    items.push({ heading: cur.heading, body: cur.body.join('\n').trim(), actLabel: cur.act });
+    cur = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === '') {
+      blank = true; // 空行は「次の行から新しい箱」の合図として覚えておく
+      continue;
+    }
+    if (!title && /^#\s+/.test(line)) {
+      title = line.replace(/^#\s+/, '').trim();
+      blank = false;
+      continue;
+    }
+    if (/^##\s+/.test(line)) {
+      flush();
+      act = line.replace(/^##\s+/, '').trim();
+      blank = false;
+      continue;
+    }
+    const mt = markerText(line);
+    if (mt !== null) {
+      flush();
+      cur = { heading: mt, body: [], act };
+      blank = false;
+      continue;
+    }
+    if (!cur || blank) {
+      flush();
+      cur = { heading: line, body: [], act };
+      blank = false;
+      continue;
+    }
+    cur.body.push(line);
+  }
+  flush();
+  return { title, items };
+}
+
 /**
  * アウトラインを Markdown 風のプレーンテキストへ書き出す。
  * ラベルは i18n に依存するため、呼び出し側から解決関数を渡す。
