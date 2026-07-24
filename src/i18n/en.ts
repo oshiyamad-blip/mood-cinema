@@ -151,6 +151,12 @@ export const en = {
     done: 'Done',
     prevBox: '← Prev',
     nextBox: 'Next →',
+    syncSyncing: 'Syncing…',
+    syncSynced: 'Synced ✓',
+    syncError: 'Sync error (saved locally)',
+    syncBanner: 'Log in to sync your work across devices.',
+    syncBannerCta: 'Log in →',
+    syncBannerDismiss: 'Dismiss',
   },
   balloonLabel: {
     cry: 'Want to cry',

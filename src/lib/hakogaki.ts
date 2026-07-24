@@ -177,7 +177,9 @@ export function switchProject(w: Workspace, id: string): Workspace {
  * 現在作品を消したときは、生きている別の作品へ切り替える（無ければ null）。
  */
 export function trashProject(w: Workspace, id: string): Workspace {
-  const outlines = w.outlines.map((o) => (o.id === id ? { ...o, deletedAt: Date.now() } : o));
+  const now = Date.now();
+  // updated も進める：削除を「新しい編集」として LWW で伝播させ、同期の差分検出にも乗せる
+  const outlines = w.outlines.map((o) => (o.id === id ? { ...o, deletedAt: now, updated: now } : o));
   let currentId = w.currentId;
   if (currentId === id) {
     const alive = outlines.filter((o) => !o.deletedAt).sort((a, b) => b.updated - a.updated);
@@ -188,11 +190,12 @@ export function trashProject(w: Workspace, id: string): Workspace {
 
 /** ゴミ箱から復元する（deletedAt を外す）。 */
 export function restoreProject(w: Workspace, id: string): Workspace {
+  const now = Date.now();
   const outlines = w.outlines.map((o) => {
     if (o.id !== id) return o;
     const { deletedAt: _omit, ...rest } = o;
     void _omit;
-    return rest;
+    return { ...rest, updated: now }; // 復元も新しい編集＝LWW で復活を伝播
   });
   return { ...w, outlines };
 }

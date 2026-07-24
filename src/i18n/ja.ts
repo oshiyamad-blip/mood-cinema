@@ -151,6 +151,12 @@ export const ja = {
     done: '完了',
     prevBox: '← 前の箱',
     nextBox: '次の箱 →',
+    syncSyncing: '同期中…',
+    syncSynced: '同期済み ✓',
+    syncError: '同期エラー（ローカルに保存済み）',
+    syncBanner: 'ログインすると、作品を複数の端末で同期できます。',
+    syncBannerCta: 'ログイン →',
+    syncBannerDismiss: '閉じる',
   },
   balloonLabel: {
     cry: '泣きたい',
