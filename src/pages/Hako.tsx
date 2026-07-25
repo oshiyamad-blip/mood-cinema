@@ -21,6 +21,7 @@ import {
   purgeProject,
   outlineToText,
   parseOutlineText,
+  formatTimecode,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -415,7 +416,13 @@ export default function Hako() {
     const pos = siblings.findIndex(b => b.id === box.id);
     return (
       <div className="hako-box" key={box.id}>
-        <span className="hako-box__num">{index}</span>
+        <span className="hako-box__num">
+          {index}
+          {/* 逆ハコで起こした箱は、作品内での位置（打刻時刻）を添える */}
+          {typeof box.at === 'number' && (
+            <span className="hako-box__at">{formatTimecode(box.at)}</span>
+          )}
+        </span>
         <div className="hako-box__fields">
           <input
             ref={el => {

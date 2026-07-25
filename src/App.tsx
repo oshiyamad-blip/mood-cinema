@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Mood from './pages/Mood';
 import Hako from './pages/Hako';
 import Account from './pages/Account';
+import Gyaku from './pages/Gyaku';
 import Result from './pages/Result';
 import SceneLanding from './pages/SceneLanding';
 import Article from './pages/Article';
@@ -89,6 +90,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           </Link>
           <nav className="site-nav">
             <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
+            <NavLink to={`${prefix}/gyaku`}>{t.nav.gyaku}</NavLink>
             <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
             <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
             <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
@@ -104,6 +106,7 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           <Route path="/mood" element={<Mood />} />
           <Route path="/hako" element={<Hako />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/gyaku" element={<Gyaku />} />
           <Route path="/quiz" element={<Navigate to={`${prefix}/mood`} replace />} />
           <Route path="/result" element={<Result />} />
           <Route path="/scene/:slug" element={<SceneLanding />} />

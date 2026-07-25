@@ -17,6 +17,16 @@ export interface Box {
   act: string;      // 所属する幕の ID（自由構成では ''）
   heading: string;  // シーン見出し
   body: string;     // 内容メモ
+  at?: number;      // 逆ハコ：作品開始からの秒数（観ながら打刻したシーン開始位置）
+}
+
+/** 逆ハコで題材にした作品（TMDB 由来。手入力もできるので id は任意）。 */
+export interface FilmRef {
+  tmdbId?: number;
+  title: string;
+  year?: string;
+  runtime?: number;      // 分
+  posterPath?: string | null;
 }
 
 export interface Outline {
@@ -26,6 +36,17 @@ export interface Outline {
   boxes: Box[];
   updated: number;
   deletedAt?: number;    // ソフト削除の時刻（ゴミ箱行き）。未設定なら生きている。
+  film?: FilmRef;        // 逆ハコで起こした場合の題材作品
+}
+
+/** 秒数を h:mm:ss / m:ss に整形する（逆ハコの打刻表示）。 */
+export function formatTimecode(sec: number): string {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`;
 }
 
 /** 一覧表示用の軽量メタ（本文は含めない）。 */
@@ -207,7 +228,28 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   return { currentId, outlines };
 }
 
-// ── 逆ハコ：テキスト → 箱の解析 ────────────────────────────────────────
+/**
+ * 打刻位置（at 秒）と全体の尺から、各箱を幕へ割り当てる（逆ハコの構成分析）。
+ * 三幕構成は 25% / 75%、起承転結は 25% ずつを目安の切れ目とする。
+ * at が無い箱・尺が不明なときは触らない（勝手に動かさない）。
+ */
+export function assignActsByPosition(boxes: Box[], structure: StructureId, totalSec: number): Box[] {
+  const acts = STRUCTURES[structure].acts;
+  if (acts.length === 0 || totalSec <= 0) return boxes;
+  // 幕ごとの上限比率（最後の幕は 1.0）
+  const bounds =
+    acts.length === 3 ? [0.25, 0.75, 1] :
+    acts.length === 4 ? [0.25, 0.5, 0.75, 1] :
+    acts.map((_, i) => (i + 1) / acts.length);
+  return boxes.map((b) => {
+    if (typeof b.at !== 'number') return b;
+    const p = Math.min(1, Math.max(0, b.at / totalSec));
+    const idx = bounds.findIndex((limit) => p < limit);
+    return { ...b, act: acts[idx === -1 ? acts.length - 1 : idx] };
+  });
+}
+
+// ── 取り込み：テキスト → 箱の解析 ──────────────────────────────────────
 /** 解析で得られた 1 箱ぶん。actLabel は見出し行（## …）の生ラベル。 */
 export interface ParsedItem {
   heading: string;
