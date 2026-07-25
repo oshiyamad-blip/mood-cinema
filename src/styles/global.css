@@ -1539,9 +1539,13 @@ main {
   border: 1px solid var(--color-border); border-radius: var(--radius-md);
 }
 .gyaku__at {
-  flex-shrink: 0; min-width: 3.6rem; padding-top: 6px;
-  color: var(--color-accent); font-weight: 700; font-size: 0.86rem; font-variant-numeric: tabular-nums;
+  flex-shrink: 0; width: 4.2rem; padding: var(--space-2) 4px;
+  background: var(--color-bg-elev); border: 1px solid transparent; border-radius: 6px;
+  color: var(--color-accent); font-family: inherit; font-weight: 700; font-size: 0.86rem;
+  font-variant-numeric: tabular-nums; text-align: center;
 }
+.gyaku__at:hover { border-color: var(--color-border); }
+.gyaku__at:focus { outline: none; border-color: var(--color-accent); }
 .gyaku__no { flex-shrink: 0; padding-top: 6px; color: var(--color-text-muted); font-size: 0.78rem; min-width: 1.4rem; }
 .gyaku__fields { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .gyaku__heading, .gyaku__body {
@@ -1564,14 +1568,6 @@ main {
   padding: var(--space-3) 0;
   background: linear-gradient(to bottom, transparent, var(--color-bg) 28%);
 }
-.gyaku__structure { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.gyaku__structurelabel { font-size: 0.82rem; font-weight: 700; color: var(--color-text-muted); }
-.gyaku__structbtn {
-  padding: var(--space-1) var(--space-3); background: transparent;
-  border: 1px solid var(--color-border); border-radius: var(--radius-pill);
-  color: var(--color-text-muted); font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
-}
-.gyaku__structbtn--on { border-color: var(--color-accent); color: var(--color-accent); }
 .gyaku__savebtn { width: 100%; }
 .hako-box__at {
   display: block;

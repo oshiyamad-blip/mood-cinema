@@ -229,24 +229,21 @@ export function purgeProject(w: Workspace, id: string): Workspace {
 }
 
 /**
- * 打刻位置（at 秒）と全体の尺から、各箱を幕へ割り当てる（逆ハコの構成分析）。
- * 三幕構成は 25% / 75%、起承転結は 25% ずつを目安の切れ目とする。
- * at が無い箱・尺が不明なときは触らない（勝手に動かさない）。
+ * "34:12" / "1:02:05" / "812"（秒だけ）を秒数へ。解釈できなければ null。
+ * 逆ハコで、プレイヤーに出ている時刻をそのまま打ち直せるようにするためのもの。
  */
-export function assignActsByPosition(boxes: Box[], structure: StructureId, totalSec: number): Box[] {
-  const acts = STRUCTURES[structure].acts;
-  if (acts.length === 0 || totalSec <= 0) return boxes;
-  // 幕ごとの上限比率（最後の幕は 1.0）
-  const bounds =
-    acts.length === 3 ? [0.25, 0.75, 1] :
-    acts.length === 4 ? [0.25, 0.5, 0.75, 1] :
-    acts.map((_, i) => (i + 1) / acts.length);
-  return boxes.map((b) => {
-    if (typeof b.at !== 'number') return b;
-    const p = Math.min(1, Math.max(0, b.at / totalSec));
-    const idx = bounds.findIndex((limit) => p < limit);
-    return { ...b, act: acts[idx === -1 ? acts.length - 1 : idx] };
-  });
+export function parseTimecode(input: string): number | null {
+  const s = input.trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return Number(s); // 秒だけの入力
+  const parts = s.split(':');
+  if (parts.length < 2 || parts.length > 3) return null;
+  if (!parts.every((x) => /^\d{1,3}$/.test(x))) return null;
+  const n = parts.map(Number);
+  const [h, m, sec] = parts.length === 3 ? n : [0, n[0], n[1]];
+  if (sec > 59) return null;
+  if (parts.length === 3 && m > 59) return null;
+  return h * 3600 + m * 60 + sec;
 }
 
 // ── 取り込み：テキスト → 箱の解析 ──────────────────────────────────────

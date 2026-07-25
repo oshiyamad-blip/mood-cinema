@@ -7,12 +7,11 @@ import type { TmdbMovie } from '../lib/tmdb';
 import {
   uid,
   formatTimecode,
-  assignActsByPosition,
+  parseTimecode,
   loadWorkspace,
   saveWorkspace,
-  STRUCTURES,
 } from '../lib/hakogaki';
-import type { Box, FilmRef, Outline, StructureId } from '../lib/hakogaki';
+import type { Box, FilmRef, Outline } from '../lib/hakogaki';
 
 /** 観ながらの打刻セッション。リロードで消えないよう localStorage に常時保存する。 */
 interface Session {
@@ -76,7 +75,7 @@ export default function Gyaku() {
   const [results, setResults] = useState<TmdbMovie[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState('');
-  const [structure, setStructure] = useState<StructureId>('three-act');
+  const [tcDrafts, setTcDrafts] = useState<Record<string, string>>({}); // 時刻を打ち直している最中の値
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | undefined>(undefined);
   const headingRefs = useRef(new Map<string, HTMLInputElement>());
@@ -176,12 +175,19 @@ export default function Gyaku() {
     });
 
   // ── シーンの打刻 ────────────────────────────────────────────
+  // 打刻＝「映画を止めてメモを取る」瞬間なので、計測も一緒に止める。
+  // こうしないとメモを書いている間だけ時間が進み、以降の時刻が全部ずれる。
   const capture = useCallback(() => {
     setSession(s => {
       const id = uid();
       focusId.current = id;
       const at = Math.round(elapsedOf(s));
-      return { ...s, scenes: [...s.scenes, { id, at, heading: '', body: '' }] };
+      return {
+        ...s,
+        accumulated: at,
+        startedAt: null,
+        scenes: [...s.scenes, { id, at, heading: '', body: '' }],
+      };
     });
   }, []);
 
@@ -203,6 +209,19 @@ export default function Gyaku() {
   const removeScene = (id: string) =>
     setSession(s => ({ ...s, scenes: s.scenes.filter(x => x.id !== id) }));
 
+  /** 時刻の打ち直しを確定する。読めない入力は元の値に戻すだけで、メモは触らない。 */
+  const commitTimecode = (id: string) => {
+    const draft = tcDrafts[id];
+    setTcDrafts(d => {
+      const { [id]: _drop, ...rest } = d;
+      void _drop;
+      return rest;
+    });
+    if (draft === undefined) return;
+    const sec = parseTimecode(draft);
+    if (sec !== null) updateScene(id, { at: sec });
+  };
+
   // ── 保存：ワークスペースへ作品として書き出す ────────────────
   const scenesSorted = useMemo(
     () => [...session.scenes].sort((a, b) => a.at - b.at),
@@ -211,22 +230,19 @@ export default function Gyaku() {
 
   const saveAsProject = () => {
     if (scenesSorted.length === 0) return;
-    const acts = STRUCTURES[structure].acts;
-    let boxes: Box[] = scenesSorted.map(sc => ({
+    // 幕には振らない：観たままの並びを time 順のフラットな箱として残す（構成は後で決められる）
+    const boxes: Box[] = scenesSorted.map(sc => ({
       id: uid(),
-      act: acts.length === 0 ? '' : acts[0],
+      act: '',
       heading: sc.heading,
       body: sc.body,
       at: sc.at,
     }));
-    // 尺が分かっていれば、打刻位置から幕を割り当てて構成を見えるようにする
-    const total = runtimeSec > 0 ? runtimeSec : scenesSorted[scenesSorted.length - 1].at;
-    boxes = assignActsByPosition(boxes, structure, total);
 
     const outline: Outline = {
       id: uid(),
       title: session.film?.title ? t.gyaku.projectTitle(session.film.title) : t.gyaku.projectTitleFallback,
-      structure,
+      structure: 'free',
       boxes,
       updated: Date.now(),
       film: session.film ?? undefined,
@@ -344,7 +360,17 @@ export default function Gyaku() {
         <ol className="gyaku__scenes">
           {scenesSorted.map((sc, i) => (
             <li className="gyaku__scene" key={sc.id}>
-              <span className="gyaku__at">{formatTimecode(sc.at)}</span>
+              {/* 時刻はプレイヤーの表示を見て打ち直せる（ここが逆ハコの肝） */}
+              <input
+                className="gyaku__at"
+                type="text"
+                inputMode="numeric"
+                aria-label={t.gyaku.timecodeLabel}
+                value={tcDrafts[sc.id] ?? formatTimecode(sc.at)}
+                onChange={e => setTcDrafts(d => ({ ...d, [sc.id]: e.target.value }))}
+                onBlur={() => commitTimecode(sc.id)}
+                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              />
               <span className="gyaku__no">{i + 1}</span>
               <div className="gyaku__fields">
                 <input
@@ -379,18 +405,6 @@ export default function Gyaku() {
 
       {scenesSorted.length > 0 && (
         <div className="gyaku__save">
-          <div className="gyaku__structure" role="group" aria-label={t.hako.structureLabel}>
-            <span className="gyaku__structurelabel">{t.gyaku.assignAs}</span>
-            {(['three-act', 'kishotenketsu', 'free'] as StructureId[]).map(id => (
-              <button
-                key={id}
-                type="button"
-                className={`gyaku__structbtn${structure === id ? ' gyaku__structbtn--on' : ''}`}
-                aria-pressed={structure === id}
-                onClick={() => setStructure(id)}
-              >{t.hako.structures[id]}</button>
-            ))}
-          </div>
           <button type="button" className="btn btn--primary gyaku__savebtn" onClick={saveAsProject}>
             {t.gyaku.save(scenesSorted.length)}
           </button>
