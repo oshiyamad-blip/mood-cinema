@@ -17,6 +17,16 @@ export interface Box {
   act: string;      // 所属する幕の ID（自由構成では ''）
   heading: string;  // シーン見出し
   body: string;     // 内容メモ
+  at?: number;      // 逆ハコ：作品開始からの秒数（観ながら打刻したシーン開始位置）
+}
+
+/** 逆ハコで題材にした作品（TMDB 由来。手入力もできるので id は任意）。 */
+export interface FilmRef {
+  tmdbId?: number;
+  title: string;
+  year?: string;
+  runtime?: number;      // 分
+  posterPath?: string | null;
 }
 
 export interface Outline {
@@ -26,6 +36,17 @@ export interface Outline {
   boxes: Box[];
   updated: number;
   deletedAt?: number;    // ソフト削除の時刻（ゴミ箱行き）。未設定なら生きている。
+  film?: FilmRef;        // 逆ハコで起こした場合の題材作品
+}
+
+/** 秒数を h:mm:ss / m:ss に整形する（逆ハコの打刻表示）。 */
+export function formatTimecode(sec: number): string {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`;
 }
 
 /** 一覧表示用の軽量メタ（本文は含めない）。 */
@@ -205,6 +226,109 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   const outlines = w.outlines.filter((o) => o.id !== id);
   const currentId = w.currentId === id ? null : w.currentId;
   return { currentId, outlines };
+}
+
+/**
+ * "34:12" / "1:02:05" / "812"（秒だけ）を秒数へ。解釈できなければ null。
+ * 逆ハコで、プレイヤーに出ている時刻をそのまま打ち直せるようにするためのもの。
+ */
+export function parseTimecode(input: string): number | null {
+  const s = input.trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return Number(s); // 秒だけの入力
+  const parts = s.split(':');
+  if (parts.length < 2 || parts.length > 3) return null;
+  if (!parts.every((x) => /^\d{1,3}$/.test(x))) return null;
+  const n = parts.map(Number);
+  const [h, m, sec] = parts.length === 3 ? n : [0, n[0], n[1]];
+  if (sec > 59) return null;
+  if (parts.length === 3 && m > 59) return null;
+  return h * 3600 + m * 60 + sec;
+}
+
+// ── 取り込み：テキスト → 箱の解析 ──────────────────────────────────────
+/** 解析で得られた 1 箱ぶん。actLabel は見出し行（## …）の生ラベル。 */
+export interface ParsedItem {
+  heading: string;
+  body: string;
+  actLabel: string | null;
+}
+export interface ParsedOutline {
+  title: string;
+  items: ParsedItem[];
+}
+
+/** 箱の始まりを示す行頭マーカー。先に一致したものを採用する。 */
+const BOX_MARKERS: RegExp[] = [
+  /^#{3,}\s+(.+)$/,                        // ### 見出し
+  /^\d+[.．、)）]\s*(.*)$/,                 // 1. / 1、/ 1)
+  /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*(.*)$/, // ①②③…
+  /^[○◯〇●]\s*(.*)$/,                      // ○柱（シーン見出しの慣習）
+  /^[-*]\s+(.+)$/,                          // - / * 箇条書き
+  /^・\s*(.+)$/,                            // ・箇条書き
+];
+
+function markerText(line: string): string | null {
+  for (const re of BOX_MARKERS) {
+    const m = line.match(re);
+    if (m) return (m[1] ?? '').trim();
+  }
+  return null;
+}
+
+/**
+ * あらすじ・脚本などのテキストを箱に分解する（逆ハコ）。
+ * 自前の書き出し形式（# 題名 / ## 幕 / 1. 見出し + 字下げ本文）を往復できることを第一に、
+ * 素のテキストでも「空行区切り＝1 箱・先頭行＝見出し」で拾う。破壊的な解釈はしない。
+ */
+export function parseOutlineText(text: string): ParsedOutline {
+  const lines = text.split(/\r?\n/);
+  let title = '';
+  let act: string | null = null;
+  let blank = false;
+  const items: ParsedItem[] = [];
+  let cur: { heading: string; body: string[]; act: string | null } | null = null;
+
+  const flush = () => {
+    if (!cur) return;
+    items.push({ heading: cur.heading, body: cur.body.join('\n').trim(), actLabel: cur.act });
+    cur = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === '') {
+      blank = true; // 空行は「次の行から新しい箱」の合図として覚えておく
+      continue;
+    }
+    if (!title && /^#\s+/.test(line)) {
+      title = line.replace(/^#\s+/, '').trim();
+      blank = false;
+      continue;
+    }
+    if (/^##\s+/.test(line)) {
+      flush();
+      act = line.replace(/^##\s+/, '').trim();
+      blank = false;
+      continue;
+    }
+    const mt = markerText(line);
+    if (mt !== null) {
+      flush();
+      cur = { heading: mt, body: [], act };
+      blank = false;
+      continue;
+    }
+    if (!cur || blank) {
+      flush();
+      cur = { heading: line, body: [], act };
+      blank = false;
+      continue;
+    }
+    cur.body.push(line);
+  }
+  flush();
+  return { title, items };
 }
 
 /**

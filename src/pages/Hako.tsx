@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
@@ -20,8 +20,10 @@ import {
   restoreProject,
   purgeProject,
   outlineToText,
+  parseOutlineText,
+  formatTimecode,
 } from '../lib/hakogaki';
-import type { Box, Outline, StructureId, Workspace } from '../lib/hakogaki';
+import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
 const BANNER_KEY = 'mc:hako:syncBannerDismissed';
 
@@ -51,6 +53,12 @@ export default function Hako() {
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     try { return localStorage.getItem(BANNER_KEY) === '1'; } catch { return false; }
   });
+  // ── 逆ハコ（テキスト → 箱）の取り込みダイアログ ──
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importMode, setImportMode] = useState<'new' | 'append'>('new');
+  const parsed = useMemo(() => parseOutlineText(importText), [importText]);
+
   const wsRef = useRef(ws);
   const pushTimer = useRef<number | undefined>(undefined);
   const lastPushed = useRef<Map<string, number>>(new Map()); // id→updated（送信済みの基準）
@@ -145,6 +153,14 @@ export default function Hako() {
       document.body.style.overflow = prevOverflow;
     };
   }, [openId]);
+
+  // 取り込みダイアログは Esc で閉じる
+  useEffect(() => {
+    if (!importOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setImportOpen(false); setImportText(''); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [importOpen]);
 
   // textarea を内容に合わせて自動で伸ばす（スマホで本文を書き切れるように）
   const autoGrow = (el: HTMLTextAreaElement | null) => {
@@ -314,11 +330,99 @@ export default function Hako() {
     flash(t.hako.resetDone, () => setWs(prev => upsertOutline(prev, { ...snapshot, updated: Date.now() })));
   };
 
+  // ── 逆ハコ：解析結果を箱へ変換して取り込む（既存データは一切書き換えない）──
+  // 書き出しの幕見出し（ラベル）から幕 ID を引き直すための逆引き表
+  const actIdByLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    Object.entries(t.hako.acts).forEach(([id, label]) => m.set(label, id));
+    return m;
+  }, [t]);
+
+  /** 幕ラベルから構成テンプレートを推定（自前の書き出しを読み戻すと元の構成に戻る）。 */
+  const detectStructure = (items: ParsedItem[]): StructureId | null => {
+    const ids = [...new Set(items.map(i => i.actLabel).filter(Boolean) as string[])]
+      .map(l => actIdByLabel.get(l))
+      .filter(Boolean) as string[];
+    if (ids.length === 0) return null;
+    for (const sid of STRUCTURE_IDS) {
+      const acts = STRUCTURES[sid].acts;
+      if (acts.length > 0 && ids.every(id => acts.includes(id))) return sid;
+    }
+    return null;
+  };
+
+  const buildBoxes = (structure: StructureId, items: ParsedItem[]): Box[] => {
+    const acts = STRUCTURES[structure].acts;
+    return items.map(it => {
+      const mapped = it.actLabel ? actIdByLabel.get(it.actLabel) : undefined;
+      const act = acts.length === 0 ? '' : (mapped && acts.includes(mapped) ? mapped : acts[0]);
+      return { id: uid(), act, heading: it.heading, body: it.body };
+    });
+  };
+
+  const closeImport = () => {
+    setImportOpen(false);
+    setImportText('');
+  };
+
+  const runImport = () => {
+    const items = parsed.items;
+    if (items.length === 0) return;
+    if (importMode === 'new') {
+      // 新しい作品として追加（既存作品には触れない）
+      const structure = detectStructure(items) ?? 'free';
+      const fresh: Outline = {
+        id: uid(),
+        title: parsed.title,
+        structure,
+        boxes: buildBoxes(structure, items),
+        updated: Date.now(),
+      };
+      setWs(prev => ({ currentId: fresh.id, outlines: [...prev.outlines, fresh] }));
+      // 取り消しはゴミ箱行き（＝復元可能）。完全削除はしない。
+      flash(t.hako.importDone(items.length), () => setWs(prev => trashProject(prev, fresh.id)));
+    } else {
+      if (!outline) return;
+      const oid = outline.id;
+      const added = buildBoxes(outline.structure, items);
+      const addedIds = new Set(added.map(b => b.id));
+      patchOutline(o => ({ ...o, boxes: [...o.boxes, ...added], updated: Date.now() }));
+      // 取り消しは「今足した箱だけ」を戻す（元からあった箱には触れない）
+      flash(t.hako.importDone(items.length), () =>
+        setWs(prev => {
+          const cur = prev.outlines.find(o => o.id === oid);
+          if (!cur) return prev;
+          return upsertOutline(prev, {
+            ...cur,
+            boxes: cur.boxes.filter(b => !addedIds.has(b.id)),
+            updated: Date.now(),
+          });
+        }),
+      );
+    }
+    closeImport();
+  };
+
+  const pickImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = ''; // 同じファイルを選び直せるように
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setImportText(String(reader.result ?? ''));
+    reader.readAsText(f);
+  };
+
   const renderBox = (box: Box, index: number, siblings: Box[]) => {
     const pos = siblings.findIndex(b => b.id === box.id);
     return (
       <div className="hako-box" key={box.id}>
-        <span className="hako-box__num">{index}</span>
+        <span className="hako-box__num">
+          {index}
+          {/* 逆ハコで起こした箱は、作品内での位置（打刻時刻）を添える */}
+          {typeof box.at === 'number' && (
+            <span className="hako-box__at">{formatTimecode(box.at)}</span>
+          )}
+        </span>
         <div className="hako-box__fields">
           <input
             ref={el => {
@@ -498,6 +602,7 @@ export default function Hako() {
           </span>
         )}
         <div className="hako-export">
+          <button type="button" className="btn btn--secondary" onClick={() => setImportOpen(true)}>{t.hako.importBtn}</button>
           <button type="button" className="btn btn--secondary" onClick={copyText}>{t.hako.copy}</button>
           <button type="button" className="btn btn--secondary" onClick={downloadText}>{t.hako.download}</button>
           <button type="button" className="hako-reset" onClick={reset}>{t.hako.reset}</button>
@@ -519,6 +624,67 @@ export default function Hako() {
             </div>
           ))}
         </details>
+      )}
+
+      {importOpen && (
+        <div className="hako-import" role="dialog" aria-modal="true" aria-label={t.hako.importTitle}>
+          <div className="hako-import__panel">
+            <h2 className="hako-import__title">{t.hako.importTitle}</h2>
+            <p className="hako-import__help">{t.hako.importHelp}</p>
+
+            <textarea
+              className="hako-import__text"
+              value={importText}
+              placeholder={t.hako.importPlaceholder}
+              onChange={e => setImportText(e.target.value)}
+              autoFocus
+            />
+
+            <div className="hako-import__row">
+              <label className="hako-import__file">
+                {t.hako.importFile}
+                <input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={pickImportFile} hidden />
+              </label>
+              <span className="hako-import__count">
+                {parsed.items.length > 0 ? t.hako.importDetected(parsed.items.length) : t.hako.importNone}
+              </span>
+            </div>
+
+            {parsed.items.length > 0 && (
+              <ol className="hako-import__preview">
+                {parsed.items.slice(0, 8).map((it, i) => (
+                  <li key={i}>{it.heading || '—'}</li>
+                ))}
+                {parsed.items.length > 8 && <li className="hako-import__more">… {parsed.items.length - 8}</li>}
+              </ol>
+            )}
+
+            <div className="hako-import__modes" role="group" aria-label={t.hako.importTitle}>
+              <button
+                type="button"
+                className={`hako-import__mode${importMode === 'new' ? ' hako-import__mode--on' : ''}`}
+                aria-pressed={importMode === 'new'}
+                onClick={() => setImportMode('new')}
+              >{t.hako.importModeNew}</button>
+              <button
+                type="button"
+                className={`hako-import__mode${importMode === 'append' ? ' hako-import__mode--on' : ''}`}
+                aria-pressed={importMode === 'append'}
+                onClick={() => setImportMode('append')}
+              >{t.hako.importModeAppend}</button>
+            </div>
+
+            <div className="hako-import__actions">
+              <button type="button" className="hako-import__cancel" onClick={closeImport}>{t.hako.importCancel}</button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                disabled={parsed.items.length === 0}
+                onClick={runImport}
+              >{t.hako.importRun}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {toast && (
