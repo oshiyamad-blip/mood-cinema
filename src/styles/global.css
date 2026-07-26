@@ -1593,3 +1593,21 @@ main {
 }
 .hako-box__act:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .hako-box__act:focus { outline: none; border-color: var(--color-accent); }
+
+/* 逆ハコ：配信先バッジ（タップでそのサービスの検索へ） */
+.gyaku__watch {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2);
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+}
+.gyaku__watchlabel { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); }
+.gyaku__provider {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px 3px 4px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text) !important;
+  font-size: 0.78rem; font-weight: 700; text-decoration: none;
+}
+.gyaku__provider:hover { border-color: var(--color-accent); color: var(--color-accent) !important; }
+.gyaku__providerlogo { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; }

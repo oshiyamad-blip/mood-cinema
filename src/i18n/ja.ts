@@ -193,6 +193,7 @@ export const ja = {
     manual: (title: string) => `「${title}」を手入力で始める →`,
     runtime: (min: number) => `${min}分`,
     change: '作品を変える',
+    watchOn: '配信中：',
     start: '▶ 開始',
     pause: '❚❚ 一時停止',
     resume: '▶ 再開',

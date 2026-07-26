@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
-import { searchMovies, getMovieRuntime, posterUrl, TmdbConfigError } from '../lib/tmdb';
-import type { TmdbMovie } from '../lib/tmdb';
+import { searchMovies, getMovieRuntime, getJpWatchProviders, posterUrl, TmdbConfigError } from '../lib/tmdb';
+import type { TmdbMovie, WatchProvider } from '../lib/tmdb';
+import { providerUrl } from '../lib/affiliate';
 import {
   uid,
   formatTimecode,
@@ -76,6 +77,8 @@ export default function Gyaku() {
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState('');
   const [tcDrafts, setTcDrafts] = useState<Record<string, string>>({}); // 時刻を打ち直している最中の値
+  // どこで配信しているか（TMDB 由来。取れなければ何も出さない）
+  const [providers, setProviders] = useState<{ list: WatchProvider[]; link: string | null } | null>(null);
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | undefined>(undefined);
   const headingRefs = useRef(new Map<string, HTMLInputElement>());
@@ -90,6 +93,17 @@ export default function Gyaku() {
   useEffect(() => {
     if (loaded) saveSession(session);
   }, [session, loaded]);
+
+  // 選んだ作品の配信先を引く（失敗しても何も出さないだけ＝作業は止めない）
+  const tmdbId = session.film?.tmdbId;
+  useEffect(() => {
+    if (!tmdbId) { setProviders(null); return; }
+    let cancelled = false;
+    getJpWatchProviders(tmdbId)
+      .then(r => { if (!cancelled) setProviders(r && r.flatrate.length > 0 ? { list: r.flatrate, link: r.link } : null); })
+      .catch(() => { if (!cancelled) setProviders(null); });
+    return () => { cancelled = true; };
+  }, [tmdbId]);
 
   // 計測中だけ 1 秒ごとに再描画する
   useEffect(() => {
@@ -330,6 +344,30 @@ export default function Gyaku() {
         </div>
         <button type="button" className="gyaku__change" onClick={discard}>{t.gyaku.change}</button>
       </div>
+
+      {/* どこで配信中か。タップでそのサービスの検索へ飛ばす（再生位置の同期はできない） */}
+      {providers && (
+        <div className="gyaku__watch">
+          <span className="gyaku__watchlabel">{t.gyaku.watchOn}</span>
+          {providers.list.map(pv => {
+            const href = providerUrl(pv.provider_name, session.film!.title, session.film!.year, providers.link);
+            if (!href) return null;
+            const logo = posterUrl(pv.logo_path);
+            return (
+              <a
+                key={pv.provider_id}
+                className="gyaku__provider"
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {logo && <img className="gyaku__providerlogo" src={logo} alt="" loading="lazy" />}
+                {pv.provider_name}
+              </a>
+            );
+          })}
+        </div>
+      )}
 
       <div className="gyaku__clock">
         <span className="gyaku__time">{formatTimecode(elapsed)}</span>

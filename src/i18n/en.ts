@@ -193,6 +193,7 @@ export const en = {
     manual: (title: string) => `Start with “${title}” manually →`,
     runtime: (min: number) => `${min} min`,
     change: 'Change film',
+    watchOn: 'Streaming on:',
     start: '▶ Start',
     pause: '❚❚ Pause',
     resume: '▶ Resume',
