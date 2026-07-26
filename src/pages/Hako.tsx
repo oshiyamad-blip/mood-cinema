@@ -22,6 +22,9 @@ import {
   outlineToText,
   parseOutlineText,
   formatTimecode,
+  moveBoxAcross,
+  setBoxAct,
+  orderedBoxes,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -272,17 +275,19 @@ export default function Hako() {
   };
 
   // 同じ幕に属する隣の箱と入れ替える
+  // ↑↓ は幕の境目を越える（境目で押すと隣の幕へ移る）
   const moveBox = (id: string, dir: -1 | 1) => {
     patchOutline(o => {
-      const boxes = [...o.boxes];
-      const i = boxes.findIndex(b => b.id === id);
-      if (i < 0) return o;
-      const act = boxes[i].act;
-      let j = i + dir;
-      while (j >= 0 && j < boxes.length && boxes[j].act !== act) j += dir;
-      if (j < 0 || j >= boxes.length) return o;
-      [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
-      return { ...o, boxes, updated: Date.now() };
+      const boxes = moveBoxAcross(o.boxes, o.structure, id, dir);
+      return boxes === o.boxes ? o : { ...o, boxes, updated: Date.now() };
+    });
+  };
+
+  // 幕を直接指定して移す（離れた幕へ一度で動かす用）
+  const changeBoxAct = (id: string, act: string) => {
+    patchOutline(o => {
+      const boxes = setBoxAct(o.boxes, o.structure, id, act);
+      return boxes === o.boxes ? o : { ...o, boxes, updated: Date.now() };
     });
   };
 
@@ -412,8 +417,12 @@ export default function Hako() {
     reader.readAsText(f);
   };
 
-  const renderBox = (box: Box, index: number, siblings: Box[]) => {
-    const pos = siblings.findIndex(b => b.id === box.id);
+  // index は作品全体の通し番号（1 始まり）。↑↓ は幕を越えるので端の判定も全体で行い、
+  // 隣の幕が空でもそこへ入れる（＝前後に幕が残っていれば押せる）。
+  const renderBox = (box: Box, index: number, total: number, boxActs: string[]) => {
+    const actIdx = boxActs.indexOf(box.act);
+    const canUp = index > 1 || actIdx > 0;
+    const canDown = index < total || (actIdx >= 0 && actIdx < boxActs.length - 1);
     return (
       <div className="hako-box" key={box.id}>
         <span className="hako-box__num">
@@ -444,6 +453,19 @@ export default function Hako() {
           />
         </div>
         <div className="hako-box__actions">
+          {/* 離れた幕へは一度で移せるように（↑↓ は隣の幕まで） */}
+          {boxActs.length > 0 && (
+            <select
+              className="hako-box__act"
+              aria-label={t.hako.moveToAct}
+              value={box.act}
+              onChange={e => changeBoxAct(box.id, e.target.value)}
+            >
+              {boxActs.map(a => (
+                <option key={a} value={a}>{t.hako.actsShort[a] ?? a}</option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             className="hako-box__open"
@@ -453,13 +475,13 @@ export default function Hako() {
           <button
             type="button"
             aria-label={t.hako.moveUp}
-            disabled={pos <= 0}
+            disabled={!canUp}
             onClick={() => moveBox(box.id, -1)}
           >↑</button>
           <button
             type="button"
             aria-label={t.hako.moveDown}
-            disabled={pos >= siblings.length - 1}
+            disabled={!canDown}
             onClick={() => moveBox(box.id, 1)}
           >↓</button>
           <button
@@ -494,19 +516,16 @@ export default function Hako() {
       ? [{ act: '', boxes: outline.boxes }]
       : acts.map(act => ({ act, boxes: outline.boxes.filter(b => b.act === act) }));
 
-  // フォーカス執筆モード用：表示順にならした箱の一覧（前後移動と通し番号に使う）
-  const orderedBoxes: Box[] =
-    acts.length === 0
-      ? outline.boxes
-      : acts.flatMap(act => outline.boxes.filter(b => b.act === act));
-  const openBox = openId ? orderedBoxes.find(b => b.id === openId) : undefined;
-  const openIndex = openBox ? orderedBoxes.findIndex(b => b.id === openBox.id) : -1;
+  // 表示順にならした箱の一覧（フォーカス執筆の前後移動・通し番号・端の判定に使う）
+  const ordered: Box[] = orderedBoxes(outline.boxes, outline.structure);
+  const openBox = openId ? ordered.find(b => b.id === openId) : undefined;
+  const openIndex = openBox ? ordered.findIndex(b => b.id === openBox.id) : -1;
   const openActLabel = openBox?.act ? (t.hako.acts[openBox.act] ?? openBox.act) : '';
 
   const gotoFocus = (dir: -1 | 1) => {
     const j = openIndex + dir;
-    if (j < 0 || j >= orderedBoxes.length) return;
-    setOpenId(orderedBoxes[j].id);
+    if (j < 0 || j >= ordered.length) return;
+    setOpenId(ordered[j].id);
   };
 
   return (
@@ -583,7 +602,7 @@ export default function Hako() {
       {groups.map(group => (
         <section className="hako-act" key={group.act || 'free'}>
           {group.act && <h2 className="hako-act__label">{t.hako.acts[group.act] ?? group.act}</h2>}
-          {group.boxes.map(box => renderBox(box, ++counter, group.boxes))}
+          {group.boxes.map(box => renderBox(box, ++counter, ordered.length, acts))}
           <button type="button" className="hako-add" onClick={() => addBox(group.act)}>
             {t.hako.addBox}
           </button>

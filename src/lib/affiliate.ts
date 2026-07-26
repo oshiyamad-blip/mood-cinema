@@ -34,3 +34,24 @@ export const HAS_AFFILIATE = {
   amazon: Boolean(AMAZON_TAG),
   unext: Boolean(UNEXT_REDIRECT_PREFIX),
 };
+
+/**
+ * 配信サービス名から、その作品を開くリンクを組み立てる。
+ * 各社とも「この作品の再生ページ」への公開 deep link は無いので、サービス内検索へ送る。
+ * U-NEXT / Amazon は既存のアフィリエイト経路に載せる。
+ * 未知のサービスは TMDB(JustWatch) の配信案内ページへ逃がす。
+ */
+export function providerUrl(
+  providerName: string,
+  title: string,
+  year: string | undefined,
+  fallbackLink: string | null,
+): string | null {
+  const n = providerName.toLowerCase();
+  if (n.includes('u-next') || n.includes('unext')) return unextSearchUrl(title);
+  if (n.includes('amazon')) return amazonSearchUrl(title, year);
+  if (n.includes('netflix')) return `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
+  if (n.includes('disney')) return `https://www.disneyplus.com/ja-jp/search?q=${encodeURIComponent(title)}`;
+  if (n.includes('hulu')) return `https://www.hulu.jp/search?q=${encodeURIComponent(title)}`;
+  return fallbackLink;
+}
