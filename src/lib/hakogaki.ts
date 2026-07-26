@@ -228,6 +228,75 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   return { currentId, outlines };
 }
 
+// ── 箱の並べ替え（幕をまたぐ移動を含む）────────────────────────────────
+/**
+ * 画面に出る順に箱を並べ直す。幕ありなら幕の順→幕内は配列順、
+ * どの幕にも属さない箱（構成変更で取り残されたもの）は末尾に置く。
+ */
+export function orderedBoxes(boxes: Box[], structure: StructureId): Box[] {
+  const acts = STRUCTURES[structure].acts;
+  if (acts.length === 0) return [...boxes];
+  const grouped = acts.flatMap((a) => boxes.filter((b) => b.act === a));
+  const orphans = boxes.filter((b) => !acts.includes(b.act));
+  return [...grouped, ...orphans];
+}
+
+/**
+ * 箱を 1 つ上/下へ動かす。**幕の境目では隣の幕へ移る**（同じ幕の中で詰まらない）。
+ * 「このシーンは二幕に回そう」を ↑↓ だけで実現するための中核。
+ */
+export function moveBoxAcross(
+  boxes: Box[],
+  structure: StructureId,
+  id: string,
+  dir: -1 | 1,
+): Box[] {
+  const acts = STRUCTURES[structure].acts;
+  const ordered = orderedBoxes(boxes, structure);
+  const i = ordered.findIndex((b) => b.id === id);
+  if (i < 0) return boxes;
+  const j = i + dir;
+
+  // 同じ幕の中に隣がいれば、ただ入れ替える
+  if (j >= 0 && j < ordered.length && ordered[j].act === ordered[i].act) {
+    const next = [...ordered];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  }
+
+  // ここから先は幕をまたぐ移動。幕なし構成では端なので何もしない。
+  if (acts.length === 0) return boxes;
+  const ai = acts.indexOf(ordered[i].act);
+  if (ai < 0) return boxes; // どの幕にも属さない箱は動かさない
+  const targetIdx = ai + dir;
+  if (targetIdx < 0 || targetIdx >= acts.length) return boxes; // 最初の幕の頭／最後の幕の尻
+  const targetAct = acts[targetIdx];
+
+  // 隣の幕が空でも必ずそこへ入る（幕を飛び越さない）
+  const rest = ordered.filter((b) => b.id !== id);
+  const positions = rest.reduce<number[]>((acc, b, k) => (b.act === targetAct ? [...acc, k] : acc), []);
+  const at =
+    positions.length === 0
+      ? rest.length // 空の幕：配列上の位置は表示順に影響しない
+      : dir === -1
+        ? positions[positions.length - 1] + 1 // 上へ：前の幕の最後に付く
+        : positions[0];                        // 下へ：次の幕の先頭に付く
+  rest.splice(at, 0, { ...ordered[i], act: targetAct });
+  return rest;
+}
+
+/** 箱を指定した幕へ移す（移動先の幕の最後に置く。細かい順は ↑↓ で詰める）。 */
+export function setBoxAct(boxes: Box[], structure: StructureId, id: string, act: string): Box[] {
+  const acts = STRUCTURES[structure].acts;
+  if (acts.length > 0 && !acts.includes(act)) return boxes;
+  const target = boxes.find((b) => b.id === id);
+  if (!target || target.act === act) return boxes;
+  const ordered = orderedBoxes(boxes.filter((b) => b.id !== id), structure);
+  const lastOfAct = ordered.map((b) => b.act).lastIndexOf(act);
+  ordered.splice(lastOfAct >= 0 ? lastOfAct + 1 : ordered.length, 0, { ...target, act });
+  return ordered;
+}
+
 /**
  * "34:12" / "1:02:05" / "812"（秒だけ）を秒数へ。解釈できなければ null。
  * 逆ハコで、プレイヤーに出ている時刻をそのまま打ち直せるようにするためのもの。

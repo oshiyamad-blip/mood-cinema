@@ -130,6 +130,11 @@ export const ja = {
       ten: '転',
       ketsu: '結',
     } as Record<string, string>,
+    actsShort: {
+      setup: '一幕', confrontation: '二幕', resolution: '三幕',
+      ki: '起', sho: '承', ten: '転', ketsu: '結',
+    } as Record<string, string>,
+    moveToAct: '幕を変える',
     addBox: '＋ 箱を追加',
     boxHeadingPlaceholder: 'シーン見出し（例: 主人公、故郷を離れる）',
     boxBodyPlaceholder: '何が起きる？ 誰が何をして、どう転がるか…',

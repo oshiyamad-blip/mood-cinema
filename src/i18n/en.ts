@@ -130,6 +130,11 @@ export const en = {
       ten: 'Ten (twist)',
       ketsu: 'Ketsu (conclusion)',
     } as Record<string, string>,
+    actsShort: {
+      setup: 'I', confrontation: 'II', resolution: 'III',
+      ki: 'Ki', sho: 'Shō', ten: 'Ten', ketsu: 'Ketsu',
+    } as Record<string, string>,
+    moveToAct: 'Move to act',
     addBox: '＋ Add a box',
     boxHeadingPlaceholder: 'Scene heading (e.g. Hero leaves home)',
     boxBodyPlaceholder: 'What happens? Who does what, and how does it turn?',

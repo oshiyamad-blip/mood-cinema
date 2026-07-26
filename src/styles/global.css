@@ -1577,3 +1577,19 @@ main {
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
 }
+
+/* 箱の幕セレクタ（離れた幕へ一度で移す） */
+.hako-box__act {
+  padding: 2px 4px;
+  background: var(--color-bg-elev);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  max-width: 4.4rem;
+}
+.hako-box__act:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-box__act:focus { outline: none; border-color: var(--color-accent); }
