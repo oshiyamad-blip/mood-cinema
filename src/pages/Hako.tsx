@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
 import { useAuth } from '../lib/auth';
-import { fullSync, pushOutlines, deleteRemote } from '../lib/cloudSync';
+import { fullSync, pushOutlines, deleteRemote, mergeOutlines } from '../lib/cloudSync';
 import {
   STRUCTURES,
   STRUCTURE_IDS,
@@ -25,6 +25,8 @@ import {
   moveBoxAcross,
   setBoxAct,
   orderedBoxes,
+  exportWorkspaceJson,
+  parseWorkspaceBackup,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -408,6 +410,56 @@ export default function Hako() {
     closeImport();
   };
 
+  // ── バックアップ：全作品を JSON で持ち出す／戻す ──────────────
+  const saveBackup = () => {
+    const text = exportWorkspaceJson(ws);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([text], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `tsumugi-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+    flash(t.hako.backupSaved(ws.outlines.length));
+  };
+
+  /**
+   * バックアップから戻す。同期と同じ作品単位 LWW でマージするので、
+   * 手元の新しい編集が古い控えで上書きされることはない（消えない・入れ替わらない）。
+   */
+  const restoreBackup = (text: string) => {
+    const incoming = parseWorkspaceBackup(text);
+    if (!incoming) { flash(t.hako.backupInvalid); return; }
+    const before = new Map(ws.outlines.map(o => [o.id, o]));
+    const { merged } = mergeOutlines(ws.outlines, incoming);
+    const added = merged.filter(o => !before.has(o.id)).map(o => o.id);
+    const replaced = merged.filter(o => { const b = before.get(o.id); return b && b !== o; }).map(o => o.id);
+    if (added.length === 0 && replaced.length === 0) { flash(t.hako.backupNoChange); return; }
+    setWs(prev => ({ ...prev, outlines: merged }));
+    // 取り消しは触った作品だけ元に戻す（無関係な作品には手を付けない）
+    const addedSet = new Set(added);
+    flash(t.hako.backupRestored(added.length, replaced.length), () =>
+      setWs(prev => ({
+        ...prev,
+        outlines: prev.outlines
+          .filter(o => !addedSet.has(o.id))
+          .map(o => before.get(o.id) ?? o),
+      })),
+    );
+  };
+
+  const pickBackupFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => restoreBackup(String(reader.result ?? ''));
+    reader.readAsText(f);
+  };
+
   const pickImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = ''; // 同じファイルを選び直せるように
@@ -626,6 +678,16 @@ export default function Hako() {
           <button type="button" className="btn btn--secondary" onClick={downloadText}>{t.hako.download}</button>
           <button type="button" className="hako-reset" onClick={reset}>{t.hako.reset}</button>
         </div>
+      </div>
+
+      <div className="hako-backup">
+        <span className="hako-backup__label">{t.hako.backupLabel}</span>
+        <button type="button" className="hako-backup__btn" onClick={saveBackup}>{t.hako.backupSave}</button>
+        <label className="hako-backup__btn">
+          {t.hako.backupRestore}
+          <input type="file" accept=".json,application/json" onChange={pickBackupFile} hidden />
+        </label>
+        <span className="hako-backup__note">{t.hako.backupNote}</span>
       </div>
 
       {trashed.length > 0 && (

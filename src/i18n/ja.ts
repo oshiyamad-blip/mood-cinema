@@ -177,6 +177,15 @@ export const ja = {
     importRun: '取り込む',
     importCancel: 'キャンセル',
     importDone: (n: number) => `${n} 個の箱を取り込みました`,
+    backupLabel: 'バックアップ',
+    backupSave: '⬇ 全作品を保存',
+    backupRestore: '⬆ ファイルから戻す',
+    backupNote: 'この端末の全作品（ゴミ箱も含む）を 1 つの JSON にまとめます。',
+    backupSaved: (n: number) => `${n} 作品を書き出しました`,
+    backupInvalid: 'このファイルは読めませんでした（Tsumugi のバックアップではないようです）。',
+    backupNoChange: 'すでに最新です。戻すものはありませんでした。',
+    backupRestored: (added: number, updated: number) =>
+      updated > 0 ? `${added} 作品を追加、${updated} 作品を更新しました` : `${added} 作品を戻しました`,
   },
   gyaku: {
     title: '逆ハコ — 映画を観ながら箱に起こす | Tsumugi',

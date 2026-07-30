@@ -33,7 +33,8 @@
   （`src` 用の `tsconfig.app.json` と、ビルドツール用の `tsconfig.node.json`）
 - CSS フレームワークなし — 手書き CSS（`src/styles/` の `tokens.css`
   デザイントークン + `global.css`）
-- **Vercel** にデプロイ（設定は `vercel.json`）
+- **Vercel** または **Cloudflare Pages** にデプロイ（設定は `vercel.json` と
+  `public/_headers` / `public/_redirects` の両方を同内容で保持）
 - **テストランナーと ESLint の設定はありません**。自動チェックは
   TypeScript コンパイラ（`tsc -b`）のみで、strict 設定
   （`noUnusedLocals`、`noUnusedParameters`、`noFallthroughCasesInSwitch`）です。
@@ -50,7 +51,7 @@ npm run preview        # 本番ビルドをローカルで配信
 
 `lint` や `test` スクリプトはありません。変更がコンパイルできるか確認するには
 `npm run build`（または `npx tsc -b`）を実行します。自明でない変更の後は必ず
-ビルドを実行してください。strict TS に通らないと Vercel のデプロイが失敗します。
+ビルドを実行してください。strict TS に通らないとデプロイが失敗します。
 
 ## 環境変数
 
@@ -150,7 +151,12 @@ npm run preview        # 本番ビルドをローカルで配信
 
 ## デプロイ
 
-GitHub にプッシュ → Vercel が自動ビルド（`npm run build`）し `dist/` を配信します。
+GitHub にプッシュ → Vercel / Cloudflare Pages が自動ビルド（`npm run build`）し `dist/` を配信します。
+**ランニングコスト ¥0 の構成（Cloudflare Pages ＋ Supabase Free ＋ Stripe）と移行手順は
+[`docs/deploy-zero-cost.md`](docs/deploy-zero-cost.md) を参照。** Vercel の Hobby は規約上
+商用利用不可なので、収益化する場合は Cloudflare Pages へ移すこと。
+ホスティング設定は 2 系統を同内容で維持する（`vercel.json` ／ `public/_headers`・`public/_redirects`）
+— **CSP やリダイレクトを変えるときは必ず両方を直す。**
 `vercel.json` が SPA リライト（すべて → `index.html`）、`/quiz`→`/mood`
 リダイレクト、manifest の content-type、セキュリティヘッダーを処理します。環境変数は
 Vercel ダッシュボードで設定してください。公開・アフィリエイトの全手順は

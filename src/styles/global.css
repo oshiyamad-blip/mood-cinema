@@ -1611,3 +1611,25 @@ main {
 }
 .gyaku__provider:hover { border-color: var(--color-accent); color: var(--color-accent) !important; }
 .gyaku__providerlogo { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; }
+
+/* バックアップ（JSON で持ち出す／戻す） */
+.hako-backup {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+}
+.hako-backup__label { font-size: 0.82rem; font-weight: 700; color: var(--color-text-muted); }
+.hako-backup__btn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer;
+}
+.hako-backup__btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.hako-backup__note { flex: 1 1 14rem; min-width: 0; font-size: 0.76rem; color: var(--color-text-muted); }

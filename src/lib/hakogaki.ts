@@ -228,6 +228,52 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   return { currentId, outlines };
 }
 
+// ── バックアップ（JSON で持ち出す・戻す）──────────────────────────────
+const BACKUP_KIND = 'tsumugi-workspace';
+
+export interface WorkspaceBackup {
+  app: string;
+  kind: string;
+  version: number;
+  exportedAt: string;
+  outlines: Outline[];
+}
+
+/**
+ * 全作品（ゴミ箱の中身も含む）を JSON 文字列にする。
+ * クラウドに頼らず自分で持ち出せる控えを作るための出口。無料枠に自動バックアップが
+ * 無くても、ここからいつでも救い出せる。
+ */
+export function exportWorkspaceJson(w: Workspace, now = new Date()): string {
+  const backup: WorkspaceBackup = {
+    app: 'Tsumugi',
+    kind: BACKUP_KIND,
+    version: 1,
+    exportedAt: now.toISOString(),
+    outlines: w.outlines,
+  };
+  return JSON.stringify(backup, null, 2);
+}
+
+/**
+ * バックアップ JSON を検証して作品の配列を返す。読めなければ null。
+ * 壊れた行は落とすが、読める行は必ず拾う（全部か無かにしない）。
+ */
+export function parseWorkspaceBackup(text: string): Outline[] | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== 'object') return null;
+  const b = data as Partial<WorkspaceBackup>;
+  if (b.kind !== BACKUP_KIND) return null;
+  if (!Array.isArray(b.outlines)) return null;
+  const valid = b.outlines.filter(isValidOutline);
+  return valid.length > 0 ? valid : null;
+}
+
 // ── 箱の並べ替え（幕をまたぐ移動を含む）────────────────────────────────
 /**
  * 画面に出る順に箱を並べ直す。幕ありなら幕の順→幕内は配列順、

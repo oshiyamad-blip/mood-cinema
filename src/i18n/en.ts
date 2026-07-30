@@ -177,6 +177,15 @@ export const en = {
     importRun: 'Import',
     importCancel: 'Cancel',
     importDone: (n: number) => `Imported ${n} box${n === 1 ? '' : 'es'}`,
+    backupLabel: 'Backup',
+    backupSave: '⬇ Save all projects',
+    backupRestore: '⬆ Restore from file',
+    backupNote: 'Bundles every project on this device (trash included) into a single JSON file.',
+    backupSaved: (n: number) => `Exported ${n} project${n === 1 ? '' : 's'}`,
+    backupInvalid: 'Could not read that file — it does not look like a Tsumugi backup.',
+    backupNoChange: 'Already up to date. Nothing to restore.',
+    backupRestored: (added: number, updated: number) =>
+      updated > 0 ? `Added ${added}, updated ${updated} project(s)` : `Restored ${added} project(s)`,
   },
   gyaku: {
     title: 'Reverse Outline — box a film as you watch | Tsumugi',
