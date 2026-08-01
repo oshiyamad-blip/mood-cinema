@@ -1697,3 +1697,26 @@ main {
   font-size: 0.78rem;
   color: var(--color-text-muted);
 }
+
+/* メモ帳の操作バー（選択を箱にする） */
+.hako-notepad__bar {
+  display: flex; align-items: center; gap: var(--space-3);
+  flex-wrap: wrap; margin-bottom: var(--space-2);
+}
+.hako-nest-btn {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer;
+}
+.hako-nest-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* 入れ子の箱（カード表示）— 内側ほど控えめに、親との線でつながりを見せる */
+.hako-box--child {
+  border-left: 2px solid color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+.hako-box--child .hako-box__num { opacity: 0.55; }

@@ -142,8 +142,10 @@ export const ja = {
     viewNotepad: 'メモ帳',
     viewCards: 'カード',
     notepadPlaceholder:
-      '思いつくまま書く。\n1行目が見出し、字下げした行が中身、空行で次の場面。\n\n例:\n主人公、故郷を離れる\n  駅で幼馴染と再会する\n\n都会での生活が始まる',
-    notepadHint: '空行で次の場面。字下げ（スペース）した行は中身になります。並べ替えや幕振りは「カード」で。',
+      '思いつくまま書く。1行が1つの箱。\nTab で字下げすると、その上の箱の中に入ります。\n\n例:\n主人公、故郷を離れる\n  駅で幼馴染と再会する\n    言えなかった一言\n都会での生活が始まる',
+    notepadHint: '1行＝1つの箱。字下げ（Tab）でその上の箱の中に入ります。',
+    nestSelection: '⤷ 選択を箱にする',
+    nestNeedsSelection: '箱にしたい部分を選んでから押してください。',
     notepadRemoved: (n: number) => `${n} 個の場面が消えました`,
     boxHeadingPlaceholder: 'シーン見出し（例: 主人公、故郷を離れる）',
     boxBodyPlaceholder: '何が起きる？ 誰が何をして、どう転がるか…',

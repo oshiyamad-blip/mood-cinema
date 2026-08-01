@@ -15,9 +15,15 @@ export type StructureId = 'three-act' | 'kishotenketsu' | 'free';
 export interface Box {
   id: string;
   act: string;      // 所属する幕の ID（自由構成では ''）
-  heading: string;  // シーン見出し
-  body: string;     // 内容メモ
+  heading: string;  // 箱の中身（1 行）
+  body: string;     // 旧「内容メモ」。入れ子化以降は子の箱へ移すので通常は空
   at?: number;      // 逆ハコ：作品開始からの秒数（観ながら打刻したシーン開始位置）
+  depth?: number;   // 入れ子の深さ。0＝いちばん外側。未設定は 0 とみなす
+}
+
+/** 入れ子の深さ（未設定は 0）。 */
+export function depthOf(b: Box): number {
+  return typeof b.depth === 'number' && b.depth > 0 ? Math.floor(b.depth) : 0;
 }
 
 /** 逆ハコで題材にした作品（TMDB 由来。手入力もできるので id は任意）。 */
@@ -117,7 +123,13 @@ export function loadWorkspace(): Workspace {
     if (raw) {
       const w = JSON.parse(raw) as Workspace;
       if (w && Array.isArray(w.outlines)) {
-        const outlines = w.outlines.filter(isValidOutline);
+        // 旧「本文」は子の箱へ移して、すべてを箱に統一する（文字は捨てない）
+        const outlines = w.outlines
+          .filter(isValidOutline)
+          .map((o) => {
+            const boxes = migrateBodiesToBoxes(o.boxes);
+            return boxes === o.boxes ? o : { ...o, boxes };
+          });
         const currentId =
           typeof w.currentId === 'string' && outlines.some((o) => o.id === w.currentId)
             ? w.currentId
@@ -236,30 +248,131 @@ export function purgeProject(w: Workspace, id: string): Workspace {
 }
 
 // ── メモ帳表示（テキストのまま書く）───────────────────────────────────
+/** メモ帳の字下げ 1 段ぶん。 */
+export const INDENT = '  ';
+
 /**
- * 作品を「メモ帳」用のテキストにする。
- * 1 行目＝見出し、字下げ行＝本文、空行で次の箱。幕がある構成では `## 幕名` を挟む
+ * 旧「本文（body）」を子の箱へ移す。すべてを箱に統一するための一度きりの移行。
+ * 本文の各行が、その箱のひとつ内側の箱になる。**文字は 1 つも捨てない。**
+ */
+export function migrateBodiesToBoxes(boxes: Box[]): Box[] {
+  if (!boxes.some((b) => b.body && b.body.trim())) return boxes; // 移行不要ならそのまま
+  const out: Box[] = [];
+  for (const b of boxes) {
+    const d = depthOf(b);
+    out.push({ ...b, body: '', depth: d });
+    const lines = (b.body ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
+    lines.forEach((line) => out.push({ id: uid(), act: b.act, heading: line, body: '', depth: d + 1 }));
+  }
+  return out;
+}
+
+/**
+ * 深さを正規化する。いきなり 2 段以上深くならないように詰め、先頭は必ず 0 にする
+ * （手で書いた字下げのブレを吸収する）。
+ */
+export function normalizeDepths(items: { depth: number }[]): void {
+  let prev = -1;
+  for (const it of items) {
+    it.depth = Math.max(0, Math.min(it.depth, prev + 1));
+    prev = it.depth;
+  }
+}
+
+/**
+ * 作品を「メモ帳」用のテキストにする。**すべての行が 1 つの箱**で、
+ * 字下げの深さがそのまま入れ子の深さになる。幕がある構成では `## 幕名` を挟む
  * （空の幕も出して、その下に書き足せるようにする）。番号は付けない — 番号は
  * カード表示側の飾りで、書いている最中には邪魔になる。
  */
 export function outlineToNotepad(o: Outline, actLabel: (actId: string) => string): string {
   const acts = STRUCTURES[o.structure].acts;
   const lines: string[] = [];
-  const render = (b: Box) => {
-    lines.push(b.heading);
-    if (b.body.trim()) b.body.trim().split('\n').forEach((l) => lines.push('  ' + l));
-    lines.push('');
-  };
+  const render = (b: Box) => lines.push(INDENT.repeat(depthOf(b)) + b.heading);
   if (acts.length === 0) {
     o.boxes.forEach(render);
   } else {
     for (const a of acts) {
-      lines.push(`## ${actLabel(a)}`, '');
+      lines.push(`## ${actLabel(a)}`);
       o.boxes.filter((b) => b.act === a).forEach(render);
+      lines.push('');
     }
     o.boxes.filter((b) => !acts.includes(b.act)).forEach(render);
   }
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+}
+
+export interface NotepadItem {
+  heading: string;
+  depth: number;
+  actLabel: string | null;
+}
+
+/**
+ * メモ帳のテキストを箱の並びへ。空行は無視し、中身のある行はすべて 1 箱にする。
+ * 行頭の空白（全角スペース・タブも可）2 つで 1 段の入れ子。`## …` は幕の区切り。
+ */
+export function parseNotepad(text: string): NotepadItem[] {
+  const items: NotepadItem[] = [];
+  let act: string | null = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\t/g, INDENT).replace(/　/g, ' ');
+    if (line.trim() === '') continue;
+    const trimmed = line.trim();
+    if (/^##\s+/.test(trimmed)) {
+      act = trimmed.replace(/^##\s+/, '').trim();
+      continue;
+    }
+    const indent = line.length - line.replace(/^ +/, '').length;
+    items.push({ heading: trimmed, depth: Math.floor(indent / INDENT.length), actLabel: act });
+  }
+  normalizeDepths(items);
+  return items;
+}
+
+/**
+ * 選択した範囲を「ひとつ内側の箱」にする（マトリョーシカ的な整理）。
+ * 選択が行の一部なら、その部分を切り出して直下に子の箱として置く。
+ * 複数行にまたがるときは、その各行をまとめて 1 段深くする。
+ * 返り値は書き換え後のテキストと、次に置くべき選択範囲。
+ */
+export function nestSelection(
+  text: string,
+  start: number,
+  end: number,
+): { text: string; selStart: number; selEnd: number } | null {
+  if (start === end) return null;
+  const selected = text.slice(start, end);
+  if (!selected.trim()) return null;
+
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const lineEndIdx = text.indexOf('\n', end);
+  const lineEnd = lineEndIdx === -1 ? text.length : lineEndIdx;
+
+  // 複数行：それぞれを 1 段深くする
+  if (selected.includes('\n')) {
+    const block = text.slice(lineStart, lineEnd);
+    const shifted = block
+      .split('\n')
+      .map((l) => (l.trim() === '' ? l : INDENT + l))
+      .join('\n');
+    const next = text.slice(0, lineStart) + shifted + text.slice(lineEnd);
+    return { text: next, selStart: lineStart, selEnd: lineStart + shifted.length };
+  }
+
+  // 1 行の一部：その部分を切り出して、直下に 1 段深い箱として置く
+  const line = text.slice(lineStart, lineEnd);
+  const indent = line.length - line.replace(/^ +/, '').length;
+  const before = text.slice(lineStart, start).replace(/\s+$/, '');
+  const after = text.slice(end, lineEnd).replace(/^\s+/, '');
+  const keep = (before + (before && after ? ' ' : '') + after).trim();
+  const childIndent = INDENT.repeat(Math.floor(indent / INDENT.length) + 1);
+  const child = childIndent + selected.trim();
+  // 切り出した結果その行が空になるなら、行ごと子に置き換える（空の箱を残さない）
+  const head = keep ? line.slice(0, indent) + keep + '\n' : '';
+  const next = text.slice(0, lineStart) + head + child + text.slice(lineEnd);
+  const childStart = lineStart + head.length + childIndent.length;
+  return { text: next, selStart: childStart, selEnd: childStart + selected.trim().length };
 }
 
 /**
@@ -272,7 +385,7 @@ export function outlineToNotepad(o: Outline, actLabel: (actId: string) => string
  */
 export function reconcileBoxes(
   prev: Box[],
-  items: { heading: string; body: string; act: string }[],
+  items: { heading: string; act: string; depth: number }[],
 ): Box[] {
   const pool = [...prev];
   const out: (Box | null)[] = items.map(() => null);
@@ -281,7 +394,7 @@ export function reconcileBoxes(
     const k = pool.findIndex((b) => b.heading === it.heading);
     if (k >= 0) {
       const b = pool.splice(k, 1)[0];
-      out[i] = { ...b, heading: it.heading, body: it.body, act: it.act };
+      out[i] = { ...b, heading: it.heading, act: it.act, depth: it.depth };
     }
   });
   // 2) 残りは順番に割り当てる（見出しを書き換えた箱を拾う）
@@ -289,8 +402,8 @@ export function reconcileBoxes(
     if (out[i]) return;
     const b = pool.shift();
     out[i] = b
-      ? { ...b, heading: it.heading, body: it.body, act: it.act }
-      : { id: uid(), act: it.act, heading: it.heading, body: it.body };
+      ? { ...b, heading: it.heading, act: it.act, depth: it.depth }
+      : { id: uid(), act: it.act, heading: it.heading, body: '', depth: it.depth };
   });
   return out as Box[];
 }
@@ -525,11 +638,13 @@ export function outlineToText(
   const acts = STRUCTURES[o.structure].acts;
 
   const renderBox = (box: Box, n: number) => {
-    lines.push(`${n}. ${box.heading || '—'}`);
+    const pad = INDENT.repeat(depthOf(box));
+    // いちばん外側の箱にだけ通し番号を振り、内側は字下げで入れ子を示す
+    lines.push(depthOf(box) === 0 ? `${n}. ${box.heading || '—'}` : `${pad}${box.heading || '—'}`);
     if (box.body.trim()) {
-      box.body.trim().split('\n').forEach(l => lines.push(`   ${l}`));
+      box.body.trim().split('\n').forEach(l => lines.push(`   ${pad}${l}`));
     }
-    lines.push('');
+    if (depthOf(box) === 0) lines.push('');
   };
 
   if (acts.length === 0) {

@@ -142,8 +142,10 @@ export const en = {
     viewNotepad: 'Notepad',
     viewCards: 'Cards',
     notepadPlaceholder:
-      'Just write.\nFirst line is the heading, indented lines are the details, a blank line starts the next scene.\n\ne.g.\nHero leaves home\n  Runs into an old friend at the station\n\nCity life begins',
-    notepadHint: 'Blank line starts the next scene; indented lines become its details. Switch to Cards to reorder or assign acts.',
+      'Just write. One line is one box.\nPress Tab to nest a line inside the box above it.\n\ne.g.\nHero leaves home\n  Runs into an old friend at the station\n    The words he never said\nCity life begins',
+    notepadHint: 'One line = one box. Indent (Tab) to nest it inside the box above.',
+    nestSelection: '⤷ Nest selection',
+    nestNeedsSelection: 'Select the part you want to turn into a box first.',
     notepadRemoved: (n: number) => `${n} scenes were removed`,
     boxHeadingPlaceholder: 'Scene heading (e.g. Hero leaves home)',
     boxBodyPlaceholder: 'What happens? Who does what, and how does it turn?',

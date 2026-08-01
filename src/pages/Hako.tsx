@@ -30,6 +30,9 @@ import {
   DEFAULT_STRUCTURE,
   outlineToNotepad,
   reconcileBoxes,
+  parseNotepad,
+  nestSelection,
+  depthOf,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -471,20 +474,15 @@ export default function Hako() {
   /** メモ帳のテキストを箱へ反映。id と打刻時刻は reconcileBoxes が引き継ぐ。 */
   const commitNotepad = (text: string) => {
     if (!outline) return;
-    const raw = parseOutlineText(text);
-    // 先頭に `# …` を書かれても行を失わないよう、見出しとして拾い直す
-    const src = raw.title
-      ? [{ heading: raw.title, body: '', actLabel: null as string | null }, ...raw.items]
-      : raw.items;
     const acts = STRUCTURES[outline.structure].acts;
-    const items = src.map(it => {
+    const items = parseNotepad(text).map(it => {
       const mapped = it.actLabel ? actIdByLabel.get(it.actLabel) : undefined;
       const act = acts.length === 0 ? '' : (mapped && acts.includes(mapped) ? mapped : acts[0]);
-      return { heading: it.heading, body: it.body, act };
+      return { heading: it.heading, act, depth: it.depth };
     });
     const prevBoxes = outline.boxes;
     const next = reconcileBoxes(prevBoxes, items);
-    const sig = (bs: Box[]) => JSON.stringify(bs.map(b => [b.id, b.act, b.heading, b.body]));
+    const sig = (bs: Box[]) => JSON.stringify(bs.map(b => [b.id, b.act, b.heading, depthOf(b)]));
     if (sig(prevBoxes) === sig(next)) return; // 変化なし
     const oid = outline.id;
     patchOutline(o => ({ ...o, boxes: next, updated: Date.now() }));
@@ -500,6 +498,24 @@ export default function Hako() {
         }),
       );
     }
+  };
+
+  const notepadRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /** 選択した部分を「ひとつ内側の箱」にする（マトリョーシカ的な整理）。 */
+  const nestFromSelection = () => {
+    const el = notepadRef.current;
+    if (!el) return;
+    const res = nestSelection(el.value, el.selectionStart, el.selectionEnd);
+    if (!res) { flash(t.hako.nestNeedsSelection); return; }
+    setDraft(res.text);
+    window.clearTimeout(commitTimer.current);
+    commitTimer.current = window.setTimeout(() => commitNotepad(res.text), 700);
+    // 切り出した箇所を選んだままにして、続けて調整できるようにする
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(res.selStart, res.selEnd);
+    });
   };
 
   const onDraftChange = (text: string) => {
@@ -587,7 +603,11 @@ export default function Hako() {
     const canUp = index > 1 || actIdx > 0;
     const canDown = index < total || (actIdx >= 0 && actIdx < boxActs.length - 1);
     return (
-      <div className="hako-box" key={box.id}>
+      <div
+        className={`hako-box${depthOf(box) > 0 ? ' hako-box--child' : ''}`}
+        style={depthOf(box) > 0 ? { marginLeft: `calc(${depthOf(box)} * var(--space-5))` } : undefined}
+        key={box.id}
+      >
         <span className="hako-box__num">
           {index}
           {/* 逆ハコで起こした箱は、作品内での位置（打刻時刻）を添える */}
@@ -775,7 +795,14 @@ export default function Hako() {
 
       {view === 'notepad' && (
         <>
+          <div className="hako-notepad__bar">
+            <button type="button" className="hako-nest-btn" onClick={nestFromSelection}>
+              {t.hako.nestSelection}
+            </button>
+            <span className="hako-notepad__hint">{t.hako.notepadHint}</span>
+          </div>
           <textarea
+            ref={notepadRef}
             className="hako-notepad"
             value={draft}
             placeholder={t.hako.notepadPlaceholder}
@@ -783,8 +810,29 @@ export default function Hako() {
             spellCheck={false}
             onChange={e => onDraftChange(e.target.value)}
             onBlur={flushNotepad}
+            onKeyDown={e => {
+              // Tab で 1 段内側へ、Shift+Tab で外へ（選択範囲があればまとめて）
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                const el = e.currentTarget;
+                const { selectionStart: a, selectionEnd: b, value } = el;
+                const from = value.lastIndexOf('\n', a - 1) + 1;
+                const toIdx = value.indexOf('\n', b);
+                const to = toIdx === -1 ? value.length : toIdx;
+                const block = value.slice(from, to);
+                const shifted = block
+                  .split('\n')
+                  .map(l => (l.trim() === '' ? l
+                    : e.shiftKey ? l.replace(/^ {1,2}/, '') : '  ' + l))
+                  .join('\n');
+                const next = value.slice(0, from) + shifted + value.slice(to);
+                onDraftChange(next);
+                requestAnimationFrame(() => {
+                  el.setSelectionRange(from, from + shifted.length);
+                });
+              }
+            }}
           />
-          <p className="hako-notepad__hint">{t.hako.notepadHint}</p>
         </>
       )}
 
