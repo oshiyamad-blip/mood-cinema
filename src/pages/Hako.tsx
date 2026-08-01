@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
 import { useAuth } from '../lib/auth';
-import { fullSync, pushOutlines, deleteRemote } from '../lib/cloudSync';
+import { fullSync, pushOutlines, deleteRemote, mergeOutlines } from '../lib/cloudSync';
 import {
   STRUCTURES,
   STRUCTURE_IDS,
@@ -25,6 +25,9 @@ import {
   moveBoxAcross,
   setBoxAct,
   orderedBoxes,
+  exportWorkspaceJson,
+  parseWorkspaceBackup,
+  DEFAULT_STRUCTURE,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -60,6 +63,8 @@ export default function Hako() {
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importMode, setImportMode] = useState<'new' | 'append'>('new');
+  // 素早い書き出し欄（幕ごとに 1 つ。自由構成ではキーが '' の 1 つだけ）
+  const [quick, setQuick] = useState<Record<string, string>>({});
   const parsed = useMemo(() => parseOutlineText(importText), [importText]);
 
   const wsRef = useRef(ws);
@@ -251,6 +256,35 @@ export default function Hako() {
     setFocusId(id);
   };
 
+  /**
+   * 素早い書き出し：入力欄の文字をそのまま箱の見出しにして足す。
+   * 追加後もフォーカスは入力欄に残す（新しいカードへ飛ばさない）ので、
+   * Enter を打つたびに次々と並べていける。改行を含む貼り付けは行ごとに 1 箱。
+   */
+  const quickAdd = (act: string, raw: string) => {
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    const added = lines.map(heading => ({ id: uid(), act, heading, body: '' }));
+    const addedIds = new Set(added.map(b => b.id));
+    patchOutline(o => ({ ...o, boxes: [...o.boxes, ...added], updated: Date.now() }));
+    setQuick(q => ({ ...q, [act]: '' }));
+    // まとめて入った時だけ知らせる（1 行ずつはうるさいので出さない）
+    if (added.length > 1) {
+      const oid = outline?.id;
+      flash(t.hako.quickAdded(added.length), () =>
+        setWs(prev => {
+          const cur = prev.outlines.find(o => o.id === oid);
+          if (!cur) return prev;
+          return upsertOutline(prev, {
+            ...cur,
+            boxes: cur.boxes.filter(b => !addedIds.has(b.id)),
+            updated: Date.now(),
+          });
+        }),
+      );
+    }
+  };
+
   const updateBox = (id: string, p: Partial<Box>) =>
     patchOutline(o => ({ ...o, boxes: o.boxes.map(b => (b.id === id ? { ...b, ...p } : b)), updated: Date.now() }));
 
@@ -330,7 +364,7 @@ export default function Hako() {
     if (outline.boxes.length === 0 && !outline.title.trim()) return;
     if (!window.confirm(t.hako.resetConfirm)) return;
     const snapshot = outline; // 消す前の状態を控えておく
-    patchOutline(o => ({ ...o, title: '', structure: 'three-act', boxes: [], updated: Date.now() }));
+    patchOutline(o => ({ ...o, title: '', structure: DEFAULT_STRUCTURE, boxes: [], updated: Date.now() }));
     setOpenId(null);
     flash(t.hako.resetDone, () => setWs(prev => upsertOutline(prev, { ...snapshot, updated: Date.now() })));
   };
@@ -406,6 +440,56 @@ export default function Hako() {
       );
     }
     closeImport();
+  };
+
+  // ── バックアップ：全作品を JSON で持ち出す／戻す ──────────────
+  const saveBackup = () => {
+    const text = exportWorkspaceJson(ws);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([text], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `tsumugi-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+    flash(t.hako.backupSaved(ws.outlines.length));
+  };
+
+  /**
+   * バックアップから戻す。同期と同じ作品単位 LWW でマージするので、
+   * 手元の新しい編集が古い控えで上書きされることはない（消えない・入れ替わらない）。
+   */
+  const restoreBackup = (text: string) => {
+    const incoming = parseWorkspaceBackup(text);
+    if (!incoming) { flash(t.hako.backupInvalid); return; }
+    const before = new Map(ws.outlines.map(o => [o.id, o]));
+    const { merged } = mergeOutlines(ws.outlines, incoming);
+    const added = merged.filter(o => !before.has(o.id)).map(o => o.id);
+    const replaced = merged.filter(o => { const b = before.get(o.id); return b && b !== o; }).map(o => o.id);
+    if (added.length === 0 && replaced.length === 0) { flash(t.hako.backupNoChange); return; }
+    setWs(prev => ({ ...prev, outlines: merged }));
+    // 取り消しは触った作品だけ元に戻す（無関係な作品には手を付けない）
+    const addedSet = new Set(added);
+    flash(t.hako.backupRestored(added.length, replaced.length), () =>
+      setWs(prev => ({
+        ...prev,
+        outlines: prev.outlines
+          .filter(o => !addedSet.has(o.id))
+          .map(o => before.get(o.id) ?? o),
+      })),
+    );
+  };
+
+  const pickBackupFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => restoreBackup(String(reader.result ?? ''));
+    reader.readAsText(f);
   };
 
   const pickImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -603,9 +687,35 @@ export default function Hako() {
         <section className="hako-act" key={group.act || 'free'}>
           {group.act && <h2 className="hako-act__label">{t.hako.acts[group.act] ?? group.act}</h2>}
           {group.boxes.map(box => renderBox(box, ++counter, ordered.length, acts))}
-          <button type="button" className="hako-add" onClick={() => addBox(group.act)}>
-            {t.hako.addBox}
-          </button>
+          <div className="hako-quick">
+            <input
+              className="hako-quick__input"
+              type="text"
+              value={quick[group.act] ?? ''}
+              placeholder={t.hako.quickPlaceholder}
+              aria-label={t.hako.quickPlaceholder}
+              onChange={e => setQuick(q => ({ ...q, [group.act]: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  quickAdd(group.act, quick[group.act] ?? '');
+                } else if (e.key === 'Escape') {
+                  setQuick(q => ({ ...q, [group.act]: '' }));
+                }
+              }}
+              onPaste={e => {
+                // 複数行の貼り付けは 1 行 = 1 箱にする（メモからの流し込み）
+                const text = e.clipboardData.getData('text');
+                if (text.includes('\n')) {
+                  e.preventDefault();
+                  quickAdd(group.act, text);
+                }
+              }}
+            />
+            <button type="button" className="hako-add" onClick={() => addBox(group.act)}>
+              {t.hako.addBox}
+            </button>
+          </div>
         </section>
       ))}
 
@@ -626,6 +736,16 @@ export default function Hako() {
           <button type="button" className="btn btn--secondary" onClick={downloadText}>{t.hako.download}</button>
           <button type="button" className="hako-reset" onClick={reset}>{t.hako.reset}</button>
         </div>
+      </div>
+
+      <div className="hako-backup">
+        <span className="hako-backup__label">{t.hako.backupLabel}</span>
+        <button type="button" className="hako-backup__btn" onClick={saveBackup}>{t.hako.backupSave}</button>
+        <label className="hako-backup__btn">
+          {t.hako.backupRestore}
+          <input type="file" accept=".json,application/json" onChange={pickBackupFile} hidden />
+        </label>
+        <span className="hako-backup__note">{t.hako.backupNote}</span>
       </div>
 
       {trashed.length > 0 && (

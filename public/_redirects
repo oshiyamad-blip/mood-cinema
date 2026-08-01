@@ -1,0 +1,7 @@
+# Cloudflare Pages のリダイレクト設定（vercel.json の redirects / rewrites と同内容）
+# 個別の規則を先に、SPA のフォールバックを最後に置く（上から順に評価される）。
+/quiz /mood 301
+/en/quiz /en/mood 301
+
+# SPA：実ファイルが無いパスは index.html を 200 で返す（クライアント側ルーティング）
+/* /index.html 200
