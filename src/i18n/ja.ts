@@ -87,6 +87,11 @@ export const ja = {
     viewLabel: '表示',
     viewNotepad: 'メモ帳',
     viewCards: 'カード',
+    viewScript: '脚本',
+    scriptHashira: '柱',
+    scriptTogaki: 'ト書き',
+    scriptSerifu: 'セリフ',
+    scriptHint: 'Enter で次の行、Tab でト書き⇄セリフ、Ctrl/⌘+1・2・3 で柱・ト書き・セリフ。柱を書き替えるとプロットの見出しも変わります。',
     notepadPlaceholder:
       '思いつくまま書く。1行が1つの箱。\nTab で字下げすると、その上の箱の中に入ります。\n\n例:\n主人公、故郷を離れる\n  駅で幼馴染と再会する\n    言えなかった一言\n都会での生活が始まる',
     notepadHint: '1行＝1つの箱。字下げ（Tab）でその上の箱の中に入ります。',

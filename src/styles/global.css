@@ -1720,3 +1720,46 @@ main {
   border-left: 2px solid color-mix(in oklab, var(--color-accent) 45%, transparent);
 }
 .hako-box--child .hako-box__num { opacity: 0.55; }
+
+/* ── 脚本ビュー（縦書き・白い紙） ── */
+.script__bar {
+  display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+.script__type {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: transparent; color: var(--color-text);
+  font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+}
+.script__type:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.script__hint { font-size: 0.74rem; color: var(--color-text-muted); }
+.script-shell {
+  overflow-x: auto;
+  background: #faf8f4;
+  border: 1px solid #e4e0d6;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.script-editor .ProseMirror {
+  writing-mode: vertical-rl;
+  height: 70vh;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  color: #1b1922;
+  caret-color: #d9770a;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  font-size: 1.05rem;
+  line-height: 2.1;
+  outline: none;
+}
+.script-editor .ProseMirror::selection, .script-editor .ProseMirror *::selection { background: rgba(255,168,48,0.32); }
+.script-editor .scene { border-right: 2px solid rgba(217,119,10,0.35); padding-right: 0.6em; margin-right: 1.2em; }
+.script-editor .scene:first-child { border-right: none; padding-right: 0; margin-right: 0; }
+.script-editor .sblock { margin: 0; }
+.script-editor .sblock--hashira { font-weight: 700; }
+.script-editor .sblock--hashira::before { content: '○'; margin-block-end: 0.3em; color: #d9770a; }
+.script-editor .sblock--togaki { text-indent: 2em; }
+.script-editor .sblock--serifu { text-indent: 1em; }
+.script-editor .sblock--serifu[data-speaker]::before { content: attr(data-speaker); font-weight: 700; margin-block-end: 0.2em; }
