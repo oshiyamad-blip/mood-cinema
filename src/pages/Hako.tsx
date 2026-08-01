@@ -28,10 +28,16 @@ import {
   exportWorkspaceJson,
   parseWorkspaceBackup,
   DEFAULT_STRUCTURE,
+  outlineToNotepad,
+  reconcileBoxes,
+  parseNotepad,
+  nestSelection,
+  depthOf,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
 const BANNER_KEY = 'mc:hako:syncBannerDismissed';
+const VIEW_KEY = 'mc:hako:view';
 
 export default function Hako() {
   const { t, prefix, lang } = useI18n();
@@ -65,6 +71,13 @@ export default function Hako() {
   const [importMode, setImportMode] = useState<'new' | 'append'>('new');
   // 素早い書き出し欄（幕ごとに 1 つ。自由構成ではキーが '' の 1 つだけ）
   const [quick, setQuick] = useState<Record<string, string>>({});
+  // 表示：メモ帳（ただ書く）が既定。並べ替えや幕振りをするときだけカードへ。
+  const [view, setView] = useState<'notepad' | 'cards'>(() => {
+    try { return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'notepad'; } catch { return 'notepad'; }
+  });
+  const [draft, setDraft] = useState('');
+  const draftFor = useRef<string>('');            // draft がどの作品のものか
+  const commitTimer = useRef<number | undefined>(undefined);
   const parsed = useMemo(() => parseOutlineText(importText), [importText]);
 
   const wsRef = useRef(ws);
@@ -191,6 +204,21 @@ export default function Hako() {
   const outline = currentOutline(ws);
   const projects = listProjects(ws);
   const trashed = listTrashed(ws);
+
+  // メモ帳のテキストを用意する（作品が変わった／メモ帳に入った時だけ作り直し、
+  // 打っている最中に外から上書きしてカーソルを飛ばさない）
+  useEffect(() => {
+    if (view !== 'notepad' || !outline) return;
+    if (draftFor.current === outline.id) return;
+    draftFor.current = outline.id;
+    setDraft(outlineToNotepad(outline, a => t.hako.acts[a] ?? a));
+    // outline は編集のたびに別オブジェクトになるので id だけを見る
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, outline?.id, outline?.structure]);
+
+  // 画面を離れるときに書きかけを取りこぼさない
+  useEffect(() => () => window.clearTimeout(commitTimer.current), []);
+
 
   // 現在作品を不変更新する（本文編集はすべてここを通す）
   const patchOutline = (updater: (o: Outline) => Outline) =>
@@ -442,6 +470,73 @@ export default function Hako() {
     closeImport();
   };
 
+  // ── メモ帳表示：テキストのまま書いて、離れたときに箱へ書き戻す ──────
+  /** メモ帳のテキストを箱へ反映。id と打刻時刻は reconcileBoxes が引き継ぐ。 */
+  const commitNotepad = (text: string) => {
+    if (!outline) return;
+    const acts = STRUCTURES[outline.structure].acts;
+    const items = parseNotepad(text).map(it => {
+      const mapped = it.actLabel ? actIdByLabel.get(it.actLabel) : undefined;
+      const act = acts.length === 0 ? '' : (mapped && acts.includes(mapped) ? mapped : acts[0]);
+      return { heading: it.heading, act, depth: it.depth };
+    });
+    const prevBoxes = outline.boxes;
+    const next = reconcileBoxes(prevBoxes, items);
+    const sig = (bs: Box[]) => JSON.stringify(bs.map(b => [b.id, b.act, b.heading, depthOf(b)]));
+    if (sig(prevBoxes) === sig(next)) return; // 変化なし
+    const oid = outline.id;
+    patchOutline(o => ({ ...o, boxes: next, updated: Date.now() }));
+    // まとめて消えたときだけ取り消しを出す（うっかり全選択削除の保険）
+    const lost = prevBoxes.length - next.length;
+    if (lost >= 2 || (next.length === 0 && prevBoxes.length > 0)) {
+      flash(t.hako.notepadRemoved(lost), () =>
+        setWs(prev => {
+          const cur = prev.outlines.find(o => o.id === oid);
+          if (!cur) return prev;
+          draftFor.current = ''; // テキストも作り直す
+          return upsertOutline(prev, { ...cur, boxes: prevBoxes, updated: Date.now() });
+        }),
+      );
+    }
+  };
+
+  const notepadRef = useRef<HTMLTextAreaElement | null>(null);
+
+  /** 選択した部分を「ひとつ内側の箱」にする（マトリョーシカ的な整理）。 */
+  const nestFromSelection = () => {
+    const el = notepadRef.current;
+    if (!el) return;
+    const res = nestSelection(el.value, el.selectionStart, el.selectionEnd);
+    if (!res) { flash(t.hako.nestNeedsSelection); return; }
+    setDraft(res.text);
+    window.clearTimeout(commitTimer.current);
+    commitTimer.current = window.setTimeout(() => commitNotepad(res.text), 700);
+    // 切り出した箇所を選んだままにして、続けて調整できるようにする
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(res.selStart, res.selEnd);
+    });
+  };
+
+  const onDraftChange = (text: string) => {
+    setDraft(text);
+    window.clearTimeout(commitTimer.current);
+    commitTimer.current = window.setTimeout(() => commitNotepad(text), 700);
+  };
+
+  const flushNotepad = () => {
+    window.clearTimeout(commitTimer.current);
+    if (view === 'notepad' && draftFor.current) commitNotepad(draft);
+  };
+
+  const switchView = (next: 'notepad' | 'cards') => {
+    if (next === view) return;
+    if (view === 'notepad') flushNotepad(); // 書きかけを取りこぼさない
+    draftFor.current = '';                  // 次に開くときテキストを作り直す
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* ignore */ }
+  };
+
   // ── バックアップ：全作品を JSON で持ち出す／戻す ──────────────
   const saveBackup = () => {
     const text = exportWorkspaceJson(ws);
@@ -508,7 +603,11 @@ export default function Hako() {
     const canUp = index > 1 || actIdx > 0;
     const canDown = index < total || (actIdx >= 0 && actIdx < boxActs.length - 1);
     return (
-      <div className="hako-box" key={box.id}>
+      <div
+        className={`hako-box${depthOf(box) > 0 ? ' hako-box--child' : ''}`}
+        style={depthOf(box) > 0 ? { marginLeft: `calc(${depthOf(box)} * var(--space-5))` } : undefined}
+        key={box.id}
+      >
         <span className="hako-box__num">
           {index}
           {/* 逆ハコで起こした箱は、作品内での位置（打刻時刻）を添える */}
@@ -679,11 +778,69 @@ export default function Hako() {
         ))}
       </div>
 
-      {outline.boxes.length === 0 && (
+      <div className="hako-views" role="group" aria-label={t.hako.viewLabel}>
+        <button
+          type="button"
+          className={`hako-view-btn${view === 'notepad' ? ' hako-view-btn--on' : ''}`}
+          aria-pressed={view === 'notepad'}
+          onClick={() => switchView('notepad')}
+        >{t.hako.viewNotepad}</button>
+        <button
+          type="button"
+          className={`hako-view-btn${view === 'cards' ? ' hako-view-btn--on' : ''}`}
+          aria-pressed={view === 'cards'}
+          onClick={() => switchView('cards')}
+        >{t.hako.viewCards}</button>
+      </div>
+
+      {view === 'notepad' && (
+        <>
+          <div className="hako-notepad__bar">
+            <button type="button" className="hako-nest-btn" onClick={nestFromSelection}>
+              {t.hako.nestSelection}
+            </button>
+            <span className="hako-notepad__hint">{t.hako.notepadHint}</span>
+          </div>
+          <textarea
+            ref={notepadRef}
+            className="hako-notepad"
+            value={draft}
+            placeholder={t.hako.notepadPlaceholder}
+            aria-label={t.hako.viewNotepad}
+            spellCheck={false}
+            onChange={e => onDraftChange(e.target.value)}
+            onBlur={flushNotepad}
+            onKeyDown={e => {
+              // Tab で 1 段内側へ、Shift+Tab で外へ（選択範囲があればまとめて）
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                const el = e.currentTarget;
+                const { selectionStart: a, selectionEnd: b, value } = el;
+                const from = value.lastIndexOf('\n', a - 1) + 1;
+                const toIdx = value.indexOf('\n', b);
+                const to = toIdx === -1 ? value.length : toIdx;
+                const block = value.slice(from, to);
+                const shifted = block
+                  .split('\n')
+                  .map(l => (l.trim() === '' ? l
+                    : e.shiftKey ? l.replace(/^ {1,2}/, '') : '  ' + l))
+                  .join('\n');
+                const next = value.slice(0, from) + shifted + value.slice(to);
+                onDraftChange(next);
+                requestAnimationFrame(() => {
+                  el.setSelectionRange(from, from + shifted.length);
+                });
+              }
+            }}
+          />
+        </>
+      )}
+
+      {view === 'cards' && outline.boxes.length === 0 && (
         <p className="hako-empty">{t.hako.empty}</p>
       )}
 
-      {groups.map(group => (
+      {view === 'cards' && groups.map(group => (
         <section className="hako-act" key={group.act || 'free'}>
           {group.act && <h2 className="hako-act__label">{t.hako.acts[group.act] ?? group.act}</h2>}
           {group.boxes.map(box => renderBox(box, ++counter, ordered.length, acts))}

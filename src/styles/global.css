@@ -1654,3 +1654,69 @@ main {
   border-color: var(--color-accent);
 }
 .hako-quick .hako-add { flex: 0 0 auto; width: auto; white-space: nowrap; }
+
+/* 表示の切替（メモ帳／カード） */
+.hako-views { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
+.hako-view-btn {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit; font-size: 0.85rem; font-weight: 700;
+  cursor: pointer;
+}
+.hako-view-btn--on { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* メモ帳（ただ書く）— 紙のように白い面に書く。暗い画面の中で、ここだけが原稿。 */
+.hako-notepad {
+  width: 100%;
+  min-height: 62vh;
+  resize: vertical;
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  background: #faf8f4;
+  border: 1px solid #e4e0d6;
+  border-radius: var(--radius-md);
+  color: #1b1922;
+  caret-color: #d9770a;
+  font-family: inherit;
+  font-size: 1.02rem;
+  line-height: 2;
+  tab-size: 2;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.hako-notepad:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(255, 168, 48, 0.18);
+}
+.hako-notepad::placeholder { color: #a8a2b4; line-height: 1.8; }
+.hako-notepad::selection { background: rgba(255, 168, 48, 0.32); }
+.hako-notepad__hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* メモ帳の操作バー（選択を箱にする） */
+.hako-notepad__bar {
+  display: flex; align-items: center; gap: var(--space-3);
+  flex-wrap: wrap; margin-bottom: var(--space-2);
+}
+.hako-nest-btn {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer;
+}
+.hako-nest-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* 入れ子の箱（カード表示）— 内側ほど控えめに、親との線でつながりを見せる */
+.hako-box--child {
+  border-left: 2px solid color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+.hako-box--child .hako-box__num { opacity: 0.55; }
