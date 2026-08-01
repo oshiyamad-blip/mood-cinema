@@ -138,6 +138,13 @@ export const ja = {
     addBox: '＋ 空の箱',
     quickPlaceholder: '思いついた場面を1行で。Enter で次へ（改行を含む貼り付けは1行=1箱）',
     quickAdded: (n: number) => `${n} 個の箱を足しました`,
+    viewLabel: '表示',
+    viewNotepad: 'メモ帳',
+    viewCards: 'カード',
+    notepadPlaceholder:
+      '思いつくまま書く。\n1行目が見出し、字下げした行が中身、空行で次の場面。\n\n例:\n主人公、故郷を離れる\n  駅で幼馴染と再会する\n\n都会での生活が始まる',
+    notepadHint: '空行で次の場面。字下げ（スペース）した行は中身になります。並べ替えや幕振りは「カード」で。',
+    notepadRemoved: (n: number) => `${n} 個の場面が消えました`,
     boxHeadingPlaceholder: 'シーン見出し（例: 主人公、故郷を離れる）',
     boxBodyPlaceholder: '何が起きる？ 誰が何をして、どう転がるか…',
     moveUp: '上へ',

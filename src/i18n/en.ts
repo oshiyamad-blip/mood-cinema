@@ -138,6 +138,13 @@ export const en = {
     addBox: '＋ Empty box',
     quickPlaceholder: 'One line per beat. Enter to keep going (paste multiple lines = multiple boxes)',
     quickAdded: (n: number) => `Added ${n} boxes`,
+    viewLabel: 'View',
+    viewNotepad: 'Notepad',
+    viewCards: 'Cards',
+    notepadPlaceholder:
+      'Just write.\nFirst line is the heading, indented lines are the details, a blank line starts the next scene.\n\ne.g.\nHero leaves home\n  Runs into an old friend at the station\n\nCity life begins',
+    notepadHint: 'Blank line starts the next scene; indented lines become its details. Switch to Cards to reorder or assign acts.',
+    notepadRemoved: (n: number) => `${n} scenes were removed`,
     boxHeadingPlaceholder: 'Scene heading (e.g. Hero leaves home)',
     boxBodyPlaceholder: 'What happens? Who does what, and how does it turn?',
     moveUp: 'Move up',

@@ -235,6 +235,66 @@ export function purgeProject(w: Workspace, id: string): Workspace {
   return { currentId, outlines };
 }
 
+// ── メモ帳表示（テキストのまま書く）───────────────────────────────────
+/**
+ * 作品を「メモ帳」用のテキストにする。
+ * 1 行目＝見出し、字下げ行＝本文、空行で次の箱。幕がある構成では `## 幕名` を挟む
+ * （空の幕も出して、その下に書き足せるようにする）。番号は付けない — 番号は
+ * カード表示側の飾りで、書いている最中には邪魔になる。
+ */
+export function outlineToNotepad(o: Outline, actLabel: (actId: string) => string): string {
+  const acts = STRUCTURES[o.structure].acts;
+  const lines: string[] = [];
+  const render = (b: Box) => {
+    lines.push(b.heading);
+    if (b.body.trim()) b.body.trim().split('\n').forEach((l) => lines.push('  ' + l));
+    lines.push('');
+  };
+  if (acts.length === 0) {
+    o.boxes.forEach(render);
+  } else {
+    for (const a of acts) {
+      lines.push(`## ${actLabel(a)}`, '');
+      o.boxes.filter((b) => b.act === a).forEach(render);
+    }
+    o.boxes.filter((b) => !acts.includes(b.act)).forEach(render);
+  }
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+}
+
+/**
+ * 編集後のテキストから作り直した箱を、編集前の箱に突き合わせて **id と打刻時刻
+ * (at) を引き継ぐ**。これが無いとメモ帳で 1 文字直すたびに逆ハコの時刻が消え、
+ * 同期上も別物の箱として扱われてしまう。
+ *
+ * 突き合わせは ①見出しが一致するもの ②残りは順番で、の 2 段階。
+ * 見出しを書き換えても位置が近ければ引き継げる。
+ */
+export function reconcileBoxes(
+  prev: Box[],
+  items: { heading: string; body: string; act: string }[],
+): Box[] {
+  const pool = [...prev];
+  const out: (Box | null)[] = items.map(() => null);
+  // 1) 見出しがそのまま残っているものを先に対応づける（並べ替えに強い）
+  items.forEach((it, i) => {
+    const k = pool.findIndex((b) => b.heading === it.heading);
+    if (k >= 0) {
+      const b = pool.splice(k, 1)[0];
+      out[i] = { ...b, heading: it.heading, body: it.body, act: it.act };
+    }
+  });
+  // 2) 残りは順番に割り当てる（見出しを書き換えた箱を拾う）
+  items.forEach((it, i) => {
+    if (out[i]) return;
+    const b = pool.shift();
+    out[i] = b
+      ? { ...b, heading: it.heading, body: it.body, act: it.act }
+      : { id: uid(), act: it.act, heading: it.heading, body: it.body };
+  });
+  return out as Box[];
+}
+
 // ── バックアップ（JSON で持ち出す・戻す）──────────────────────────────
 const BACKUP_KIND = 'tsumugi-workspace';
 
