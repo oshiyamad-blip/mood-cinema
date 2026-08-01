@@ -4,26 +4,28 @@
 
 ## 概要
 
-> **ピボット中（2026-07 〜）**: 本プロダクトは映画レコメンドアプリ **mood-cinema** から、
-> 脚本開発の統合エディタ **Tsumugi** へ全面ピボットしています。方針・情報設計・命名の
-> 原則は [`docs/tsumugi-concept.md`](docs/tsumugi-concept.md) を正とします。
-> 旧レコメンド機能（気分バルーン → TMDB → 5 本）は撤去せず「**参考作品ファインダー**」
-> （`/mood` → `/result`）として、書いている物語のトーンに近い作品を引く素材ツールに転生。
-> エディタ本体は `/hako`（箱書き）。以下の記述のうち "映画を観る人向け" の文脈は、
-> この参考作品ファインダーの説明として読み替えてください。
+**Tsumugi（紬）** は脚本開発の統合エディタです（旧・映画レコメンドアプリ mood-cinema から
+全面ピボットし、**2026-07 に旧レコメンド機能を完全撤去**しました。リポジトリ名だけが
+旧名のまま残っています）。方針・情報設計・命名の原則は
+[`docs/tsumugi-concept.md`](docs/tsumugi-concept.md) を正とします。
 
-**mood-cinema** は、ユーザーの「今の気分」と「シチュエーション」に基づいて映画を
-レコメンドする、日英バイリンガルの PWA です。ユーザーが絵文字の「バルーン」
-（気分・シーン・雰囲気 …）をいくつか選ぶと、その組み合わせを
-[TMDB](https://www.themoviedb.org/) Discover API のパラメータに変換し、
-マッチする映画トップ 5 を表示します。各作品にはアフィリエイトリンク
-（U-NEXT / Amazon）と SEO コンテンツが付きます。
+- **エディタ `/hako`** — 主役。メモ帳（白い紙にただ書く。1 行＝1 箱、字下げ＝入れ子）と
+  カード（並べ替え・幕振り）の 2 表示。複数作品・ゴミ箱・取り込み・JSON バックアップ。
+- **逆ハコ `/gyaku`** — 映画を一時停止しながらシーンを打刻し、開始時刻つきの箱書きに
+  分解する勉強ツール。TMDB で作品検索・尺・配信先を取得（未設定なら手入力に縮退）。
+- **アカウント `/account`** — メール OTP ログイン。作品単位 LWW のクラウド同期
+  （Supabase。未設定なら導線ごと非表示に縮退）。
 
-**バックエンドは存在しません**。完全なクライアントサイド SPA で、すべてのロジックは
-ブラウザ上で動作します。TMDB はリードトークンを使ってクライアントから直接呼び出し、
-レスポンスは `localStorage` にキャッシュします。収益化はアフィリエイトリンクと
-（承認後の）Google AdSense で行います。ユーザー向けの文言やコード内コメントの多くは
-日本語です。この慣習を維持してください。
+**バックエンドは持ちません**。完全なクライアントサイド SPA で、localStorage が真実の源。
+TMDB・Supabase はクライアントから直接呼びます。ユーザー向けの文言やコード内コメントの
+多くは日本語です。この慣習を維持してください。
+
+### 最上位の設計理念：絶対にユーザーのデータを消さない
+
+破壊的操作は明示的・確認つき・復元可能に（ソフト削除＝ゴミ箱、対象限定の Undo、
+JSON バックアップ）。自動処理でユーザーの本文を静かに失わない（同期は作品単位 LWW で
+ローカルを絶対に落とさない、メモ帳の書き戻しは id と打刻時刻を引き継ぐ）。迷ったら
+消さない方に倒す。
 
 ## 技術スタック
 
@@ -69,30 +71,26 @@ npm run preview        # 本番ビルドをローカルで配信
 
 ## アーキテクチャとデータフロー
 
-中核となるループは **バルーン選択 → マッピング → TMDB クエリ → 結果表示** です。
+中核は **箱書きのデータモデル（`src/lib/hakogaki.ts`）** です。
 
-1. **`src/pages/Mood.tsx`** — 選択画面。選択中のバルーン ID は URL
-   （`/mood?s=cry,solo`）に保持され、送信すると `/result?b=cry,solo` へ遷移します。
-   選択数は 2〜6 個に制限されています。
-2. **`src/data/balloons.ts`** — `BALLOONS` のカタログ。各バルーンは `category`
-   （`mood`/`scene`/`intensity`/`theme`/`atmosphere`/`with`）と `weights`
-   （気分スコア、ジャンルスコア、runtime、atmosphere など）を持ちます。
-   クイズコンテンツの単一の真実の源（source of truth）です。
-3. **`src/lib/balloonMapper.ts`** — `buildParamsFromBalloons()` がアプリの心臓部。
-   バルーンの weights を集約して主気分・上位ジャンル・除外ジャンル・runtime・
-   評価しきい値などを求め、TMDB `DiscoverParams` と表示ラベル、推薦理由テキストを
-   生成します。`dailyPage()` が TMDB の取得ページを日替わりでローテーションし、
-   結果に新鮮味を持たせています。
-4. **`src/data/moodMapping.ts`** — `GENRE` の ID 定数、`MOOD_CONFIG`
-   （気分 → 基本ジャンル + 理由テンプレート）、`DiscoverParams` 型、
-   `buildRecommendReason()`。
-5. **`src/lib/tmdb.ts`** — 型付き TMDB クライアント。`/discover/movie` と
-   日本の配信プロバイダ取得をラップします。全リクエストは `localStorage` に 24 時間
-   キャッシュ（`mc:tmdb:` プレフィックス）。`TmdbConfigError`（トークン未設定）または
-   `TmdbApiError`（非 2xx）を投げ、いずれも `Result.tsx` で処理します。
-6. **`src/pages/Result.tsx`** — 取得して映画 5 件にスライスし、`MovieCard` +
-   `AdBanner` + 関連記事を描画、履歴保存、アナリティクス送信を行います。
-   このページはクエリ依存のため `noindex` です。
+1. **`src/lib/hakogaki.ts`** — 単一の真実の源。`Workspace`（複数作品）→ `Outline`（作品）→
+   `Box[]`（flat な並び。`depth` で入れ子、`act` で幕、`at` で逆ハコの打刻秒）。
+   localStorage（`mc:hakogaki:ws`）へ自動保存。純関数群：メモ帳の往復
+   （`outlineToNotepad` / `parseNotepad` / `reconcileBoxes` — **id と打刻時刻を引き継ぐ**）、
+   幕またぎ移動（`moveBoxAcross` / `setBoxAct`）、選択の入れ子化（`nestSelection`）、
+   テキスト取り込み（`parseOutlineText`）、JSON バックアップ、旧データ移行。
+2. **`src/pages/Hako.tsx`** — エディタ画面。メモ帳（既定）とカードの 2 表示、
+   素早い書き出し欄、取り込み、バックアップ、ゴミ箱、クラウド同期の結線。
+3. **`src/pages/Gyaku.tsx`** — 逆ハコ。打刻セッションは `mc:gyaku:session` に常時保存
+   （リロードしても復元）。保存すると通常の作品としてワークスペースへ追加。
+4. **`src/lib/tmdb.ts`** — TMDB クライアント（検索・尺・日本の配信先）。24 時間
+   localStorage キャッシュ（`mc:tmdb:`）。トークン未設定なら `TmdbConfigError` を投げ、
+   逆ハコは手入力に縮退。
+5. **`src/lib/cloudSync.ts` / `auth.ts` / `supabase.ts`** — 作品単位 LWW の同期と
+   メール OTP 認証。Supabase の env 2 変数が無ければ全機能が縮退（導線ごと非表示）。
+   ローカルの作品は絶対に落とさない。SQL / RLS は `docs/supabase-setup.sql`。
+6. **`src/lib/affiliate.ts`** — 逆ハコの配信先リンク（`providerUrl`。U-NEXT / Amazon は
+   アフィリエイト経路に載る）。
 
 ### ルーティングと i18n
 
@@ -101,51 +99,27 @@ npm run preview        # 本番ビルドをローカルで配信
 - `/*` → 日本語（`prefix = ''`、`lang = 'ja'`）
 - `/en/*` → 英語（`prefix = '/en'`、`lang = 'en'`）
 
+ルートは `/`（ホーム）、`/hako`、`/gyaku`、`/account`、`/about`、`/privacy`、`/contact`。
 シェル内のルートは prefix 相対です。**リンクやルートを追加する際は、必ず
-`useI18n()` から得た `prefix` を使ってパスを組み立て**（例: `` `${prefix}/mood` ``）、
-`/mood` のようにハードコードしないでください。翻訳は `src/i18n/ja.ts` と
-`src/i18n/en.ts` にあり（同じ形状 — `Translations` は `typeof ja`）、`useI18n()`
-経由でアクセスします。`/quiz` は `/mood` へリダイレクトするレガシーパスです
-（`vercel.json` でも強制）。
-
-### その他のライブラリ（`src/lib/`）
-
-- `seo.ts` — `useSeo()` フックが `<head>`（title、meta、OG、canonical、hreflang、
-  JSON-LD）を命令的に管理。`buildArticleJsonLd` / `buildBreadcrumbJsonLd` ヘルパー
-  あり。SPA は SSR なしのため、SEO はページごとにクライアントサイドで行います。
-- `history.ts` — 直近 10 件の診断を `localStorage`（`mc:history`）に保存。
-- `analytics.ts` — GA4 `gtag` の薄いラッパー（`track.*`）。`index.html` に GA を
-  組み込むまでは no-op。
-- `affiliate.ts` — タグ付きの Amazon / U-NEXT 検索 URL を生成。
-- `courseNames.ts` — 選択 ID から日本語の「コース」ラベルを生成。
-
-### コンテンツデータ（`src/data/`）
-
-- `articles.ts` / `articles.en.ts` — SEO 用ロングフォーム記事（日/英）。
-  各ファイルが `ARTICLES` と `ARTICLE_MAP` をエクスポート。
-- `sceneLandings.ts` — `/scene/:slug` の静的 SEO ランディングページ。バルーンの
-  組み合わせをプリセットします。
-- `moodArticleMap.ts` — バルーン ID → `/result` で表示する関連記事のマッピング。
+`useI18n()` から得た `prefix` を使ってパスを組み立て**（例: `` `${prefix}/hako` ``）、
+ハードコードしないでください。翻訳は `src/i18n/ja.ts` と `src/i18n/en.ts`
+（同じ形状 — `Translations` は `typeof ja`）。新しいユーザー向け文字列は必ず両方に追加。
 
 ## 慣習と注意点
 
-- **sitemap のスラッグ一覧は重複している。** `scripts/generate-sitemap.mjs` は
-  `ARTICLE_SLUGS` と `SCENE_SLUGS` をハードコードしています。`articles.ts` に記事を、
-  または `sceneLandings.ts` にランディングを追加・削除したら、**sitemap スクリプト側の
-  対応するリストも更新**してください。さもないと新ページがインデックスされません。
-- **バルーン ID は実質的な公開 API。** URL（`?b=`、`?s=`）、`i18n/*.ts` のショートカット、
-  `moodArticleMap.ts`、`sceneLandings.ts`、`courseNames.ts` に登場します。バルーン ID を
-  リネームすると共有リンクやこれらの相互参照が壊れるため、変更前に必ず grep してください。
-- **縮退動作は意図的。** アフィリエイト/広告/アナリティクスの環境変数が未設定でも
+- **ページを増やしたら `scripts/generate-sitemap.mjs` の `CORE_PATHS` も更新**すること。
+- **縮退動作は意図的。** TMDB / Supabase / アフィリエイトの環境変数が未設定でも
   UI が壊れてはいけません。`?? ''` / `Boolean(...)` のガードや空状態処理を維持してください。
+- **localStorage のキーは公開 API 扱い**（`mc:hakogaki:ws`・`mc:gyaku:session`・
+  `mc:hako:view` 等）。形を変えるときは必ず旧データからの移行を書くこと。
 - **strict TS、未使用シンボル禁止。** 未使用の import/変数/引数を残さないこと —
   ビルドが失敗します。既存の型付き・関数型のスタイルに合わせてください。
 - **localStorage アクセスは常に try/catch で包む**（quota / プライベートモード対策）。
   新しい永続化処理でもこのパターンに従ってください。
-- **CSP は `vercel.json` で厳格に制限**されています。script/style は `'self'` +
-  `'unsafe-inline'`、画像は `image.tmdb.org` のみ、通信は `api.themoviedb.org` のみ。
-  新しい外部オリジン（アナリティクス、広告、フォント）を追加する場合は、そこの CSP
-  ヘッダーと `index.html` 内の対応するスニペットの両方を更新する必要があります。
+- **CSP は厳格に制限**されています。script/style は `'self'` + `'unsafe-inline'`、
+  画像は `image.tmdb.org` のみ、通信は `api.themoviedb.org` と `*.supabase.co` のみ。
+  新しい外部オリジンを追加する場合は **`vercel.json` と `public/_headers` の両方**を
+  同内容で更新すること。
 - このプロジェクトでは UI 文言・コメント・コミットの文脈の既定言語は日本語です。
   新しいユーザー向け文字列はバイリンガルで（`ja.ts` と `en.ts` の両方に追加）してください。
 

@@ -99,11 +99,6 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
       name: 'Tsumugi',
       url: SITE_URL,
       description: '脚本を組み立てる編集卓',
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/result?mood={mood}` },
-        'query-input': 'required name=mood',
-      },
     };
 
     setJsonLd(jsonLd ?? defaultJsonLd);
@@ -112,47 +107,4 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
       document.title = prevTitle;
     };
   }, [title, description, image, canonicalPath, jsonLd]);
-}
-
-export function buildArticleJsonLd(opts: {
-  title: string;
-  description: string;
-  slug: string;
-  publishedAt: string;
-  basePath?: string;
-}): Record<string, unknown> {
-  const base = opts.basePath ?? '/article';
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: opts.title,
-    description: opts.description,
-    url: `${SITE_URL}${base}/${opts.slug}`,
-    datePublished: opts.publishedAt,
-    dateModified: opts.publishedAt,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Tsumugi',
-      url: SITE_URL,
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `${SITE_URL}${base}/${opts.slug}`,
-    },
-  };
-}
-
-export function buildBreadcrumbJsonLd(
-  items: { name: string; path: string }[],
-): Record<string, unknown> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: item.name,
-      item: SITE_URL + item.path,
-    })),
-  };
 }

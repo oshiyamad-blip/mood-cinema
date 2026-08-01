@@ -27,83 +27,28 @@ const SITE_URL = (env.VITE_SITE_URL ?? 'https://mood-cinema.example.com').replac
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
-// 記事スラッグ一覧（articles.ts と同期）
-const ARTICLE_SLUGS = [
-  'tearjerker-movies',
-  'short-runtime-classics',
-  'family-night',
-  'date-night',
-  'horror-night',
-  'rainy-day-movies',
-  'stress-relief-movies',
-  'solo-night-movies',
-  'weekend-movies',
-  'why-use-quiz',
-  'romance-movies',
-  'action-movies',
-  'late-night-movies',
-  'cheer-up-movies',
-  'scifi-movies',
-  'mystery-thriller',
-  'anime-movies-adult',
-  'winter-cozy-movies',
-  'feel-good-endings',
-  'hidden-gem-movies',
-];
+const CORE_PATHS = ['/', '/hako', '/gyaku', '/about', '/privacy', '/contact'];
 
-// SEO 静的シーンランディング
-const SCENE_SLUGS = [
-  'heartbreak-solo',
-  'friday-friends',
-  'rainy-night-solo',
-  'couple-romantic',
-  'family-sunday',
-  'scary-night',
-  'think-arty',
-  'epic-adventure',
-  'heal-winter',
-  'noir-mature',
-];
-
-function url(loc, { changefreq = 'monthly', priority = '0.7', lastmod } = {}) {
-  const lastmodTag = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
-  return `  <url><loc>${loc}</loc>${lastmodTag}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
+const urls = [];
+for (const p of CORE_PATHS) {
+  urls.push({ loc: `${SITE_URL}${p}`, priority: p === '/' ? '1.0' : '0.8' });
+  urls.push({ loc: `${SITE_URL}/en${p === '/' ? '/' : p}`, priority: '0.6' });
 }
-
-const entries = [
-  // ── Japanese (root) ──────────────────────────────────
-  url(`${SITE_URL}/`, { changefreq: 'weekly', priority: '1.0' }),
-  url(`${SITE_URL}/mood`, { changefreq: 'monthly', priority: '0.9' }),
-  url(`${SITE_URL}/hako`, { changefreq: 'monthly', priority: '0.7' }),
-  url(`${SITE_URL}/articles`, { changefreq: 'weekly', priority: '0.8' }),
-  url(`${SITE_URL}/about`, { changefreq: 'yearly', priority: '0.3' }),
-  url(`${SITE_URL}/privacy`, { changefreq: 'yearly', priority: '0.2' }),
-  url(`${SITE_URL}/contact`, { changefreq: 'yearly', priority: '0.2' }),
-  ...ARTICLE_SLUGS.map(slug =>
-    url(`${SITE_URL}/article/${slug}`, { lastmod: TODAY, priority: '0.8' }),
-  ),
-  ...SCENE_SLUGS.map(slug =>
-    url(`${SITE_URL}/scene/${slug}`, { lastmod: TODAY, priority: '0.7' }),
-  ),
-  // ── English (/en/) ───────────────────────────────────
-  url(`${SITE_URL}/en/`, { changefreq: 'weekly', priority: '1.0' }),
-  url(`${SITE_URL}/en/mood`, { changefreq: 'monthly', priority: '0.9' }),
-  url(`${SITE_URL}/en/hako`, { changefreq: 'monthly', priority: '0.7' }),
-  url(`${SITE_URL}/en/articles`, { changefreq: 'weekly', priority: '0.8' }),
-  url(`${SITE_URL}/en/about`, { changefreq: 'yearly', priority: '0.3' }),
-  url(`${SITE_URL}/en/privacy`, { changefreq: 'yearly', priority: '0.2' }),
-  url(`${SITE_URL}/en/contact`, { changefreq: 'yearly', priority: '0.2' }),
-  ...ARTICLE_SLUGS.map(slug =>
-    url(`${SITE_URL}/en/article/${slug}`, { lastmod: TODAY, priority: '0.8' }),
-  ),
-];
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries.join('\n')}
+${urls
+  .map(
+    u => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${TODAY}</lastmod>
+    <priority>${u.priority}</priority>
+  </url>`,
+  )
+  .join('\n')}
 </urlset>
 `;
 
-const outPath = path.resolve(__dirname, '../dist/sitemap.xml');
-fs.writeFileSync(outPath, xml);
-console.log(`✓ sitemap.xml generated → ${SITE_URL} (${entries.length} URLs)`);
+const out = path.resolve(__dirname, '../dist/sitemap.xml');
+fs.writeFileSync(out, xml);
+console.log(`✓ sitemap.xml generated → ${SITE_URL} (${urls.length} URLs)`);
