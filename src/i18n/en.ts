@@ -1,7 +1,5 @@
 export const en = {
   nav: {
-    diagnose: 'References',
-    articles: 'Articles',
     hako: 'Editor',
     gyaku: 'Reverse',
     about: 'About',
@@ -41,64 +39,12 @@ export const en = {
   home: {
     title: 'Tsumugi | Assemble Your Screenplay',
     description:
-      'An integrated screenwriting editor: gather ideas, characters, and reference films as materials, then shape your story scene by scene. Runs entirely in your browser — your data stays on this device.',
+      'A notepad-style plot editor — just write on a white page — plus a reverse-outline tool for breaking down films scene by scene. Runs entirely in your browser; your data stays on this device.',
     heroHeading: 'Assemble your film,\nscene by scene.',
-    heroSub: 'Gather ideas, characters, and reference films as materials,\nthen build your story from scene boxes — all on this device.',
+    heroSub: 'Write freely on a white page, sort it into boxes, weave it into a script.\nSaved on this device; log in to sync across devices.',
     heroCta: 'Open the editor →',
     workspaceHeading: 'Workspace',
-    referenceFinder: {
-      label: 'Search by mood & tone',
-      sub: 'Pull up films that match the tone of the story you\'re writing',
-    },
-    shortcutsHeading: 'Find reference films',
-    toolsHeading: 'Workspace',
-    historyHeading: 'Recently viewed references',
-    articlesHeading: 'Featured articles',
-    shortcuts: [
-      { label: 'Movies to cry to',      balloons: 'cry,heartstring,solo',       emoji: '💧' },
-      { label: 'Feel-good comedies',    balloons: 'laugh,friday-night,friends', emoji: '😂' },
-      { label: 'Short classics <90min', balloons: 'light,bedtime,heal',         emoji: '⏱️' },
-      { label: 'Sci-Fi solo night',     balloons: 'think,scifi-theme,solo',     emoji: '🚀' },
-      { label: 'Family movie night',    balloons: 'heal,family-watch,light',    emoji: '👪' },
-      { label: 'Horror night in',       balloons: 'scared,solo,winter-night',   emoji: '👻' },
-    ],
-    historyTime: (ts: number) => new Date(ts).toLocaleString('en-US'),
-  },
-  mood: {
-    title: 'Find Reference Films | Tsumugi',
-    description: 'Pick 2–6 tones or moods and find films to reference for the story you\'re writing.',
-    heading: 'What tone are you looking for?',
-    subheading: (min: number, max: number) => `Tap ${min}–${max} bubbles that match your mood`,
-    randomBtn: '↺ Random pick',
-    trayLabel: 'Selected moods',
-    trayRemove: (label: string) => `Remove ${label}`,
-    submitReady: (n: number) => `Find references for these ${n} →`,
-    submitNotReady: (n: number) => `Pick ${n} more`,
-  },
-  result: {
-    heading: '5 reference films with a similar tone',
-    summarySep: ' · ',
-    loading: 'Loading…',
-    noResults: 'No results found. Try changing your tone selection.',
-    devHint: 'Set VITE_TMDB_TOKEN in .env.local.',
-    relatedHeading: 'Related articles',
-    relatedReadMore: 'Read article →',
-    retryBtn: 'Change tone & search again',
-    retryBtnFull: 'Start over',
-  },
-  articles: {
-    title: 'Movie Articles | Tsumugi',
-    description:
-      'Curated movie lists by mood and situation — tearjerkers, date night picks, horror nights, and more.',
-    heading: 'Featured Articles',
-  },
-  article: {
-    notFound: 'Article not found',
-    published: (date: string) => `Published: ${date}`,
-    breadHome: 'Home',
-    breadArticles: 'Articles',
-    ctaBtn: 'See the films in this list',
-    diagnosisBtn: 'Find reference films by mood',
+    gyakuSub: 'Pause a film, stamp each scene, and break down its whole structure',
   },
   hako: {
     title: 'Screenplay Beat Sheet Editor | Tsumugi',
@@ -232,59 +178,6 @@ export const en = {
     discardConfirm: 'Discard the current beats and pick another film?',
     discarded: 'Discarded',
   },
-  balloonLabel: {
-    cry: 'Want to cry',
-    laugh: 'Want to laugh',
-    think: 'Want to think',
-    heartstring: 'Bittersweet',
-    excited: 'Get pumped',
-    scared: 'Get scared',
-    'rainy-night': 'Rainy night',
-    'friday-night': 'Friday night',
-    'sunday-afternoon': 'Sunday afternoon',
-    bedtime: 'Bedtime',
-    'winter-night': 'Cold night',
-    dense: 'Heavy',
-    light: 'Light',
-    epic: 'Epic',
-    heartbreak: 'Heartbreak',
-    family: 'Family',
-    society: 'Social issues',
-    'scifi-theme': 'Sci-Fi',
-    'mystery-theme': 'Mystery',
-    life: 'Life story',
-    mature: 'Mature',
-    artsy: 'Arthouse',
-    noir: 'Noir',
-    romantic: 'Romantic',
-    solo: 'Solo',
-    partner: 'With partner',
-    'family-watch': 'With family',
-    friends: 'With friends',
-  } as Record<string, string>,
-  getCombinationName(ids: string[]): string {
-    const MOOD: Record<string, string> = {
-      cry: 'Tearjerker', laugh: 'Comedy', think: 'Thought-provoking',
-      heal: 'Healing', excited: 'Action-packed', scared: 'Horror',
-      heartstring: 'Bittersweet', heartbreak: 'Heartbreak',
-    };
-    const SCENE: Record<string, string> = {
-      solo: 'Solo', partner: 'Date night', friends: "Friends' night",
-      family: 'Family time', 'family-watch': 'Family time',
-      'rainy-night': 'Rainy night', 'friday-night': 'Friday night',
-      'winter-night': 'Cold night', 'sunday-afternoon': 'Sunday afternoon',
-      bedtime: 'Bedtime',
-    };
-    const mood = ids.find(id => MOOD[id]);
-    const scene = ids.find(id => SCENE[id]);
-    if (mood && scene) return `${SCENE[scene]} ${MOOD[mood]}`;
-    if (mood)  return `${MOOD[mood]} picks`;
-    if (scene) return `${SCENE[scene]} picks`;
-    return "Tonight's picks";
-  },
-  shareDefault: 'I tried the mood-based movie quiz!',
-  shareText: (emojis: string, labels: string) =>
-    `${emojis} Feeling "${labels}" — found my perfect movie picks`,
   tmdbLanguage: 'en-US',
   locale: 'en-US',
 };

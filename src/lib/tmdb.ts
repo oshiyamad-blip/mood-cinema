@@ -1,5 +1,3 @@
-import type { DiscoverParams } from '../data/moodMapping';
-
 export interface TmdbMovie {
   id: number;
   title: string;
@@ -92,11 +90,6 @@ async function request<T>(path: string, query: Record<string, unknown>): Promise
   const json = (await res.json()) as T;
   cacheSet(cacheKey, json);
   return json;
-}
-
-export async function discoverMovies(params: DiscoverParams): Promise<TmdbMovie[]> {
-  const data = await request<DiscoverResponse>('/discover/movie', params as Record<string, unknown>);
-  return data.results;
 }
 
 /** タイトル検索（逆ハコで観る作品を選ぶのに使う）。 */

@@ -1,14 +1,9 @@
-import { Routes, Route, Link, NavLink, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import Home from './pages/Home';
-import Mood from './pages/Mood';
 import Hako from './pages/Hako';
 import Account from './pages/Account';
 import Gyaku from './pages/Gyaku';
-import Result from './pages/Result';
-import SceneLanding from './pages/SceneLanding';
-import Article from './pages/Article';
-import ArticleList from './pages/ArticleList';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -91,8 +86,6 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
           <nav className="site-nav">
             <NavLink to={`${prefix}/hako`}>{t.nav.hako}</NavLink>
             <NavLink to={`${prefix}/gyaku`}>{t.nav.gyaku}</NavLink>
-            <NavLink to={`${prefix}/mood`}>{t.nav.diagnose}</NavLink>
-            <NavLink to={`${prefix}/articles`}>{t.nav.articles}</NavLink>
             <NavLink to={`${prefix}/about`}>{t.nav.about}</NavLink>
             <AccountNav lang={lang} prefix={prefix} />
             <LangSwitcher lang={lang} prefix={prefix} />
@@ -103,15 +96,9 @@ function AppShell({ lang, prefix }: { lang: Lang; prefix: string }) {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/mood" element={<Mood />} />
           <Route path="/hako" element={<Hako />} />
           <Route path="/account" element={<Account />} />
           <Route path="/gyaku" element={<Gyaku />} />
-          <Route path="/quiz" element={<Navigate to={`${prefix}/mood`} replace />} />
-          <Route path="/result" element={<Result />} />
-          <Route path="/scene/:slug" element={<SceneLanding />} />
-          <Route path="/articles" element={<ArticleList />} />
-          <Route path="/article/:slug" element={<Article />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
