@@ -77,8 +77,15 @@ export function uid(): string {
 }
 
 /** 新規の空作品を1件つくる。 */
+/**
+ * 新しい作品の既定の構成。
+ * 枠から入らせない：まず自由に書き出して、構成は必要になってから選ぶ。
+ * 幕に振り直したくなったら、構成を切り替えて箱ごとに幕を指定できる。
+ */
+export const DEFAULT_STRUCTURE: StructureId = 'free';
+
 export function emptyOutline(): Outline {
-  return { id: uid(), title: '', structure: 'three-act', boxes: [], updated: Date.now() };
+  return { id: uid(), title: '', structure: DEFAULT_STRUCTURE, boxes: [], updated: Date.now() };
 }
 
 /** 壊れた保存データで UI が落ちないよう、最低限の妥当性チェックを通す。 */

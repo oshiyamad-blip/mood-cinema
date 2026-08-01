@@ -27,6 +27,7 @@ import {
   orderedBoxes,
   exportWorkspaceJson,
   parseWorkspaceBackup,
+  DEFAULT_STRUCTURE,
 } from '../lib/hakogaki';
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
@@ -332,7 +333,7 @@ export default function Hako() {
     if (outline.boxes.length === 0 && !outline.title.trim()) return;
     if (!window.confirm(t.hako.resetConfirm)) return;
     const snapshot = outline; // 消す前の状態を控えておく
-    patchOutline(o => ({ ...o, title: '', structure: 'three-act', boxes: [], updated: Date.now() }));
+    patchOutline(o => ({ ...o, title: '', structure: DEFAULT_STRUCTURE, boxes: [], updated: Date.now() }));
     setOpenId(null);
     flash(t.hako.resetDone, () => setWs(prev => upsertOutline(prev, { ...snapshot, updated: Date.now() })));
   };
