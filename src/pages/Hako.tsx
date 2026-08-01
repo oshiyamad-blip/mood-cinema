@@ -63,6 +63,8 @@ export default function Hako() {
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importMode, setImportMode] = useState<'new' | 'append'>('new');
+  // 素早い書き出し欄（幕ごとに 1 つ。自由構成ではキーが '' の 1 つだけ）
+  const [quick, setQuick] = useState<Record<string, string>>({});
   const parsed = useMemo(() => parseOutlineText(importText), [importText]);
 
   const wsRef = useRef(ws);
@@ -252,6 +254,35 @@ export default function Hako() {
     const id = uid();
     patch({ boxes: [...outline.boxes, { id, act, heading: '', body: '' }] });
     setFocusId(id);
+  };
+
+  /**
+   * 素早い書き出し：入力欄の文字をそのまま箱の見出しにして足す。
+   * 追加後もフォーカスは入力欄に残す（新しいカードへ飛ばさない）ので、
+   * Enter を打つたびに次々と並べていける。改行を含む貼り付けは行ごとに 1 箱。
+   */
+  const quickAdd = (act: string, raw: string) => {
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    const added = lines.map(heading => ({ id: uid(), act, heading, body: '' }));
+    const addedIds = new Set(added.map(b => b.id));
+    patchOutline(o => ({ ...o, boxes: [...o.boxes, ...added], updated: Date.now() }));
+    setQuick(q => ({ ...q, [act]: '' }));
+    // まとめて入った時だけ知らせる（1 行ずつはうるさいので出さない）
+    if (added.length > 1) {
+      const oid = outline?.id;
+      flash(t.hako.quickAdded(added.length), () =>
+        setWs(prev => {
+          const cur = prev.outlines.find(o => o.id === oid);
+          if (!cur) return prev;
+          return upsertOutline(prev, {
+            ...cur,
+            boxes: cur.boxes.filter(b => !addedIds.has(b.id)),
+            updated: Date.now(),
+          });
+        }),
+      );
+    }
   };
 
   const updateBox = (id: string, p: Partial<Box>) =>
@@ -656,9 +687,35 @@ export default function Hako() {
         <section className="hako-act" key={group.act || 'free'}>
           {group.act && <h2 className="hako-act__label">{t.hako.acts[group.act] ?? group.act}</h2>}
           {group.boxes.map(box => renderBox(box, ++counter, ordered.length, acts))}
-          <button type="button" className="hako-add" onClick={() => addBox(group.act)}>
-            {t.hako.addBox}
-          </button>
+          <div className="hako-quick">
+            <input
+              className="hako-quick__input"
+              type="text"
+              value={quick[group.act] ?? ''}
+              placeholder={t.hako.quickPlaceholder}
+              aria-label={t.hako.quickPlaceholder}
+              onChange={e => setQuick(q => ({ ...q, [group.act]: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  quickAdd(group.act, quick[group.act] ?? '');
+                } else if (e.key === 'Escape') {
+                  setQuick(q => ({ ...q, [group.act]: '' }));
+                }
+              }}
+              onPaste={e => {
+                // 複数行の貼り付けは 1 行 = 1 箱にする（メモからの流し込み）
+                const text = e.clipboardData.getData('text');
+                if (text.includes('\n')) {
+                  e.preventDefault();
+                  quickAdd(group.act, text);
+                }
+              }}
+            />
+            <button type="button" className="hako-add" onClick={() => addBox(group.act)}>
+              {t.hako.addBox}
+            </button>
+          </div>
         </section>
       ))}
 
