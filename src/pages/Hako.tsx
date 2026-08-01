@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSeo } from '../lib/seo';
 import { useI18n } from '../i18n';
@@ -37,6 +37,8 @@ import {
 import type { Box, Outline, ParsedItem, StructureId, Workspace } from '../lib/hakogaki';
 
 const BANNER_KEY = 'mc:hako:syncBannerDismissed';
+// ProseMirror ごと遅延読み込み（脚本を開かない人のバンドルを重くしない）
+const ScriptEditor = lazy(() => import('../script/ScriptEditor'));
 const VIEW_KEY = 'mc:hako:view';
 
 export default function Hako() {
@@ -72,8 +74,11 @@ export default function Hako() {
   // 素早い書き出し欄（幕ごとに 1 つ。自由構成ではキーが '' の 1 つだけ）
   const [quick, setQuick] = useState<Record<string, string>>({});
   // 表示：メモ帳（ただ書く）が既定。並べ替えや幕振りをするときだけカードへ。
-  const [view, setView] = useState<'notepad' | 'cards'>(() => {
-    try { return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'notepad'; } catch { return 'notepad'; }
+  const [view, setView] = useState<'notepad' | 'cards' | 'script'>(() => {
+    try {
+      const v = localStorage.getItem(VIEW_KEY);
+      return v === 'cards' || v === 'script' ? v : 'notepad';
+    } catch { return 'notepad'; }
   });
   const [draft, setDraft] = useState('');
   const draftFor = useRef<string>('');            // draft がどの作品のものか
@@ -529,7 +534,7 @@ export default function Hako() {
     if (view === 'notepad' && draftFor.current) commitNotepad(draft);
   };
 
-  const switchView = (next: 'notepad' | 'cards') => {
+  const switchView = (next: 'notepad' | 'cards' | 'script') => {
     if (next === view) return;
     if (view === 'notepad') flushNotepad(); // 書きかけを取りこぼさない
     draftFor.current = '';                  // 次に開くときテキストを作り直す
@@ -791,7 +796,23 @@ export default function Hako() {
           aria-pressed={view === 'cards'}
           onClick={() => switchView('cards')}
         >{t.hako.viewCards}</button>
+        <button
+          type="button"
+          className={`hako-view-btn${view === 'script' ? ' hako-view-btn--on' : ''}`}
+          aria-pressed={view === 'script'}
+          onClick={() => switchView('script')}
+        >{t.hako.viewScript}</button>
       </div>
+
+      {view === 'script' && (
+        <Suspense fallback={<p className="hako-empty">…</p>}>
+          <ScriptEditor
+            key={outline.id}
+            outline={outline}
+            onApply={next => setWs(prev => upsertOutline(prev, next))}
+          />
+        </Suspense>
+      )}
 
       {view === 'notepad' && (
         <>

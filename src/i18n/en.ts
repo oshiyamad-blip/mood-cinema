@@ -87,6 +87,11 @@ export const en = {
     viewLabel: 'View',
     viewNotepad: 'Notepad',
     viewCards: 'Cards',
+    viewScript: 'Script',
+    scriptHashira: 'Slug',
+    scriptTogaki: 'Action',
+    scriptSerifu: 'Dialogue',
+    scriptHint: 'Enter for a new line, Tab toggles action⇄dialogue, Ctrl/⌘+1·2·3 sets slug · action · dialogue. Editing a slug also renames the plot box.',
     notepadPlaceholder:
       'Just write. One line is one box.\nPress Tab to nest a line inside the box above it.\n\ne.g.\nHero leaves home\n  Runs into an old friend at the station\n    The words he never said\nCity life begins',
     notepadHint: 'One line = one box. Indent (Tab) to nest it inside the box above.',

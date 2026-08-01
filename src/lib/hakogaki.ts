@@ -12,6 +12,13 @@ const WS_KEY = 'mc:hakogaki:ws';    // 新：複数作品ワークスペース
 
 export type StructureId = 'three-act' | 'kishotenketsu' | 'free';
 
+/** 脚本本文の 1 行（柱・ト書き・セリフ）。最上位の箱＝シーンに紐づく。 */
+export interface ScriptLine {
+  type: 'hashira' | 'togaki' | 'serifu';
+  speaker?: string;
+  text: string;
+}
+
 export interface Box {
   id: string;
   act: string;      // 所属する幕の ID（自由構成では ''）
@@ -19,6 +26,7 @@ export interface Box {
   body: string;     // 旧「内容メモ」。入れ子化以降は子の箱へ移すので通常は空
   at?: number;      // 逆ハコ：作品開始からの秒数（観ながら打刻したシーン開始位置）
   depth?: number;   // 入れ子の深さ。0＝いちばん外側。未設定は 0 とみなす
+  script?: ScriptLine[]; // 脚本ビューの本文（最上位の箱のみ持つ）
 }
 
 /** 入れ子の深さ（未設定は 0）。 */
