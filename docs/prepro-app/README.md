@@ -6,3 +6,4 @@ Instagramリール https://www.instagram.com/reel/Dd4IuJnIjV4/ で紹介され�
 1. `01-research.md` — 動画の内容、各アプリの日本語対応・機能・マネタイズ、日本の既存状況、リリース可否
 2. `02-evaluation.md` — 日本語で1本にまとめる価値と実現性、統合で生まれるシナジー機能
 3. `03-requirements.md` — 要件定義書（仮称 KOBAN）
+4. `04-basic-design.md` — 基本設計書（構成・データ・同期・アルゴリズム・画面・帳票）
