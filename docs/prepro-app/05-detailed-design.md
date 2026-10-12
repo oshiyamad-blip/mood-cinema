@@ -626,7 +626,7 @@ create table webhook_events (id text primary key, source text not null, received
 
 ### 9.1 共通
 
-PDF は @react-pdf/renderer で、Noto Sans JP の Regular と Bold を埋め込む。本文9pt、表の見出し8pt Bold、表題14pt Bold。余白は上下左右10mm。フッターに「版・出力日時・ページ番号」を入れ、無料プランはサービス名を加える。Excel は ExcelJS で、印刷設定（用紙・向き・幅に合わせる・見出し行の繰り返し）まで入れる。
+PDF は @react-pdf/renderer で、Noto Sans JP の Regular と Bold を埋め込む。本文9pt、表の見出し9pt Bold（印刷の最小字を9ptにそろえる。`06-ui-design.md` 第7章の提案を採用）、表題14pt Bold。余白は上下左右10mm。フッターに「版・出力日時・ページ番号」を入れ、無料プランはサービス名を加える。Excel は ExcelJS で、印刷設定（用紙・向き・幅に合わせる・見出し行の繰り返し）まで入れる。
 
 ### 9.2 日々スケ（PDF、A4横 297×210mm）
 
