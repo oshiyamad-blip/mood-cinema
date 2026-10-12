@@ -244,7 +244,10 @@ interface SceneElement {
 }
 interface Person { id: Id; projectId: Id; name: string; roleName?: string; kind: 'cast'|'extra'|'staff'; dept?: string; ngDates: { date: string; note?: string }[] }
 interface ShootDay { id: Id; projectId: Id; date: string; label: string; callMin?: number; wrapMin?: number; note?: string; sortKey: SortKey }
-interface ShootDayScene { id: Id; shootDayId: Id; sceneId: Id; part: string; sortKey: SortKey; fixedStartMin?: number }
+interface ShootDayScene { id: Id; shootDayId: Id; sceneId: Id; part: string; estShootMin?: number; sortKey: SortKey; fixedStartMin?: number }
+interface Category { id: Id; projectId: Id; key: string; label: string; kind: 'cast'|'extra'|'item'; color?: string; builtin: boolean; hidden: boolean; sortKey: SortKey }
+interface Location { id: Id; projectId: Id; name: string; address?: string; lat?: number; lng?: number; availableFromMin?: number; availableToMin?: number; origin?: string; note?: string }
+interface PersonContact { id: Id; projectId: Id; personId: Id; tel?: string; email?: string; lineId?: string; note?: string }
 ```
 
 ## 7. データ設計
@@ -414,7 +417,7 @@ create table koban.shares (                                -- 撮影日ごとに
   link_key_enc text not null,                              -- リンクの鍵を作品の鍵で暗号化したもの
   status text not null default 'active',                   -- active|revoked
   expires_at timestamptz not null, published_version int not null default 0, published_at timestamptz,
-  ref_map jsonb not null default '{}',                     -- 人物 ID → 閲覧用の参照 ID
+  ref_map_enc text not null,                               -- 人物 ID → 閲覧用の参照 ID の対応（作品の鍵で暗号化）
   /* 共通列 */
 );
 create table koban.share_publications (                    -- 配布した版の中身（差分の計算用）
@@ -440,13 +443,15 @@ create table koban.purged_rows (                           -- 物理削除の墓
 -- アカウント・制限・鍵
 create table koban.accounts (
   user_id uuid primary key references auth.users, plan text not null default 'beta',
-  created_at timestamptz not null default now(), deletion_requested_at timestamptz
+  created_at timestamptz not null default now(),
+  deletion_requested_at timestamptz, deletion_trashed_projects uuid[]   -- 退会の手続きでゴミ箱へ入れた作品（取り消しで戻す）
 );
 create table koban.plan_limits (plan text primary key, max_active_projects int, max_shoot_days int);
   -- free: 2, 5 ／ beta: 値は第16章（null は無制限）
 create table koban.account_keys (
   user_id uuid primary key references auth.users,
   recovery_envelope text not null,                         -- 復旧コードで包んだアカウントの鍵
+  previous_recovery_envelope text,                         -- 再発行の前の封筒（1世代だけ）
   public_key jsonb not null, private_key_enc text not null,-- 共有用の鍵の組（フェーズ2で使う。フェーズ1で作っておく）
   updated_at timestamptz not null default now()
 );
@@ -479,7 +484,7 @@ create table koban.daily_counts (date date, name text, dim text, count bigint, p
 
 ### 7.5 暗号化する列
 
-フェーズ1で暗号化するのは `script_versions.raw_text_enc`（取り込んだ全文）だけである。シーンの本文は全文と行範囲から切り出すので、別に持たない（`03` 第9章の Scene の本文は、この形で実現する）。配布の鍵 `shares.link_key_enc` と配布した中身 `share_publications.payload_enc` も作品の鍵で暗号化する。柱の見出し・人物・要素の名前・撮影日などの構造は暗号化しない。台帳の機能は本文が読めなくても動く。
+フェーズ1で暗号化するのは `script_versions.raw_text_enc`（取り込んだ全文）だけである。シーンの本文は全文と行範囲から切り出すので、別に持たない（`03` 第9章の Scene の本文は、この形で実現する）。配布の鍵 `shares.link_key_enc`、閲覧用の参照 ID と人物の対応 `shares.ref_map_enc`、配布した中身 `share_publications.payload_enc` も作品の鍵で暗号化する。柱の見出し・人物・要素の名前・撮影日などの構造は暗号化しない。台帳の機能は本文が読めなくても動く。
 
 連絡先は暗号化せず、権限で守る（閲覧者は読めない）。暗号化するかは未決事項とする（第27章）。改訂差分に使う `body_mac` は、平文のハッシュだと短い本文が総当たりで推測できるので、作品の鍵から導出した HMAC にする。
 
@@ -594,6 +599,7 @@ create table koban.daily_counts (date date, name text, dim text, count bigint, p
                                                別の端末か別の人の版を上書きしたなら、変わった列の旧値を row_history('overwritten') へ
   incoming.rev < 既存.rev                    → 適用せず row_history('rejected') へ。現行の行を返す → rejected
   無料枠を超える撮影日の追加・復元           → ゴミ箱に入れた状態で保存 → limited（第16章）
+  進行中の上限を超える作品の復元             → 保管の状態で戻す → limited（8.7）
 サーバーだけが決める列（updated_by、server_seq、deleted_at の時刻、作品のサーバー列）は常にサーバーが付ける
 ```
 
@@ -607,7 +613,7 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 |---|---|
 | `applied`・`duplicate` | その行の、送った `seq` 以下の送信待ちを消す |
 | `rejected` | 送った `seq` 以下の送信待ちを消し、送った版を `conflicts` に残す。端末の行の `rev` が送った版と同じときだけ、サーバーの現行版で上書きする。送信中に新しい編集があれば、それを残す（次の送信で改めて勝敗を決める） |
-| `limited` | サーバーの版（ゴミ箱に入った状態）を取り込み、通知する |
+| `limited` | サーバーで決まった状態（撮影日はゴミ箱に入った状態、作品は保管の状態）を取り込み、通知する |
 | `skew` | 時計を補正し（8.6）、未来の `rev` を持つ行を新しい `rev` で打ち直して送り直す |
 | `purged` | 端末の版を `conflicts` に移し、送信待ちを消す。利用者は新しい行として復元できる |
 | `error` | 送信待ちを残し、試行回数を増やす。5回失敗したら `conflicts`（同期できない項目）に移して再試行を止め、他の行の同期は続ける。`E_READ_ONLY` は試行回数に数えず、作品が進行中に戻るまで保留する |
@@ -620,7 +626,7 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 
 引き込み漏れが起きない理由は次のとおりで、どれか一つでも崩すと成り立たない。
 
-1. 同期対象の行への書き込み（`sync_push`、物理削除のジョブ、退会の処理）は、すべて最初に作品ごとの勧告ロック `pg_advisory_xact_lock` を取り、ロックを持ったまま `server_seq` を採番し、コミットでロックを放す。
+1. 同期対象の行への書き込み（`sync_push`、`create_project`、`set_project_active`、物理削除のジョブ、退会の処理）は、すべて最初に作品ごとの勧告ロック `pg_advisory_xact_lock` を取り、ロックを持ったまま `server_seq` を採番し、コミットでロックを放す。
 2. したがって同じ作品では、先にロックを取ったトランザクションの番号はすべて後のものより小さく、しかも後のものが番号を取る前にコミットしている。
 3. 引き込みのスナップショットに番号 s の行が見えるなら、s より小さい番号の行を書いたトランザクションはすべてコミット済みで、それらも見える。見える行は、作品ごとに番号の途切れない前半部分になる。
 4. 引き込みは1文なので、その前半部分を一度に読む。`next` を「返した最後の番号」にすれば、`limit` で切っても次の呼び出しで続きから読める。
@@ -653,7 +659,7 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 
 ### 8.9 役割の変更（フェーズ2）
 
-閲覧者から編集者へ上がったら、閲覧者には返していなかったテーブル（`person_contacts`、`share_publications`、`shares`）を `p_tables` を指定して番号0から取り直す。下がったら、それらのテーブルを端末から消す（その時点の未送信の変更は `conflicts` に移し、JSON で書き出せるようにする）。端末は `api.my_projects` が返す役割を `sync_state` に覚え、変わったときにこの処理を行う。フェーズ1は作成者だけなので起きないが、仕組みはフェーズ1で入れておく。
+閲覧者から編集者へ上がったら、閲覧者には返していなかったテーブル（`person_contacts`、`share_publications`、`shares`）を `p_tables` を指定して番号0から取り直す（取り直しは別のカーソルで最後まで読み、通常の `last_seq` は動かさない）。下がったら、それらのテーブルを端末から消す（その時点の未送信の変更は `conflicts` に移し、JSON で書き出せるようにする）。端末は `api.my_projects` が返す役割を `sync_state` に覚え、変わったときにこの処理を行う。フェーズ1は作成者だけなので起きないが、仕組みはフェーズ1で入れておく。
 
 ### 8.10 端末内の自動バックアップと版の履歴
 
@@ -701,7 +707,7 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 
 | 暗号化する（フェーズ1） | 暗号化しない |
 |---|---|
-| 改訂稿の全文、配布した中身、配布の鍵。フェーズ2で注釈、AI の下書きの入力 | 柱の見出し、話・シーン番号、時間帯・屋内外、ペラ・尺・撮影見積、要素と人物の名前、NG日、ロケ地、撮影日、日々スケの時刻とメモ、連絡先（権限で守る） |
+| 改訂稿の全文、配布した中身、配布の鍵、配布の参照 ID と人物の対応。フェーズ2で注釈、AI の下書きの入力 | 柱の見出し、話・シーン番号、時間帯・屋内外、ペラ・尺・撮影見積、要素と人物の名前、NG日、ロケ地、撮影日、日々スケの時刻とメモ、連絡先（権限で守る） |
 
 端末だけの作品（ログインしていない作品）は端末の外へ出ないので暗号化しない。端末のローカルDBとスナップショットは平文を持つ（端末は利用者の管理下にあり、検索と表示に要る）。JSON バックアップは本文を含めるのが既定で、「本文を含めない」も選べる。
 
@@ -871,7 +877,7 @@ URL のフラグメントはブラウザからサーバーへ送られないの�
 
 ### 11.3 閲覧者ごとの表示
 
-中身には、その日に関わる人物（キャスト・エキストラ・日々スケに載せるスタッフ）の一覧を、配布ごとに振った参照 ID（8字の乱数、`shares.ref_map`）つきで入れる。閲覧者が一度自分の名前を選ぶと、選択を閲覧者の端末に記憶し、以後は先頭に「あなたの入り 7:30・出番 S2、S5」を出す。スマホで読める組み（1段組、集合時刻を最大の字、表は縦に積む）を最優先にする。
+中身には、その日に関わる人物（キャスト・エキストラ・その日に出るスタッフ）の一覧を、配布ごとに振った参照 ID（8字の乱数）つきで入れる。参照 ID と人物の対応は `shares.ref_map_enc` に作品の鍵で暗号化して持つ。閲覧者が一度自分の名前を選ぶと、選択を閲覧者の端末に記憶し、以後は先頭に「あなたの入り 7:30・出番 S2、S5」を出す。スマホで読める組み（1段組、集合時刻を最大の字、表は縦に積む）を最優先にする。
 
 ### 11.4 確認
 
@@ -993,10 +999,10 @@ LLM：要素の候補を「名前・カテゴリ・根拠の行範囲」の形�
 ┌ 香盤 ──── [話:すべて▾][並び:話→台本順▾][列:人物▾ 🔍人物名][根拠の強調][書き出し▾] ┐
 │話│ #  │ 柱           │時│内│ペラ│見積│撮影日│太│花│父│母│店│…│衣│衣│小│小│…            │
 │ 1│ 1  │ 公園         │夜│外│1.5 │ 90 │1日目 │●│●│  │  │  │ │●│  │●│  │             │
-│ 1│ 2  │ 太郎の家・居間│朝│内│2.0 │120 │2日目 │●│  │●ᴴ│  │  │ │  │  │  │  │             │
+│ 1│ 2  │ 太郎の家・居間│朝│内│2.0 │120 │2日目 │●│  │●手│  │  │ │  │  │  │  │            │
 │ 1│ 3* │ 駅前         │夕│外│0.5 │ 30 │ ─    │  │●!│  │  │  │ │  │  │  │  │             │
 │ … 縦横とも仮想スクロール。固定列と見出し行は動かない。セル28px（タッチ端末は44px）       │
-└ * 改訂で変わったシーン ᴴ 手入力（台本の行の裏づけなし） ! 改訂で根拠を失った印 ─────────┘
+└ * 改訂で変わったシーン 手 手入力（台本の行の裏づけなし） ! 改訂で根拠を失った印 ─────────┘
 ```
 
 1,440px 幅の PC では、タブレール88px と固定列約452px を除いて、28px のセルの要素列が約31列、行が約23行見える（v0.1 の44px では約11列だった）。1,024px 幅でも約16列見える。柱の列は96px まで縮められる。表は WAI-ARIA の grid の作法で作り、タブ停止は表全体で1つ、矢印でセルを移り、スペースで印を切り替える。
@@ -1293,9 +1299,9 @@ GitHub Actions で、プルリクエストごとに型検査・単体テスト�
 | T16 複数タブ | 7.7 |
 | T17 課金のビューと Webhook | 第25章（課金はフェーズ2。方針のみ） |
 | T18 配布の鍵と IV | 11.2、11.8 |
-| T19 pdf.js の縦書き | 10.1、`05` 3.4.8 |
-| 軽微（4.3） | 独自 SMTP（2章、15章）、suncalc に正午（10.5）、@react-pdf の実測（14.2、24章）、履歴の膨らみ（8.8）、日々スケの欄ごとの行（7.3、10.6）、共有の端末（17章） |
-| 4.4 台本解析 | 10.1、`05` 3.4 |
+| T19 pdf.js の縦書き | 10.1、`05` 3.4.9 |
+| 軽微（`08` 4.3） | 独自 SMTP（2章、15章）、suncalc に正午（10.5）、@react-pdf の実測（14.2、24章）、履歴の膨らみ（8.8）、日々スケの欄ごとの行（7.3、10.6）、共有の端末（17章） |
+| 台本解析（`08` 4.4） | 10.1、`05` 3.4 |
 | C1 上書き履歴の90日削除 | 8.8、20章 |
 | C2 改名した列名 | 6.7（`_min` に統一）、`05` 全体 |
 | C3 時刻の正本が2か所 | 6.7 |

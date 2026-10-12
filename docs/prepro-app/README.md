@@ -11,3 +11,4 @@ Instagramリール https://www.instagram.com/reel/Dd4IuJnIjV4/ で紹介され�
 6. `06-ui-design.md` — UIデザイン仕様書（色・文字・余白・部品の状態・画面ごとの要点）。モックアップは https://claude.ai/artifact/YUcX4b6stykqjVZNryNkhN
 7. `07-improvement-proposals.md` — 改善提案12案（顧客の絞り込み、話数のデータモデル、Web先行・課金後ろ倒し、Excel取り込みの前倒しなど）
 8. `08-adversarial-review.md` — 敵対的レビュー報告（競合の出現、同期と権限の致命的な穴、香盤表の画面密度など。修正は未着手）
+9. `09-business-review.md` — ビジネス面の敵対的レビューと現場調査（端末はスマホが主役、フェーズ1から iPhone ネイティブを推奨、作る前の4週間の検証）
