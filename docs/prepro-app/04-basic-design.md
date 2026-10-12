@@ -393,6 +393,7 @@ create table koban.shoot_days (
 create table koban.shoot_day_scenes (                      -- 割り当て。id は決定的
   id uuid primary key, project_id uuid not null, shoot_day_id uuid not null, scene_id uuid not null,
   part text not null default '',                           -- '' は全体。分けて撮るときは「前半」「1/2」など
+  est_shoot_min int,                                       -- 部分撮影の見積。null ならシーンの撮影見積を割り当ての数で等分
   sort_key text collate "C" not null, fixed_start_min int, /* 共通列 */
 );
 create table koban.call_sheets (                           -- 撮影日ごとに1行。id は決定的
@@ -455,9 +456,10 @@ create table koban.project_keys (
   created_at timestamptz not null default now(), primary key (project_id, user_id, key_version)
 );
 create table koban.device_links (                          -- 端末間で鍵を渡す要求（9.3）
-  id uuid primary key, user_id uuid not null, label text not null, requester_pub jsonb not null,
-  responder_pub jsonb, envelope text, created_at timestamptz not null default now(),
-  expires_at timestamptz not null, answered_at timestamptz
+  id uuid primary key, user_id uuid not null, label text not null,
+  requester_commit text not null,                          -- 新しい端末の公開鍵の SHA-256（先に約束）
+  responder_pub jsonb, requester_pub jsonb, envelope text,  -- 既存の端末の公開鍵 → 新しい端末の公開鍵 → 封筒 の順に入る
+  created_at timestamptz not null default now(), expires_at timestamptz not null, completed_at timestamptz
 );
 create table koban.daily_counts (date date, name text, dim text, count bigint, primary key (date, name, dim));
 ```
@@ -492,8 +494,8 @@ create table koban.daily_counts (date date, name text, dim text, count bigint, p
 | テーブル・内部関数 | `koban` スキーマに置く。PostgREST の公開スキーマ（Supabase の API 設定）には入れない |
 | 公開する RPC | `api` スキーマに置き、公開スキーマは `api` だけにする（`public` は公開しない） |
 | 関数の実行権限 | Postgres は関数の実行権限を既定で PUBLIC に与え、Supabase は `anon`・`authenticated` にも既定で与える。マイグレーションの冒頭で既定の権限を取り消し（`alter default privileges ... revoke execute on functions from public` と、`anon`・`authenticated` からの取り消し）、各関数でも `revoke execute ... from public, anon, authenticated` を明示する。そのうえで、許可した `api` の関数だけに `grant execute ... to authenticated` を与える |
-| `security definer` | `api` の関数と、権限判定の `koban.member_role` だけ。すべて `set search_path = ''` とし、本文では `koban.scenes`・`auth.uid()` のように完全修飾で書く |
-| テーブルへの直接の読み書き | `anon`・`authenticated` からすべての権限を取り消す。読み書きは RPC だけで行う。RLS も有効にし、選択だけを `member_role` で許すポリシーを置く（多重の防御） |
+| `security definer` | `api` の関数だけ。内部関数（`koban.member_role` や生成した upsert）は `api` の関数の中から呼ばれ、その所有者の権限で動く。すべての関数を `set search_path = ''` とし、本文では `koban.scenes`・`auth.uid()` のように完全修飾で書く |
+| テーブルへの直接の読み書き | `koban` スキーマの使用権限と、全テーブルの権限を `anon`・`authenticated` から取り消す。読み書きは RPC だけで行う。RLS も全テーブルで有効にし、`anon`・`authenticated` 向けのポリシーは置かない（すべて拒否。権限の取り消しとの二重の防御） |
 | 監査 | CI で「`anon`・`authenticated` が実行できる関数」と「直接触れるテーブル」を問い合わせ、許可一覧と一致しなければ失敗させる（21章） |
 
 公開する RPC は次のとおり（引数と戻り値は `05` 第5章）。
@@ -508,7 +510,7 @@ create table koban.daily_counts (date date, name text, dim text, count bigint, p
 | `api.list_overwrites` | 上書き履歴の取得 | 作品の管理者・編集者 |
 | `api.share_authorize` | 配布 Worker からの権限照会 | 作品の管理者・編集者 |
 | `api.get_keys`・`api.put_account_keys`・`api.put_project_key` | 鍵の封筒の取得と登録 | 本人 |
-| `api.create_device_link`・`api.list_device_links`・`api.answer_device_link`・`api.get_device_link` | 端末間の鍵の受け渡し | 本人 |
+| `api.create_device_link`・`api.respond_device_link`・`api.reveal_device_link`・`api.complete_device_link`・`api.get_device_link`・`api.list_device_links` | 端末間の鍵の受け渡し | 本人 |
 | `api.request_account_deletion`・`api.cancel_account_deletion` | 退会と取り消し | 本人 |
 | `api.track` | 件数の計測 | ログインした人 |
 
@@ -578,10 +580,10 @@ create table koban.daily_counts (date date, name text, dim text, count bigint, p
 
 ```
 入口：呼び出し元が作品の管理者・編集者でなければ全体を拒否（E_FORBIDDEN）
-      作品が保管中・ゴミ箱なら全体を拒否（E_READ_ONLY）
       アプリのスキーマ版が最低版より古ければ全体を拒否（E_SCHEMA_TOO_OLD）
       作品ごとの勧告ロックを取る（8.5）
 各行について（行ごとに例外を捕まえ、1行の失敗で他の行を止めない）：
+  作品が保管中・ゴミ箱で、作品の行以外        → error（E_READ_ONLY。送信待ちは残し、進行中に戻ったら送る）
   表が許可一覧に無い／形式が不正             → error（E_BAD_TABLE／E_ROW_INVALID）
   rev の物理時刻がサーバー時刻＋5分より先    → skew（適用しない）
   墓標がある                                 → purged
@@ -608,7 +610,7 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 | `limited` | サーバーの版（ゴミ箱に入った状態）を取り込み、通知する |
 | `skew` | 時計を補正し（8.6）、未来の `rev` を持つ行を新しい `rev` で打ち直して送り直す |
 | `purged` | 端末の版を `conflicts` に移し、送信待ちを消す。利用者は新しい行として復元できる |
-| `error` | 送信待ちを残し、試行回数を増やす。5回失敗したら `conflicts`（同期できない項目）に移して再試行を止め、他の行の同期は続ける |
+| `error` | 送信待ちを残し、試行回数を増やす。5回失敗したら `conflicts`（同期できない項目）に移して再試行を止め、他の行の同期は続ける。`E_READ_ONLY` は試行回数に数えず、作品が進行中に戻るまで保留する |
 
 引き込んだ行は、`rev` が端末より新しいときだけ上書きする。等しいときは、サーバーだけが決める列（`deleted_at` の時刻、`updated_by`、`server_seq`）だけを取り込む。端末に未送信の変更がある行が負けたときは、端末の版を `conflicts` に残し、画面上部の通知「別の端末の変更で上書きされた項目が1件あります」から復元できるようにする。
 
@@ -707,9 +709,9 @@ v0.1 の判定にあった三つの致命的な穴は、次のように塞いだ
 
 | 場面 | 流れ |
 |---|---|
-| 初回ログイン | 端末でアカウントの鍵と復旧コードを作り、復旧コードから HKDF で導いた鍵でアカウントの鍵を暗号化してサーバーに置く。復旧コードを画面に出し、保管したことの確認（末尾4字の入力）を取る |
+| 初回ログイン | 端末でアカウントの鍵と復旧コードを作り、復旧コードから HKDF で導いた鍵でアカウントの鍵を暗号化してサーバーに置く。復旧コードを画面に出し、保管したことの確認（最後のまとまり5字の入力）を取る |
 | 作品を初めて同期する | 作品の鍵を作り、アカウントの鍵で暗号化して `project_keys` に置く |
-| 新しい端末（既存の端末がある） | 新しい端末が一時的な ECDH の公開鍵を `device_links` に登録する。既存の端末に「新しい端末からの要求」が出る。両方の画面に、二つの公開鍵から計算した6桁の確認番号を出し、一致を確かめてから承認する。既存の端末は ECDH で導いた鍵でアカウントの鍵を暗号化して返す。確認番号の照合は、運営者が公開鍵をすり替える攻撃を防ぐためである。要求は10分で失効する |
+| 新しい端末（既存の端末がある） | 新しい端末が一時的な ECDH の鍵の組を作り、公開鍵のハッシュ（先に約束だけ）を `device_links` に登録する。既存の端末に「新しい端末からの要求」が出て、既存の端末も一時的な鍵の組を作って公開鍵を返す。新しい端末はそのあとで自分の公開鍵を明かす（約束と照合する）。両方の画面に、二つの公開鍵から計算した6桁の確認番号を出し、一致を確かめてから既存の端末が承認し、ECDH で導いた鍵でアカウントの鍵を暗号化して返す。公開鍵を約束してから明かす順にするのは、運営者が公開鍵をすり替えたうえで確認番号をそろえる（6桁なら総当たりで足りる）攻撃を防ぐためである。要求は10分で失効する |
 | 新しい端末（既存の端末が無い） | 復旧コードを入れる |
 | 鍵が無いまま使う | 復旧コードも承認もせずに使い始められる。構造のデータはすべて使え、本文の欄に「この端末には本文の鍵がありません」と出る。改訂の取り込みは、新しい版の本文で行うので使えるが、旧版の本文を読めないため対応づけは見出しと番号だけで行う（10.3） |
 | 復旧コードの再発行 | 鍵を持つ端末で新しいコードを作り、封筒を差し替える。古いコードは無効になる |
@@ -808,7 +810,7 @@ ExcelJS で xlsx を、自前の読み取りで CSV（UTF-8／Shift_JIS）を読
 
 ### 10.5 総スケの見積と検査
 
-撮影見積は、シーンの `est_shoot_min` があればそれ、無ければ `round(ペラ × minPerPage)`。時間割は `call_min + prepMin` から始め、前のシーンとロケ地が変われば `moveMin` を足し、食事の時刻にかかれば休憩を入れ、`fixed_start_min` があればそこまで進める。最後のシーンの終了に `wrapBufferMin` を足したものを撤収見込みとする。編集のたびに、関わる撮影日だけを再計算する。結果は警告として出し、割り当て自体は止めない。
+撮影見積は、シーンの `est_shoot_min` があればそれ、無ければ `round(ペラ × minPerPage)`。部分撮影の割り当て（`part` が空でない）は、割り当ての `est_shoot_min` があればそれ、無ければシーンの見積をそのシーンの割り当ての数で等分する。時間割は `call_min + prepMin` から始め、前のシーンとロケ地が変われば `moveMin` を足し、食事の時刻にかかれば休憩を入れ、`fixed_start_min` があればそこまで進める。最後のシーンの終了に `wrapBufferMin` を足したものを撤収見込みとする。編集のたびに、関わる撮影日だけを再計算する。結果は警告として出し、割り当て自体は止めない。
 
 | 検査 | 内容 | 重さ | 要件 |
 |---|---|---|---|
@@ -1060,7 +1062,7 @@ LLM：要素の候補を「名前・カテゴリ・根拠の行範囲」の形�
 |---|---|---|---|---|
 | 香盤表 | PDF・Excel | A3横（既定）・A4横 | 表題・作品名・版・出力日。行＝シーン、列＝固定列＋選択カテゴリ。改ページで見出し行と固定列を繰り返す | F15-1、F15-2 |
 | 総スケ | PDF・Excel | A4横（既定）・A3横 | 撮影日ごとの見出し（日付・ロケ地・集合・撤収見込み・合計）とシーン行（番号・柱・時間帯・屋内外・ペラ・撮影見積・出演者） | F15-1 |
-| 日々スケ | PDF | A4横（既定）・スマホ幅（90×160mm の縦長） | 集合・場所・変更点・予定・出演者の入り・部署別の集合・食事・準備物・移動・注意事項・連絡先 | F15-1、F15-2 |
+| 日々スケ | PDF・Excel | A4横（既定）・スマホ幅（90×160mm の縦長。PDF のみ） | 集合・場所・変更点・予定・出演者の入り・部署別の集合・食事・準備物・移動・注意事項・連絡先 | F15-1、F15-2 |
 | 衣裳表 | PDF・Excel | A4縦 | 衣裳カテゴリの要素を持ち主ごとにまとめ、出るシーンと撮影日を並べる | F15-1 |
 | 小道具表 | PDF・Excel | A4縦 | 小道具・美術などの要素ごとに、出るシーンと撮影日 | F15-1 |
 | 人物別の出番表 | PDF・Excel | A4縦 | キャスト・エキストラごとに、出るシーンと撮影日、撮影日ごとの入り時間 | F15-1 |
