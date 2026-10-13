@@ -293,8 +293,12 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (line == null) return;
     // 期待発話時間（1.5秒+150ms/字）の2倍＋4秒。8〜30秒にクランプ。
     // 声に出す部分の長さで見積もる（（）内の演技指示は読まれない）。
-    final expected = 1500 + speechText(line.text).length * 150;
-    final budgetMs = (expected * 2 + 4000).clamp(8000, 30000);
+    final spoken = speechText(line.text).trim();
+    final expected = 1500 + spoken.length * 150;
+    // 声に出す部分が無い行（「（頷く）」「……」等）は聞き取りようがないので、
+    // 動作分のひと呼吸だけ置いて進める（8秒以上待たせない）。
+    final budgetMs =
+        spoken.isEmpty ? 1500 : (expected * 2 + 4000).clamp(8000, 30000);
     _handsFreeSafetyTimer = Timer(Duration(milliseconds: budgetMs), () {
       if (mounted &&
           _handsFree &&
@@ -418,10 +422,34 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (mounted) setState(() => _preparing = false);
   }
 
+  /// ハンズフリーを使えない状況（ブラウザ非対応・マイク拒否）で、
+  /// 「聞き取り中」のまま固まらないよう手動進行へ切り替える。
+  void _disableHandsFree(String message) {
+    if (!mounted || !_handsFree) return;
+    _handsFreeSafetyTimer?.cancel();
+    _recognizer.stop();
+    setState(() => _handsFree = false);
+    _snack(message);
+    if (_c.phase == RehearsalPhase.waitingForUser) {
+      _maybeStartAutoAdvance();
+      _startMyLineRecording(_c.currentLine);
+    }
+  }
+
   Future<void> _listenForMyLine() async {
+    // 声に出す部分が無い行は聞き取らない（安全ネットがひと呼吸で進める）。
+    if (speechText(_c.currentLine?.text ?? '').trim().isEmpty) return;
+    _recognizer.onError = (error, permanent) {
+      if (!SpeechRecognizer.isPermissionError(error)) return;
+      _disableHandsFree(kIsWeb
+          ? 'マイクがブロックされています。アドレスバーの鍵アイコンからマイクを「許可」にして、もう一度ONにしてください。'
+          : 'マイクの使用が許可されていません。端末の設定でホンヨミのマイクを許可してください。');
+    };
     final ok = await _recognizer.init();
     if (!ok) {
-      _snack('音声認識を利用できません。手動で進めてください。');
+      _disableHandsFree(kIsWeb
+          ? 'このブラウザは音声認識に対応していません（Chrome・Edge・Safari で使えます）。手動で進めます。'
+          : '音声認識を利用できません。手動で進めます。');
       return;
     }
     // OSの認識セッションは自動終了するため、自分の番が続く間は再開する
@@ -462,7 +490,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   /// 高精度認識（OSのクラウド認識）への切替を一度だけ提案する。
   void _maybeSuggestHighAccuracy() {
     final store = SettingsStore.instance;
-    if (_suggestedHighAccuracy ||
+    if (kIsWeb ||
+        _suggestedHighAccuracy ||
         _listenErrors < 3 ||
         store.settings.highAccuracyRecognition) {
       return;
@@ -561,7 +590,8 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   /// 練習完了 → リザルト画面へ差し替え遷移（戻るで台本詳細に戻れる）。
   Future<void> _goToResult() async {
     // 進捗の可視化用に1回分を記録（失敗しても遷移は続行）。
-    final stuckList = _recorder.stuckLines();
+    // 表示は上位5件までだが、スコア（仕上がり度）は全件で数える。
+    final stuckList = _recorder.stuckLines(max: 1 << 30);
     final myLines = _lines
         .where((l) => l.type == LineType.dialogue && l.speaker == s.myCharacter)
         .length;

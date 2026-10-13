@@ -76,6 +76,13 @@ class RehearsalController extends ChangeNotifier {
   bool _running = false;
   bool _disposed = false;
 
+  /// 進行ループの世代番号。一時停止・頭出し・再開のたびに進み、
+  /// 古いループ（間やTTSの await 中だったもの）が起きたときに
+  /// 「自分はもう無効」と判断して抜けるために使う。これが無いと
+  /// 一時停止→すぐ再生で2本のループが同じ行番号を進め、行が飛んだり
+  /// 読み上げが重なったりする。
+  int _runGen = 0;
+
   /// advanceMine 直後の再開時に「返しの間」を置くためのフラグ。
   bool _pendingReplyPause = false;
 
@@ -102,6 +109,8 @@ class RehearsalController extends ChangeNotifier {
   Future<void> run() async {
     if (_running) return;
     _running = true;
+    final gen = ++_runGen;
+    bool stale() => gen != _runGen || _disposed;
     _setPhase(RehearsalPhase.playing);
 
     while (_running && _index < _lines.length) {
@@ -133,6 +142,7 @@ class RehearsalController extends ChangeNotifier {
       }
       if (pause > Duration.zero) {
         await Future<void>.delayed(pause);
+        if (stale()) return; // 一時停止・再開で別ループに引き継がれた
         if (!_running) {
           _setPhase(RehearsalPhase.idle); // 間の途中で一時停止された
           return;
@@ -152,6 +162,7 @@ class RehearsalController extends ChangeNotifier {
         }
       }
 
+      if (stale()) return; // 古いループは行番号に触れず抜ける
       if (!_running) {
         _setPhase(RehearsalPhase.idle); // 途中で一時停止された
         return;
@@ -167,6 +178,7 @@ class RehearsalController extends ChangeNotifier {
   /// 一時停止。進行中の読み上げも止める。
   Future<void> pause() async {
     _running = false;
+    _runGen++; // 進行中のループを無効化
     _pendingReplyPause = false;
     await _speaker.stop();
     if (_phase != RehearsalPhase.finished) {

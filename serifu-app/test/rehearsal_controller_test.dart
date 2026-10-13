@@ -65,6 +65,8 @@ RehearsalController controller(
     );
 
 void main() {
+  group('一時停止と再開の競合', _pauseResumeRaceTests);
+
   test('メタ情報（表紙・登場人物表）は読み上げずに飛ばす', () async {
     final sp = FakeSpeaker();
     final c = controller([
@@ -481,5 +483,62 @@ void main() {
 
     await c.run();
     expect(phases, [RehearsalPhase.playing, RehearsalPhase.waitingForUser]);
+  });
+}
+
+/// 1行ごとに一定時間かかる読み上げ器（実TTSの所要時間の模擬）。
+class _SlowSpeaker implements RehearsalLineSpeaker {
+  _SlowSpeaker(this.each);
+  final Duration each;
+  final spokenIds = <String>[];
+
+  @override
+  Future<void> speakLine(Line line) async {
+    spokenIds.add(line.id);
+    await Future<void>.delayed(each);
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
+void _pauseResumeRaceTests() {
+  RehearsalController build(_SlowSpeaker sp) => RehearsalController(
+        lines: [
+          dialogue('l0', '花子', 'おはよう'),
+          dialogue('l1', '太郎', 'おはよう、花子'),
+          dialogue('l2', '花子', '今日は早いね'),
+          dialogue('l3', '花子', 'じゃあ行こう'),
+        ],
+        myCharacter: '太郎',
+        readDirections: true,
+        speaker: sp,
+        directionPause: Duration.zero,
+        replyPauseProvider: (_) => const Duration(milliseconds: 60),
+      );
+
+  test('返しの間の途中で一時停止→すぐ再生しても、行が重複・欠落しない', () async {
+    final sp = _SlowSpeaker(const Duration(milliseconds: 150));
+    final c = build(sp);
+    await c.run(); // l0 を読んで自分の番(l1)で待つ
+    unawaited(c.advanceMine()); // 返しの間(60ms)に入る
+    await c.pause(); // 間の途中で一時停止
+    unawaited(c.run()); // すぐ再開 → 新しいループ
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    expect(sp.spokenIds, ['l0', 'l2', 'l3']); // l2 が2回読まれない
+    expect(c.phase, RehearsalPhase.finished);
+  });
+
+  test('再開後に古いループが起きても最後まで到達した状態を壊さない', () async {
+    final sp = _SlowSpeaker(const Duration(milliseconds: 10));
+    final c = build(sp);
+    await c.run();
+    unawaited(c.advanceMine());
+    await c.pause();
+    await c.run(); // 新しいループが先に最後まで進む
+    await Future<void>.delayed(const Duration(milliseconds: 150)); // 古いループが起きる
+    expect(sp.spokenIds, ['l0', 'l2', 'l3']);
+    expect(c.phase, RehearsalPhase.finished); // idle に巻き戻らない
+    expect(c.atEnd, isTrue);
   });
 }
