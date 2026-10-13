@@ -1,66 +1,81 @@
 // 香盤表（B-1・B-3・A-4）。取り込んだ表の確認と小さな修正。印（出演・衣裳・小道具…）を付け外しする。
 
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ELEMENT_CATEGORIES, type ID, type IntExt, type Project, type Scene } from '../core/model';
+import { ELEMENT_CATEGORIES, type Element, type ID, type IntExt, type Person, type Project, type Scene } from '../core/model';
 import { assignedSceneIds, createScene, nameKey } from '../core/project';
 import { newId } from '../core/ids';
 import { projectStore } from '../store/projects';
 import { CellInput, NumInput } from '../ui/cells';
 import { Empty, useToast } from '../ui/ui';
 
+interface Actions {
+  update: (id: ID, patch: Partial<Scene>) => void;
+  toggleCast: (sceneId: ID, personId: ID) => void;
+  addElement: (sceneId: ID, category: string, name: string) => void;
+  setLocation: (sceneId: ID, name: string) => void;
+  archive: (s: Scene) => void;
+}
+
+function makeActions(pid: ID, onArchived: (s: Scene, undo: () => void) => void): Actions {
+  const mapScene = (id: ID, fn: (s: Scene) => Scene) =>
+    projectStore.update(pid, (q) => ({ ...q, scenes: q.scenes.map((s) => (s.id === id ? fn(s) : s)) }));
+  const update = (id: ID, patch: Partial<Scene>) => mapScene(id, (s) => ({ ...s, ...patch }));
+  return {
+    update,
+    toggleCast: (sceneId, personId) =>
+      mapScene(sceneId, (s) => ({ ...s, castIds: s.castIds.includes(personId) ? s.castIds.filter((x) => x !== personId) : [...s.castIds, personId] })),
+    addElement: (sceneId, category, name) => {
+      const n = name.trim();
+      if (!n) return;
+      projectStore.update(pid, (q) => {
+        let e = q.elements.find((x) => x.category === category && nameKey(x.name) === nameKey(n));
+        const elements = e ? q.elements : [...q.elements, (e = { id: newId(), category, name: n })];
+        return {
+          ...q,
+          elements,
+          scenes: q.scenes.map((x) => (x.id === sceneId && !x.elementIds.includes(e!.id) ? { ...x, elementIds: [...x.elementIds, e!.id] } : x)),
+        };
+      });
+    },
+    setLocation: (sceneId, name) => {
+      const n = name.trim();
+      projectStore.update(pid, (q) => {
+        if (!n) return { ...q, scenes: q.scenes.map((x) => (x.id === sceneId ? { ...x, locationId: null } : x)) };
+        let l = q.locations.find((x) => nameKey(x.name) === nameKey(n));
+        const locations = l ? q.locations : [...q.locations, (l = { id: newId(), name: n, address: '', meetingPoint: '', note: '' })];
+        return { ...q, locations, scenes: q.scenes.map((x) => (x.id === sceneId ? { ...x, locationId: l!.id } : x)) };
+      });
+    },
+    archive: (s) => {
+      projectStore.update(pid, (q) => ({
+        ...q,
+        scenes: q.scenes.map((x) => (x.id === s.id ? { ...x, archived: true } : x)),
+        days: q.days.map((d) => ({ ...d, items: d.items.filter((it) => !(it.kind === 'scene' && it.sceneId === s.id)) })),
+      }));
+      onArchived(s, () => update(s.id, { archived: false }));
+    },
+  };
+}
+
 export function KobanPage({ project: p }: { project: Project }) {
   const toast = useToast();
   const [elemCat, setElemCat] = useState(ELEMENT_CATEGORIES[0]);
   const scenes = p.scenes.filter((s) => !s.archived);
   const archived = p.scenes.filter((s) => s.archived);
-  const castCols = p.persons.filter((x) => x.kind !== 'staff');
-  const locById = new Map(p.locations.map((l) => [l.id, l]));
-  const elemById = new Map(p.elements.map((e) => [e.id, e]));
+  // 行を描き直すかどうかは参照で決めるので、作品の部分ごとに作り分ける
+  const castCols = useMemo(() => p.persons.filter((x) => x.kind !== 'staff'), [p.persons]);
+  const locById = useMemo(() => new Map(p.locations.map((l) => [l.id, l.name])), [p.locations]);
+  const elemById = useMemo(() => new Map(p.elements.map((e) => [e.id, e])), [p.elements]);
+  const actions = useMemo(
+    () => makeActions(p.id, (s, undo) => toast({ text: `S#${s.no} を消えたシーンに移しました`, action: { label: '元に戻す', run: undo } })),
+    [p.id, toast],
+  );
   const assigned = assignedSceneIds(p);
-
-  const updateScene = (id: ID, patch: Partial<Scene>) =>
-    projectStore.update(p.id, (q) => ({ ...q, scenes: q.scenes.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
-
-  const toggleCast = (s: Scene, pid: ID) =>
-    updateScene(s.id, { castIds: s.castIds.includes(pid) ? s.castIds.filter((x) => x !== pid) : [...s.castIds, pid] });
 
   function addScene() {
     const max = Math.max(0, ...scenes.map((s) => Number.parseInt(s.no, 10)).filter((n) => Number.isFinite(n)));
     projectStore.update(p.id, (q) => ({ ...q, scenes: [...q.scenes, createScene(String(max + 1))] }));
-  }
-
-  function addElement(s: Scene, name: string) {
-    const n = name.trim();
-    if (!n) return;
-    projectStore.update(p.id, (q) => {
-      let e = q.elements.find((x) => x.category === elemCat && nameKey(x.name) === nameKey(n));
-      const elements = e ? q.elements : [...q.elements, (e = { id: newId(), category: elemCat, name: n })];
-      return {
-        ...q,
-        elements,
-        scenes: q.scenes.map((x) => (x.id === s.id && !x.elementIds.includes(e!.id) ? { ...x, elementIds: [...x.elementIds, e!.id] } : x)),
-      };
-    });
-  }
-
-  function setLocation(s: Scene, name: string) {
-    const n = name.trim();
-    projectStore.update(p.id, (q) => {
-      if (!n) return { ...q, scenes: q.scenes.map((x) => (x.id === s.id ? { ...x, locationId: null } : x)) };
-      let l = q.locations.find((x) => nameKey(x.name) === nameKey(n));
-      const locations = l ? q.locations : [...q.locations, (l = { id: newId(), name: n, address: '', meetingPoint: '', note: '' })];
-      return { ...q, locations, scenes: q.scenes.map((x) => (x.id === s.id ? { ...x, locationId: l!.id } : x)) };
-    });
-  }
-
-  function archive(s: Scene) {
-    projectStore.update(p.id, (q) => ({
-      ...q,
-      scenes: q.scenes.map((x) => (x.id === s.id ? { ...x, archived: true } : x)),
-      days: q.days.map((d) => ({ ...d, items: d.items.filter((it) => !(it.kind === 'scene' && it.sceneId === s.id)) })),
-    }));
-    toast({ text: `S#${s.no} を消えたシーンに移しました`, action: { label: '元に戻す', run: () => updateScene(s.id, { archived: false }) } });
   }
 
   if (scenes.length === 0 && archived.length === 0) {
@@ -129,73 +144,15 @@ export function KobanPage({ project: p }: { project: Project }) {
           </thead>
           <tbody>
             {scenes.map((s) => (
-              <tr key={s.id}>
-                <td className="sticky-col" style={{ width: 64 }}>
-                  <CellInput value={s.no} label="シーン番号" onCommit={(v) => v.trim() && updateScene(s.id, { no: v.trim() })} />
-                </td>
-                <td style={{ minWidth: 160 }}>
-                  <CellInput value={s.heading} label={`S#${s.no} の柱`} onCommit={(v) => updateScene(s.id, { heading: v })} />
-                </td>
-                <td style={{ width: 70 }}>
-                  <CellInput value={s.timeOfDay} label={`S#${s.no} の時間帯`} onCommit={(v) => updateScene(s.id, { timeOfDay: v })} />
-                </td>
-                <td style={{ width: 70 }}>
-                  <select value={s.intExt} aria-label={`S#${s.no} の屋内外`} onChange={(e) => updateScene(s.id, { intExt: e.target.value as IntExt })}>
-                    <option value="">―</option>
-                    <option value="INT">内</option>
-                    <option value="EXT">外</option>
-                    <option value="INT/EXT">内外</option>
-                  </select>
-                </td>
-                <td style={{ width: 56 }}>
-                  <NumInput value={s.pages} label={`S#${s.no} のページ`} onCommit={(v) => updateScene(s.id, { pages: v })} />
-                </td>
-                <td style={{ width: 64 }}>
-                  <NumInput value={s.estMin} label={`S#${s.no} の撮影見積（分）`} placeholder="自動" onCommit={(v) => updateScene(s.id, { estMin: v })} />
-                </td>
-                <td style={{ minWidth: 120 }}>
-                  <LocInput value={s.locationId ? (locById.get(s.locationId)?.name ?? '') : ''} label={`S#${s.no} のロケ地`} onCommit={(v) => setLocation(s, v)} />
-                </td>
-                {castCols.map((x) => (
-                  <td key={x.id} className="mark-cell">
-                    <button
-                      type="button"
-                      className="mark"
-                      aria-pressed={s.castIds.includes(x.id)}
-                      aria-label={`S#${s.no} に ${x.name}`}
-                      onClick={() => toggleCast(s, x.id)}
-                    >
-                      {s.castIds.includes(x.id) ? '○' : ''}
-                    </button>
-                  </td>
-                ))}
-                <td style={{ minWidth: 200, whiteSpace: 'normal' }}>
-                  {s.elementIds.map((eid) => {
-                    const e = elemById.get(eid);
-                    if (!e) return null;
-                    return (
-                      <span key={eid} className="chip" title={e.category}>
-                        {e.name}
-                        <button type="button" aria-label={`${e.name} を外す`} onClick={() => updateScene(s.id, { elementIds: s.elementIds.filter((x) => x !== eid) })}>
-                          ×
-                        </button>
-                      </span>
-                    );
-                  })}
-                  <AddChip label={`S#${s.no} に${elemCat}を足す`} onAdd={(v) => addElement(s, v)} />
-                </td>
-                <td style={{ minWidth: 160 }}>
-                  <CellInput value={s.synopsis} label={`S#${s.no} の内容`} onCommit={(v) => updateScene(s.id, { synopsis: v })} />
-                </td>
-                <td style={{ minWidth: 120 }}>
-                  <CellInput value={s.note} label={`S#${s.no} の備考`} onCommit={(v) => updateScene(s.id, { note: v })} />
-                </td>
-                <td>
-                  <button type="button" className="btn-link" onClick={() => archive(s)}>
-                    外す
-                  </button>
-                </td>
-              </tr>
+              <SceneRow
+                key={s.id}
+                s={s}
+                castCols={castCols}
+                locName={s.locationId ? (locById.get(s.locationId) ?? '') : ''}
+                elemById={elemById}
+                elemCat={elemCat}
+                actions={actions}
+              />
             ))}
           </tbody>
         </table>
@@ -211,7 +168,7 @@ export function KobanPage({ project: p }: { project: Project }) {
               <li key={s.id} className="row">
                 <span className="num">S#{s.no}</span>
                 <span>{s.heading}</span>
-                <button type="button" className="btn btn-sm" onClick={() => updateScene(s.id, { archived: false })}>
+                <button type="button" className="btn btn-sm" onClick={() => actions.update(s.id, { archived: false })}>
                   戻す
                 </button>
               </li>
@@ -222,6 +179,85 @@ export function KobanPage({ project: p }: { project: Project }) {
     </>
   );
 }
+
+interface RowProps {
+  s: Scene;
+  castCols: Person[];
+  locName: string;
+  elemById: Map<ID, Element>;
+  elemCat: string;
+  actions: Actions;
+}
+
+const SceneRow = memo(function SceneRow({ s, castCols, locName, elemById, elemCat, actions }: RowProps) {
+  const { update } = actions;
+  return (
+    <tr>
+      <td className="sticky-col" style={{ width: 64 }}>
+        <CellInput value={s.no} label="シーン番号" onCommit={(v) => v.trim() && update(s.id, { no: v.trim() })} />
+      </td>
+      <td style={{ minWidth: 160 }}>
+        <CellInput value={s.heading} label={`S#${s.no} の柱`} onCommit={(v) => update(s.id, { heading: v })} />
+      </td>
+      <td style={{ width: 70 }}>
+        <CellInput value={s.timeOfDay} label={`S#${s.no} の時間帯`} onCommit={(v) => update(s.id, { timeOfDay: v })} />
+      </td>
+      <td style={{ width: 70 }}>
+        <select value={s.intExt} aria-label={`S#${s.no} の屋内外`} onChange={(e) => update(s.id, { intExt: e.target.value as IntExt })}>
+          <option value="">―</option>
+          <option value="INT">内</option>
+          <option value="EXT">外</option>
+          <option value="INT/EXT">内外</option>
+        </select>
+      </td>
+      <td style={{ width: 56 }}>
+        <NumInput value={s.pages} label={`S#${s.no} のページ`} onCommit={(v) => update(s.id, { pages: v })} />
+      </td>
+      <td style={{ width: 64 }}>
+        <NumInput value={s.estMin} label={`S#${s.no} の撮影見積（分）`} placeholder="自動" onCommit={(v) => update(s.id, { estMin: v })} />
+      </td>
+      <td style={{ minWidth: 120 }}>
+        <LocInput value={locName} label={`S#${s.no} のロケ地`} onCommit={(v) => actions.setLocation(s.id, v)} />
+      </td>
+      {castCols.map((x) => {
+        const on = s.castIds.includes(x.id);
+        return (
+          <td key={x.id} className="mark-cell">
+            <button type="button" className="mark" aria-pressed={on} aria-label={`S#${s.no} に ${x.name}`} onClick={() => actions.toggleCast(s.id, x.id)}>
+              {on ? '○' : ''}
+            </button>
+          </td>
+        );
+      })}
+      <td style={{ minWidth: 200, whiteSpace: 'normal' }}>
+        {s.elementIds.map((eid) => {
+          const e = elemById.get(eid);
+          if (!e) return null;
+          return (
+            <span key={eid} className="chip" title={e.category}>
+              {e.name}
+              <button type="button" aria-label={`${e.name} を外す`} onClick={() => update(s.id, { elementIds: s.elementIds.filter((x) => x !== eid) })}>
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <AddChip label={`S#${s.no} に${elemCat}を足す`} onAdd={(v) => actions.addElement(s.id, elemCat, v)} />
+      </td>
+      <td style={{ minWidth: 160 }}>
+        <CellInput value={s.synopsis} label={`S#${s.no} の内容`} onCommit={(v) => update(s.id, { synopsis: v })} />
+      </td>
+      <td style={{ minWidth: 120 }}>
+        <CellInput value={s.note} label={`S#${s.no} の備考`} onCommit={(v) => update(s.id, { note: v })} />
+      </td>
+      <td>
+        <button type="button" className="btn-link" onClick={() => actions.archive(s)}>
+          外す
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 function LocInput({ value, onCommit, label }: { value: string; onCommit: (v: string) => void; label: string }) {
   const [v, setV] = useState(value);
