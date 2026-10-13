@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/app_settings.dart';
+import 'safe_file.dart';
 import 'web_kv.dart';
 
 /// アプリ設定の保管庫。端末ローカル（JSON）に永続化する。
@@ -58,8 +59,8 @@ class SettingsStore extends ChangeNotifier {
       WebKv.write(_webKey, jsonEncode(_settings.toJson()));
       return;
     }
-    _file().then((f) => f.writeAsString(jsonEncode(_settings.toJson()))).catchError((_) {
-      return File('');
-    });
+    // 直列化＋原子的置き換え（スライダー操作で保存が連続しても壊れない）。
+    final json = jsonEncode(_settings.toJson());
+    _file().then((f) => SafeFile.write(f, json)).catchError((_) {});
   }
 }

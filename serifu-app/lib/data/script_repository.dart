@@ -16,6 +16,10 @@ class ScriptRepository extends ChangeNotifier {
   List<Script> get scripts => List.unmodifiable(_scripts);
   bool get loaded => _loaded;
 
+  /// 保存に失敗した回数（容量不足・ブラウザの保存無効など）。
+  /// 画面側はこれを監視して「保存できていない」ことを利用者に知らせる。
+  final ValueNotifier<int> saveFailures = ValueNotifier<int>(0);
+
   /// 起動時に1回呼ぶ。保存済みの台本を読み込む。
   Future<void> init() async {
     if (_loaded) return;
@@ -46,7 +50,9 @@ class ScriptRepository extends ChangeNotifier {
   }
 
   void _persist() {
-    // 失敗してもUIは止めない（容量不足・権限等のフォールバック）。
-    _store.save(List.of(_scripts)).catchError((_) {});
+    // 失敗してもUIは止めないが、黙って失わないよう通知する。
+    _store.save(List.of(_scripts)).catchError((_) {
+      saveFailures.value++;
+    });
   }
 }

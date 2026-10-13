@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
+import 'safe_file.dart';
 import 'web_kv.dart';
 
 /// 1回の練習の記録（進捗の可視化用・端末内のみ）。
@@ -72,6 +73,9 @@ class PracticeLog {
   static const _webKey = 'honyomi:practice_log.json';
   static const maxPerScript = 50;
 
+  /// 読み→変更→書きを直列化（ほぼ同時の追記・削除で片方が消えないように）。
+  static final SerialQueue _queue = SerialQueue();
+
   Future<File> _file() async =>
       File('${(await _baseDirProvider()).path}/practice_log.json');
 
@@ -105,31 +109,32 @@ class PracticeLog {
       if (kIsWeb) {
         WebKv.write(_webKey, raw);
       } else {
-        await (await _file()).writeAsString(raw);
+        await SafeFile.write(await _file(), raw);
       }
     } catch (_) {}
   }
 
   /// 練習1回分を追記する（古いものから間引いて上限を維持）。
-  Future<void> add(String scriptId, PracticeRecord record) async {
-    final all = await _loadAll();
-    final list = [...(all[scriptId] ?? const <PracticeRecord>[]), record];
-    if (list.length > maxPerScript) {
-      list.removeRange(0, list.length - maxPerScript);
-    }
-    all[scriptId] = list;
-    await _saveAll(all);
-  }
+  Future<void> add(String scriptId, PracticeRecord record) =>
+      _queue.run(() async {
+        final all = await _loadAll();
+        final list = [...(all[scriptId] ?? const <PracticeRecord>[]), record];
+        if (list.length > maxPerScript) {
+          list.removeRange(0, list.length - maxPerScript);
+        }
+        all[scriptId] = list;
+        await _saveAll(all);
+      });
 
   /// この台本の記録（古い順）。
   Future<List<PracticeRecord>> forScript(String scriptId) async =>
       (await _loadAll())[scriptId] ?? const [];
 
   /// 台本削除時に記録も消す。
-  Future<void> remove(String scriptId) async {
-    final all = await _loadAll();
-    if (all.remove(scriptId) != null) await _saveAll(all);
-  }
+  Future<void> remove(String scriptId) => _queue.run(() async {
+        final all = await _loadAll();
+        if (all.remove(scriptId) != null) await _saveAll(all);
+      });
 }
 
 /// 直近の通し稽古とその1つ前を返す（リザルトの「前回比」表示用）。

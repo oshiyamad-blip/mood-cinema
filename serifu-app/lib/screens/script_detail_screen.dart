@@ -36,6 +36,10 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
     _loadRecords();
   }
 
+  int get _myLineCount => s.lines
+      .where((l) => l.type == LineType.dialogue && l.speaker == s.myCharacter)
+      .length;
+
   Future<void> _loadRecords() async {
     final records = await PracticeLog().forScript(s.id);
     if (mounted && records.isNotEmpty) setState(() => _records = records);
@@ -334,18 +338,29 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
 
+          // 選んだ役にセリフが1つも無い（話者の解析ミス・追加しただけの役）。
+          if (s.myCharacter != null && _myLineCount == 0) ...[
+            Text(
+              '「${s.myCharacter}」のセリフが見つかりません。台本の内容で話者を確認してください'
+              '（このまま練習すると全員分を読み上げます）。',
+              style: AppText.caption.copyWith(color: AppColors.danger),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           // 練習開始：幅いっぱい。
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: s.myCharacter == null
                   ? null
-                  : () {
+                  : () async {
                       s.lastPracticedAt = DateTime.now();
                       ScriptRepository.instance.touch();
-                      Navigator.of(context).push(
+                      await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => RehearsalScreen(script: s)),
                       );
+                      // 練習から戻ったら「練習の記録」を最新にする。
+                      _loadRecords();
                     },
               icon: const Icon(Icons.play_arrow),
               label: Text(s.myCharacter == null ? 'まず自分の役を選んでください' : '練習開始'),

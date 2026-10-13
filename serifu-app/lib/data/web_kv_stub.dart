@@ -2,5 +2,7 @@
 class WebKv {
   WebKv._();
   static String? read(String key) => null;
-  static void write(String key, String value) {}
+
+  /// 保存できたら true。
+  static bool write(String key, String value) => true;
 }
