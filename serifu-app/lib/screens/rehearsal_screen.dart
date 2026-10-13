@@ -195,8 +195,18 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     });
   }
 
+  /// 練習画面が出した通知（ヒント等）を、画面を離れるときに片付けるため。
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
+  }
+
   @override
   void dispose() {
+    _messenger?.clearSnackBars();
     _c.removeListener(_onProgress);
     _c.dispose();
     _engine.dispose();
@@ -510,6 +520,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
         action: SnackBarAction(
           label: '切り替える',
           onPressed: () {
+            if (!mounted) return;
             store.update(
                 store.settings.copyWith(highAccuracyRecognition: true));
             if (_handsFree && _c.phase == RehearsalPhase.waitingForUser) {
@@ -616,6 +627,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     // 最後のセリフの余韻をひと呼吸だけ待つ。
     await Future<void>.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars(); // 練習中のヒントをリザルトに持ち越さない
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => ResultScreen(
@@ -792,7 +804,13 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
       SnackBar(
         duration: const Duration(seconds: 6),
         content: const Text('セリフを言うだけで進めたいときは、右上のマイクをONに'),
-        action: SnackBarAction(label: 'ONにする', onPressed: _toggleHandsFree),
+        // 画面を離れた後にこの通知が残っていても、破棄済みの画面を操作しない。
+        action: SnackBarAction(
+          label: 'ONにする',
+          onPressed: () {
+            if (mounted) _toggleHandsFree();
+          },
+        ),
       ),
     );
   }

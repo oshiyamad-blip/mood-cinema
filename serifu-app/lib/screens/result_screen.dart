@@ -121,7 +121,10 @@ class _ResultScreenState extends State<ResultScreen> {
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           const SizedBox(height: AppSpacing.md),
-          const Center(child: Text('🎭', style: TextStyle(fontSize: 56))),
+          // 絵文字はWeb版（canvaskit）でフォントが無いと豆腐（□）になるためアイコンで描く。
+          const Center(
+            child: Icon(Icons.theater_comedy, size: 56, color: AppColors.primary),
+          ),
           const SizedBox(height: AppSpacing.md),
           Center(
             child: Text(
