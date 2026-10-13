@@ -57,19 +57,30 @@ class DeviceSpeechEngine implements SpeechEngine {
     _initialized = true;
   }
 
+  /// ボイス一覧の読込待ちを一度済ませたか（Web）。
+  bool _voicesSettled = false;
+
   @override
   Future<List<TtsVoice>> voices(String languageCode) async {
     await _ensureInit();
     // ブラウザ（特にChrome）はボイス一覧を非同期に読み込むため、
-    // ページを開いた直後は空のことがある。少し待って取り直す。
-    for (var attempt = 0; attempt < (kIsWeb ? 8 : 1); attempt++) {
-      try {
-        final list = parseVoices(await _tts.getVoices, languageCode);
-        if (list.isNotEmpty) return list;
-      } catch (_) {}
-      if (kIsWeb) await Future<void>.delayed(const Duration(milliseconds: 250));
+    // ページを開いた直後は空のことがある。最初の1回だけ少し待って取り直す
+    // （日本語の声が無い環境で、毎行ここで待たされないように）。
+    final attempts = (kIsWeb && !_voicesSettled) ? 8 : 1;
+    try {
+      for (var attempt = 0; attempt < attempts; attempt++) {
+        try {
+          final list = parseVoices(await _tts.getVoices, languageCode);
+          if (list.isNotEmpty) return list;
+        } catch (_) {}
+        if (attempt + 1 < attempts) {
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+      }
+      return [];
+    } finally {
+      _voicesSettled = true;
     }
-    return [];
   }
 
   /// 「自動（性別から選択）」用：性別に合う最も高音質な端末ボイスを返す。
@@ -78,7 +89,8 @@ class DeviceSpeechEngine implements SpeechEngine {
     if (_autoVoiceCache.containsKey(gender)) return _autoVoiceCache[gender];
     final list = await voices(languageCode);
     final picked = pickAutoVoice(list, gender);
-    // 一覧が空（まだ読み込まれていない）なら結果を固定しない。
+    // 一覧が取れたら結果を固定する。空のときは固定しない（後で読み込まれたら
+    // 使えるように）が、待つのは初回だけなので毎行の遅延にはならない。
     if (list.isNotEmpty) _autoVoiceCache[gender] = picked?.id;
     return picked?.id;
   }
