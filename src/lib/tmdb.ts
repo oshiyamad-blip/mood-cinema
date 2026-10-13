@@ -1,5 +1,3 @@
-import type { DiscoverParams } from '../data/moodMapping';
-
 export interface TmdbMovie {
   id: number;
   title: string;
@@ -94,9 +92,34 @@ async function request<T>(path: string, query: Record<string, unknown>): Promise
   return json;
 }
 
-export async function discoverMovies(params: DiscoverParams): Promise<TmdbMovie[]> {
-  const data = await request<DiscoverResponse>('/discover/movie', params as Record<string, unknown>);
+/** タイトル検索（逆ハコで観る作品を選ぶのに使う）。 */
+export async function searchMovies(query: string, language = 'ja-JP'): Promise<TmdbMovie[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const data = await request<DiscoverResponse>('/search/movie', {
+    query: q,
+    language,
+    include_adult: false,
+  });
   return data.results;
+}
+
+interface MovieDetail {
+  id: number;
+  title: string;
+  runtime: number | null;
+  release_date: string;
+  poster_path: string | null;
+}
+
+/** 作品の尺（分）。取れなければ null（逆ハコは尺なしでも成立するので落とさない）。 */
+export async function getMovieRuntime(movieId: number, language = 'ja-JP'): Promise<number | null> {
+  try {
+    const data = await request<MovieDetail>(`/movie/${movieId}`, { language });
+    return typeof data.runtime === 'number' && data.runtime > 0 ? data.runtime : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface WatchProvider {

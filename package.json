@@ -1,5 +1,5 @@
 {
-  "name": "mood-cinema",
+  "name": "scene-studio",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,6 +10,13 @@
     "setup": "node scripts/setup.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-history": "^1.5.0",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.11",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.42.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.1.1"

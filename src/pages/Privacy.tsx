@@ -2,8 +2,8 @@ import { useSeo } from '../lib/seo';
 
 export default function Privacy() {
   useSeo({
-    title: 'プライバシーポリシー | mood-cinema',
-    description: 'mood-cinema のプライバシーポリシー。Cookie・Google Analytics・広告配信に関する取り扱いを明記しています。',
+    title: 'プライバシーポリシー | Tsumugi',
+    description: 'Tsumugi のプライバシーポリシー。Cookie・Google Analytics・広告配信に関する取り扱いを明記しています。',
   });
   return (
     <div className="container article">
@@ -11,11 +11,11 @@ export default function Privacy() {
       <div className="article__body">
         <h2>1. 取得する情報</h2>
         <p>
-          当サイト (mood-cinema、以下「当サイト」) は、利用者が当サイトを訪問・利用した際の以下の情報を、自動的または利用者の入力により取得することがあります。
+          当サイト (Tsumugi、以下「当サイト」) は、利用者が当サイトを訪問・利用した際の以下の情報を、自動的または利用者の入力により取得することがあります。
         </p>
         <ul>
           <li>アクセスログ (IP アドレス、ブラウザ種別、参照元 URL、訪問日時)</li>
-          <li>診断機能で入力された回答 (ブラウザ内 localStorage に保存されます。サーバには送信されません)</li>
+          <li>エディタ・逆ハコで書いた内容 (ブラウザ内 localStorage に保存されます。ログインして同期を有効にした場合のみ、暗号化された通信でクラウドにも保存されます)</li>
           <li>お問い合わせフォーム経由で送信された氏名・メールアドレス・本文</li>
         </ul>
 

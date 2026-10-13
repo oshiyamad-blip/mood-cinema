@@ -96,14 +96,9 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
     const defaultJsonLd: Record<string, unknown> = {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'mood-cinema',
+      name: 'Tsumugi',
       url: SITE_URL,
-      description: '気分で選ぶ映画レコメンド診断',
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/result?mood={mood}` },
-        'query-input': 'required name=mood',
-      },
+      description: '脚本を組み立てる編集卓',
     };
 
     setJsonLd(jsonLd ?? defaultJsonLd);
@@ -112,47 +107,4 @@ export function useSeo({ title, description, image, canonicalPath, noindex, json
       document.title = prevTitle;
     };
   }, [title, description, image, canonicalPath, jsonLd]);
-}
-
-export function buildArticleJsonLd(opts: {
-  title: string;
-  description: string;
-  slug: string;
-  publishedAt: string;
-  basePath?: string;
-}): Record<string, unknown> {
-  const base = opts.basePath ?? '/article';
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: opts.title,
-    description: opts.description,
-    url: `${SITE_URL}${base}/${opts.slug}`,
-    datePublished: opts.publishedAt,
-    dateModified: opts.publishedAt,
-    publisher: {
-      '@type': 'Organization',
-      name: 'mood-cinema',
-      url: SITE_URL,
-    },
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `${SITE_URL}${base}/${opts.slug}`,
-    },
-  };
-}
-
-export function buildBreadcrumbJsonLd(
-  items: { name: string; path: string }[],
-): Record<string, unknown> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: item.name,
-      item: SITE_URL + item.path,
-    })),
-  };
 }

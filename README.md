@@ -1,6 +1,12 @@
-# mood-cinema
+# Tsumugi
 
-気分で選ぶ映画レコメンド診断 PWA。React 19 + Vite + TypeScript。
+脚本開発をスムーズにする統合エディタ PWA（旧 **mood-cinema**）。React 19 + Vite + TypeScript。
+
+白い紙にただ書くメモ帳式のプロットエディタ（1 行＝1 箱、字下げで入れ子）と、
+映画を一時停止しながらシーンを打刻して構成を分解する「逆ハコ」。データはこの端末の
+localStorage が真実の源で、ログインすれば複数端末で同期できる。
+旧レコメンド機能（気分から映画を選ぶ）は 2026-07 に撤去済み。コンセプトの全体像は
+[`docs/tsumugi-concept.md`](docs/tsumugi-concept.md) を参照。
 
 ## セットアップ
 
