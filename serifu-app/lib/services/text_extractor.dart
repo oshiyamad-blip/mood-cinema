@@ -70,35 +70,68 @@ class TextExtractor {
 
   /// 抽出テキストが文字化けしているかの推定（純関数・テスト可能）。
   ///
-  /// 日本語（または英数）の台本を想定し、「妥当な文字」＝かな・漢字・ASCII・
-  /// 全角英数/半角カナ・和文約物 の割合が半分未満なら文字化けとみなす。
-  /// ToUnicode欠落のPDFはギリシャ文字・IPA・結合ダイアクリティカル等に化けるため、
-  /// この割合が極端に低くなる。短すぎるテキストは誤爆回避のため判定しない。
+  /// フォントに ToUnicode が無いPDFの化けは、ギリシャ文字・結合記号・
+  /// グジャラート文字・タミル文字…のように**無関係な文字体系が入り乱れる**。
+  /// 一方、正しい台本はどの言語でも1〜2種類の文字体系（日本語なら
+  /// かな・漢字、韓国語ならハングル＋漢字、ロシア語ならキリル）に集中する。
+  /// そこで次のいずれかなら化けとみなす：
+  /// - 上位2つの文字体系で文字の6割に満たない（体系が散らばっている）
+  /// - 結合用の記号（U+0300台）が文字の8%を超える
+  /// - 私用領域（PUA）の文字が文字の2割を超える
+  /// 記号・数字・英字・空白は判定に使わない。短すぎる文は判定しない。
   static bool looksGarbled(String text) {
-    var expected = 0;
-    var total = 0;
+    final counts = <String, int>{};
+    var letters = 0, combining = 0, privateUse = 0;
     for (final r in text.runes) {
-      // 空白類はカウントしない。
-      if (r == 0x20 || r == 0x09 || r == 0x0A || r == 0x0D || r == 0x3000) {
-        continue;
-      }
-      total++;
-      if (_isPlausibleScriptChar(r)) expected++;
+      if (_isNeutralChar(r)) continue;
+      letters++;
+      if (r >= 0x0300 && r <= 0x036F) combining++;
+      if (r >= 0xE000 && r <= 0xF8FF) privateUse++;
+      final bucket = _scriptBucket(r);
+      counts[bucket] = (counts[bucket] ?? 0) + 1;
     }
-    if (total < 16) return false; // 短文は判定しない
-    return expected / total < 0.5;
+    if (letters < 16) return false;
+    if (combining > letters * 0.08) return true;
+    if (privateUse > letters * 0.2) return true;
+    final sorted = counts.values.toList()..sort((a, b) => b.compareTo(a));
+    final top2 = sorted.take(2).fold<int>(0, (a, b) => a + b);
+    return top2 < letters * 0.6;
   }
 
-  static bool _isPlausibleScriptChar(int r) {
-    return (r >= 0x3040 && r <= 0x30FF) || // ひらがな・カタカナ
-        (r >= 0x4E00 && r <= 0x9FFF) || // CJK統合漢字
-        (r >= 0x3400 && r <= 0x4DBF) || // CJK拡張A
-        (r >= 0xFF00 && r <= 0xFFEF) || // 全角英数・半角カナ
-        (r >= 0x20 && r <= 0x7E) || // ASCII
-        (r >= 0x3000 && r <= 0x303F) || // 和文約物（、。「」（）等）
-        r == 0x2026 || // …
-        r == 0x2015 || r == 0x2014 || r == 0x2212 || // ―—−
-        r == 0x25CB || r == 0x25EF || r == 0x3007; // ○◯〇
+  /// 文字体系の判定に使わない文字（空白・ASCII・約物・記号類）。
+  static bool _isNeutralChar(int r) {
+    return r <= 0xBF || // ASCII・Latin-1 の記号
+        (r >= 0x2000 && r <= 0x2BFF) || // 一般句読点・矢印・図形・★♪等
+        (r >= 0x3000 && r <= 0x303F) || // 和文約物（、。「」〜）
+        (r >= 0xFE00 && r <= 0xFE6F) || // 異体字セレクタ・縦書き用約物
+        (r >= 0xFF00 && r <= 0xFF65) || // 全角英数・全角記号
+        (r >= 0x1F000 && r <= 0x1FAFF); // 絵文字
+  }
+
+  /// 文字の属する文字体系（おおまかな分類）。
+  static String _scriptBucket(int r) {
+    if ((r >= 0x3040 && r <= 0x30FF) || // かな
+        (r >= 0x31F0 && r <= 0x31FF) ||
+        (r >= 0xFF66 && r <= 0xFF9F) || // 半角カナ
+        (r >= 0x3400 && r <= 0x4DBF) || // 漢字
+        (r >= 0x4E00 && r <= 0x9FFF) ||
+        (r >= 0xF900 && r <= 0xFAFF) ||
+        r >= 0x20000) {
+      return 'cjk';
+    }
+    if ((r >= 0x1100 && r <= 0x11FF) ||
+        (r >= 0x3130 && r <= 0x318F) ||
+        (r >= 0xAC00 && r <= 0xD7AF)) {
+      return 'hangul';
+    }
+    if ((r >= 0x00C0 && r <= 0x024F) || (r >= 0x1E00 && r <= 0x1EFF)) {
+      return 'latin';
+    }
+    if (r >= 0x0300 && r <= 0x036F) return 'combining';
+    if (r >= 0x0370 && r <= 0x03FF) return 'greek';
+    if (r >= 0x0400 && r <= 0x052F) return 'cyrillic';
+    if (r >= 0xE000 && r <= 0xF8FF) return 'private';
+    return 'block${r >> 7}'; // その他は128字ごとの区画で数える
   }
 
   /// テキスト埋込PDFからの抽出（純Dart・全プラットフォーム共通）。
