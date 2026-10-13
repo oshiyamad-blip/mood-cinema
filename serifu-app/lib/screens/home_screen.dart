@@ -46,6 +46,53 @@ class _HomeScreenState extends State<HomeScreen> {
         SpeechRecognizer().init();
       });
     }
+    _repo.saveFailures.addListener(_onSaveFailed);
+  }
+
+  @override
+  void dispose() {
+    _repo.saveFailures.removeListener(_onSaveFailed);
+    super.dispose();
+  }
+
+  /// 保存に失敗したら知らせる（黙っているとリロード後に台本が消えて見える）。
+  void _onSaveFailed() {
+    if (!mounted) return;
+    _snack(kIsWeb
+        ? 'ブラウザに保存できませんでした（保存容量の不足・プライベートブラウズ等）。'
+            'このままページを閉じると台本が消えます。'
+        : '台本を保存できませんでした。端末の空き容量をご確認ください。');
+  }
+
+  /// 削除は取り消せないので確認する（通し録音・練習の記録も一緒に消える）。
+  Future<void> _confirmDelete(Script s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('台本を削除しますか？'),
+        content: Text(
+          '「${s.title}」を削除します。通し録音と練習の記録も一緒に消え、'
+          '元に戻せません。'
+          '\n\n残しておきたい場合は、先に台本の画面から書き出してください。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('削除する'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    _repo.remove(s.id);
+    ReadThroughStore().deleteAll(s.id); // 通し録音も一緒に消す
+    PracticeLog().remove(s.id); // 練習記録も一緒に消す
+    _snack('「${s.title}」を削除しました');
   }
 
   Future<void> _import() async {
@@ -56,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: FileType.custom,
         allowedExtensions: const [
           'honyomi', // ホンヨミ形式（書き出した台本の読み込み）
+          'json', // Web版で書き出した台本（.honyomi.json）
           'pdf',
           'docx',
           'txt',
@@ -74,7 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (picked == null) return;
 
       // ホンヨミ形式（書き出した台本）はそのまま復元（解析不要）。
-      if (picked.name.toLowerCase().endsWith('.${ScriptTransfer.fileExtension}')) {
+      final lowerName = picked.name.toLowerCase();
+      if (lowerName.endsWith('.${ScriptTransfer.fileExtension}') ||
+          lowerName.endsWith('.json')) {
         final String content;
         if (kIsWeb) {
           final bytes = picked.bytes;
@@ -136,6 +186,9 @@ class _HomeScreenState extends State<HomeScreen> {
         await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => ScriptEditScreen(script: script)),
         );
+        // 確認画面での修正（話者・種別・本文）を保存する。ここで保存しないと、
+        // 役を選ばずに戻ってアプリを閉じた場合に修正が失われる。
+        _repo.touch();
         if (mounted) {
           await Navigator.of(context).push(
             MaterialPageRoute(
@@ -241,11 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                       builder: (_) => ScriptDetailScreen(script: s)),
                 ),
-                onDelete: () {
-                  _repo.remove(s.id);
-                  ReadThroughStore().deleteAll(s.id); // 通し録音も一緒に消す
-                  PracticeLog().remove(s.id); // 練習記録も一緒に消す
-                },
+                onDelete: () => _confirmDelete(s),
               );
             },
           );
@@ -427,6 +476,7 @@ class _ScriptCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: AppColors.ink300),
+                tooltip: '台本を削除',
                 onPressed: onDelete,
               ),
             ],

@@ -38,16 +38,22 @@
     その状態で Flutter を起動するとロケール解決が
     「Incorrect locale information provided」で失敗し、画面が真っ白になる。
     Flutter を読み込む前に、各言語タグから @修飾子(@posix等)や .エンコーディングを
-    取り除いて正規化し、正しい形が1つも無ければ 'ja' を補って回避する。
+    取り除き、Intl.Locale で検証して正しい形だけを残す。1つも無ければ 'ja'。
     通常のブラウザ（ja-JP / en-US 等）はそのまま素通しするので影響しない。
   -->
   <script>
     (function () {
       try {
+        // Flutter の起動時ロケール解決は、ブラウザの Intl.Locale が受け付けない
+        // 言語タグで失敗する。各タグを正規化し、Intl.Locale で検証して残す。
         var clean = function (v) {
           if (!v) return '';
-          v = String(v).split('@')[0].split('.')[0].trim(); // @posix / .UTF-8 を除去
-          return /^[A-Za-z0-9-]+$/.test(v) ? v : '';         // BCP-47らしい形のみ採用
+          v = String(v).replace(/_/g, '-').split('@')[0].split('.')[0].trim(); // en_US.UTF-8@posix → en-US
+          if (!/^[A-Za-z0-9-]+$/.test(v)) return '';
+          if (typeof Intl !== 'undefined' && Intl.Locale) {
+            try { return new Intl.Locale(v).toString(); } catch (e) { return ''; }
+          }
+          return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(v) ? v : '';
         };
         var src = (navigator.languages && navigator.languages.length)
           ? navigator.languages : [navigator.language];
@@ -60,6 +66,13 @@
         Object.defineProperty(navigator, 'languages', { get: function () { return cleaned; }, configurable: true });
         Object.defineProperty(navigator, 'language', { get: function () { return cleaned[0]; }, configurable: true });
       } catch (e) { /* 失敗しても通常のブラウザには影響しない */ }
+      // 台本はこのブラウザ内（localStorage）だけに保存されるため、
+      // ブラウザの自動削除の対象になりにくいよう永続化を要求しておく（任意・失敗可）。
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().catch(function () {});
+        }
+      } catch (e) {}
     })();
   </script>
 </head>

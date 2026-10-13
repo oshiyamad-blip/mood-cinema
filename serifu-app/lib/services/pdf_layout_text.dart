@@ -123,6 +123,19 @@ class PdfLayoutText {
         bandEnd = math.max(bandEnd, g.y + g.height);
       }
     }
+    // 「役名␣␣セリフ」形式では、全列の役名の後ろに同じ高さの空きができて
+    // 段のように見える。本物の段組はどの段も何文字分も続くので、
+    // 低い段（文字セル6個分未満）が1つでもあれば分けずに1段として扱う。
+    if (bands.length > 1) {
+      for (final band in bands) {
+        var top = double.infinity, bottom = double.negativeInfinity;
+        for (final g in band) {
+          top = math.min(top, g.y);
+          bottom = math.max(bottom, g.y + g.height);
+        }
+        if (bottom - top < cell * 6) return [items];
+      }
+    }
     return bands;
   }
 
@@ -210,6 +223,29 @@ class PdfLayoutText {
         colEnd = math.max(colEnd, g.x + g.width);
       }
     }
+    // 本物の段組（左右2段）は、どの段もページ上部から並行して始まり、
+    // 複数行あり、行幅も広い（最終ページの短い段でもこれは満たす）。
+    // 中央寄せの見出し（1行・ページ途中から始まる）や、タブで揃えた
+    // 役名の列（幅が狭い）を段と誤認すると順序が崩れるので、
+    // 1つでも当てはまらない段があれば分けずに1段として扱う。
+    if (columns.length > 1) {
+      var pageTop = double.infinity;
+      for (final g in items) {
+        pageTop = math.min(pageTop, g.y);
+      }
+      for (final col in columns) {
+        final rows = <int>{for (final g in col) (g.y / (cell * 0.6)).round()};
+        var widest = 0.0, top = double.infinity;
+        for (final g in col) {
+          widest = math.max(widest, g.width);
+          top = math.min(top, g.y);
+        }
+        final startsNearTop = top - pageTop <= cell * 8;
+        if (rows.length < 2 || widest < cell * 6 || !startsNearTop) {
+          return [items];
+        }
+      }
+    }
     return columns;
   }
 
@@ -239,9 +275,25 @@ class PdfLayoutText {
         if (gap > pitch * 1.8) lines.add('');
       }
       final row = rows[i]..sort((a, b) => a.x.compareTo(b.x));
-      lines.add(row.map((g) => g.text.trim()).join());
+      lines.add(_joinRow(row));
     }
     return lines;
+  }
+
+  /// 行内のランを左から連結する。文字1つ分以上の横の空き（タブ揃えの
+  /// 「役名　セリフ」等）は全角空白で残す（空白区切り形式の解析に必要）。
+  static String _joinRow(List<GlyphRun> row) {
+    final buf = StringBuffer();
+    for (var i = 0; i < row.length; i++) {
+      if (i > 0) {
+        final prev = row[i - 1];
+        final gap = row[i].x - (prev.x + prev.width);
+        final cell = math.max(prev.height, row[i].height);
+        if (cell > 0 && gap > cell * 1.0) buf.write('　');
+      }
+      buf.write(row[i].text.trim());
+    }
+    return buf.toString();
   }
 
   /// 全ページで繰り返される定型行（ヘッダー/フッター）を除去。

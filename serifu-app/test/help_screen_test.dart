@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,5 +59,14 @@ void main() {
     expect(HelpScreen.mailTemplate, contains('ご利用端末'));
     expect(HelpScreen.mailTemplate, contains('OSバージョン'));
     expect(HelpScreen.mailTemplate, contains('お困りの内容'));
+  });
+
+  test('ヘルプのバージョン表記が pubspec.yaml の version と一致する（問い合わせの版ずれ防止）', () {
+    final pub = File('pubspec.yaml').readAsStringSync();
+    final v = RegExp(r'^version:\s*([0-9.]+)', multiLine: true)
+        .firstMatch(pub)!
+        .group(1);
+    expect(HelpScreen.appVersion, v,
+        reason: 'pubspec.yaml の version を変えたら HelpScreen.appVersion も更新すること');
   });
 }

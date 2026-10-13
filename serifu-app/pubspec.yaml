@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # 標準ウィジェットの文言（戻る・コピー/貼り付け等）を日本語にする
+  flutter_localizations:
+    sdk: flutter
 
   # 端末内蔵TTS（無料・オフライン・男女ボイス・速度/ピッチ調整）
   flutter_tts: ^4.2.0
@@ -52,6 +55,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   record: ^7.1.1
   share_plus: ^12.0.2
+  charset: ^2.0.1
+
+# flutter_localizations（SDK）は intl 0.20.2 固定だが、syncfusion_flutter_pdf 27.x は
+# intl <0.20 を宣言している。syncfusion が使う intl の API は 0.20 でも変わらない
+# （ビルド・PDF取り込みのテストで確認）ため、intl だけ揃える。
+# syncfusion を intl 0.20 対応版へ上げたら削除すること。
+dependency_overrides:
+  intl: 0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -84,11 +95,12 @@ flutter:
   # 日本語フォントを同梱（端末差による中華風グリフ/フォールバック崩れを防ぐ）
   # Noto Sans JP (SIL OFL 1.1, assets/fonts/OFL.txt)
   fonts:
+    # Noto Sans JP（OFL）を Windows-31J(cp932) の文字＋記号類にサブセット化して同梱
+    # （1書体5.3MB→2.5MB。Web版の初回読込を軽くするため。収録外の珍しい字は
+    # 端末/ブラウザのフォントで表示される）。作り方は assets/fonts/README.md。
     - family: NotoSansJP
       fonts:
         - asset: assets/fonts/NotoSansJP-Regular.ttf
           weight: 400
-        - asset: assets/fonts/NotoSansJP-Medium.ttf
-          weight: 500
         - asset: assets/fonts/NotoSansJP-Bold.ttf
           weight: 700

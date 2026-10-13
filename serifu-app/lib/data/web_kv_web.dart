@@ -1,6 +1,6 @@
 import 'package:web/web.dart' as web;
 
-/// Web実装：localStorage を使う（容量超過・プライベートモードでは静かに諦める）。
+/// Web実装：localStorage を使う。
 class WebKv {
   WebKv._();
 
@@ -12,11 +12,14 @@ class WebKv {
     }
   }
 
-  static void write(String key, String value) {
+  /// 保存できたら true。容量超過・プライベートモード・ストレージ無効では false
+  /// （呼び出し側が「保存できていない」ことをユーザーに伝えられるように）。
+  static bool write(String key, String value) {
     try {
       web.window.localStorage.setItem(key, value);
+      return true;
     } catch (_) {
-      // 容量不足等 → 保存なしで続行（メモリのみ）。
+      return false;
     }
   }
 }

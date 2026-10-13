@@ -23,10 +23,25 @@ class AdsService {
   static Future<void> init() async {
     try {
       // まず同意情報を更新し、必要なら同意フォームを表示する（EEA等）。
+      // フォームの回答がタイムアウト後になっても、閉じた時点で改めて
+      // _startAdsIfAllowed が呼ばれる（初回セッションで広告が出ないままにしない）。
       await _gatherConsent();
+      await _startAdsIfAllowed();
+    } catch (_) {
+      // SDK初期化や同意取得に失敗 → 広告なしで続行（アプリは通常動作）。
+    }
+  }
+
+  static bool _starting = false;
+
+  /// 同意状況を確認し、広告を要求してよければSDKを初期化してバナーを解禁する。
+  /// 何度呼んでも初期化は1回だけ（同意フォームを閉じたとき・同意の変更時にも呼ぶ）。
+  static Future<void> _startAdsIfAllowed() async {
+    if (adsReady.value || _starting) return;
+    _starting = true;
+    try {
       // 同意取得の結果、広告を要求できないなら広告なしで続行。
       if (!await ConsentInformation.instance.canRequestAds()) return;
-
       // 審査・ポリシー対応：
       // - 広告コンテンツは全年齢向け（G）に制限
       // - 子ども向けアプリではない（対象年齢は一般）
@@ -40,7 +55,9 @@ class AdsService {
       await MobileAds.instance.initialize();
       adsReady.value = true;
     } catch (_) {
-      // SDK初期化や同意取得に失敗 → 広告なしで続行（アプリは通常動作）。
+      // 広告なしで続行。
+    } finally {
+      _starting = false;
     }
   }
 
@@ -60,7 +77,11 @@ class AdsService {
         () async {
           // 更新成功 → 必要なら同意フォームを表示（不要地域は即完了）。
           try {
-            await ConsentForm.loadAndShowConsentFormIfRequired((_) => done());
+            await ConsentForm.loadAndShowConsentFormIfRequired((_) {
+              done();
+              // タイムアウト後に回答された場合もここで広告を開始する。
+              _startAdsIfAllowed();
+            });
           } catch (_) {
             done();
           }
@@ -90,7 +111,10 @@ class AdsService {
   /// 同意の選択をやり直すフォームを表示する（設定画面から呼ぶ）。
   static Future<void> showPrivacyOptions() async {
     try {
-      await ConsentForm.showPrivacyOptionsForm((_) {});
+      await ConsentForm.showPrivacyOptionsForm((_) {
+        // 同意に変更された場合に備えて確認し直す。
+        _startAdsIfAllowed();
+      });
     } catch (_) {
       // 表示に失敗しても致命的ではない。
     }
@@ -129,6 +153,10 @@ class _AdBannerState extends State<AdBanner> with RouteAware {
   BannerAd? _ad;
   bool _loaded = false;
 
+  /// ホームが最前面か。上に画面（練習など）が積まれている間は false。
+  /// 同意完了（adsReady）が練習中に届いても、裏でバナーをロードしない。
+  bool _isTop = true;
+
   @override
   void initState() {
     super.initState();
@@ -138,7 +166,7 @@ class _AdBannerState extends State<AdBanner> with RouteAware {
   }
 
   void _onAdsReadyChanged() {
-    if (AdsService.adsReady.value && _ad == null && mounted) _load();
+    if (AdsService.adsReady.value && _ad == null && mounted && _isTop) _load();
   }
 
   @override
@@ -151,14 +179,20 @@ class _AdBannerState extends State<AdBanner> with RouteAware {
 
   // 他の画面がこの画面の上にプッシュされた（練習開始など）→ 広告を破棄。
   @override
-  void didPushNext() => _disposeAd();
+  void didPushNext() {
+    _isTop = false;
+    _disposeAd();
+  }
 
   // 上の画面が閉じてホームに戻ってきた → 改めてロード。
   @override
-  void didPopNext() => _load();
+  void didPopNext() {
+    _isTop = true;
+    _load();
+  }
 
   Future<void> _load() async {
-    if (_ad != null) return;
+    if (_ad != null || !_isTop) return;
     // 同意取得が済んでいなければ広告を要求しない（済み次第 _onAdsReadyChanged で再試行）。
     if (!AdsService.adsReady.value) return;
     try {

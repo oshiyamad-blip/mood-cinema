@@ -109,16 +109,23 @@ class RuleBasedParser {
           // 人物表のあとに続くことがある（ワークショップ審査台本など）。
           // 近くに柱（〇シーン等）があればそこまでを表紙に含める。
           // 柱が無い台本（人物表の直後に本文が始まる形）は従来どおり。
+          // ただし、同じ役名が行頭に2回目に現れたら本文のセリフが始まっている
+          // （1回目は人物表の項目「太郎：高校生」、2回目は「太郎：ただいま」）。
+          // その場合は柱まで延ばさない（コロン・空白区切り・戯曲形式の本文を
+          // 表紙として読み飛ばさないため）。
+          final seenSpeakers = <String>{};
           for (var j = i + 1;
               j < rawLines.length && j <= i + _castLookahead;
               j++) {
             final u = rawLines[j].trim();
-            if (u.isEmpty) continue;
+            if (u.isEmpty || _pageNumber.hasMatch(u)) continue;
             if (_bracketForm.hasMatch(u)) break; // セリフ開始 → 本編
             if (_scenePillar.hasMatch(u)) {
               coverUntil = j;
               break;
             }
+            final who = _leadingSpeaker(u);
+            if (who != null && !seenSpeakers.add(who)) break;
           }
           break;
         }
@@ -417,6 +424,20 @@ class RuleBasedParser {
     return ParsedScript(
         characters: speaking.isEmpty ? characters : speaking, lines: lines);
   }
+
+  /// 行頭の役名らしき語（コロン形式・空白区切り・役名だけの行）。無ければ null。
+  String? _leadingSpeaker(String u) {
+    final c = _colonForm.firstMatch(u);
+    if (c != null) return _cleanName(c.group(1)!);
+    final sp = _spaceForm.firstMatch(u);
+    if (sp != null) return _cleanName(sp.group(1)!);
+    if (_nameOnly.hasMatch(u)) return _cleanName(u);
+    return null;
+  }
+
+  /// 役名だけの行（戯曲形式の話者行・人物表の名前だけの項目）。
+  static final RegExp _nameOnly =
+      RegExp(r'^[^\s　「『（(）)：:、。，．！？!?…‥]{1,10}$');
 
   /// 文末記号で終わっているか（折返し判定用）。
   bool _endsSentence(String t) =>

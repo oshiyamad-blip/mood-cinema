@@ -24,6 +24,10 @@ if [ -n "$(git status --porcelain)" ]; then
   echo "!! 作業ツリーに未コミットの変更があります。コミット/退避してから実行してください。"
   exit 1
 fi
+if ! git subtree --help >/dev/null 2>&1; then
+  echo "!! git subtree が使えません（git-subtree を含む git をインストールしてください）。"
+  exit 1
+fi
 if [ -e "$OUT" ]; then
   echo "!! 出力先が既に存在します: $OUT （別の場所を指定するか削除してください）"
   exit 1
@@ -50,6 +54,9 @@ transform() {
   # ブランチを main 化 ④参照するワークフロー名 serifu-app.yml → ci.yml。
   perl -0pe 's/\n[ \t]*defaults:\n[ \t]*run:\n[ \t]*working-directory: serifu-app//g' "$1" \
     | sed -e 's#\.github/workflows/serifu-app\.yml#.github/workflows/ci.yml#g' \
+          -e 's#\.github/workflows/serifu-web\.yml#.github/workflows/pages.yml#g' \
+          -e 's#\.github/workflows/serifu-play\.yml#.github/workflows/play.yml#g' \
+          -e 's#\.github/workflows/serifu-testflight\.yml#.github/workflows/testflight.yml#g' \
           -e 's#serifu-app/##g' \
           -e "s#claude/actor-dialogue-practice-app-t6wxsn#main#g" \
     > ".github/workflows/$2"
@@ -88,7 +95,7 @@ cat > CLAUDE.md <<'MD'
 - 変更後は `flutter analyze` と `flutter test` を通すこと。
 - ストア提出前は `bash scripts/preflight.sh`。
 - リリース全体の順路は `docs/16-go-live.md`。
-- ユーザー向け文言・コメントの既定言語は日本語。新規UI文言は ja/en 両方に追加。
+- ユーザー向け文言・コメントの既定言語は日本語（UIは日本語のみ）。
 MD
 
 git add -A

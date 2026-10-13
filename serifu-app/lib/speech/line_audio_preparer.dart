@@ -9,6 +9,7 @@ import 'auto_voice.dart';
 import 'device_speech_engine.dart';
 import 'speech_engine.dart';
 import 'speech_text.dart';
+import 'tts_lock.dart';
 
 /// 事前合成済み音声の参照（lineId → 音声ファイルパス）。
 class PreparedAudio {
@@ -30,6 +31,10 @@ class LineAudioPreparer {
   final String languageCode;
 
   final FlutterTts _tts = FlutterTts();
+
+  /// 画面を離れたら中断する（後片付け後に一時ファイルを書き続けないため）。
+  bool _cancelled = false;
+  void cancel() => _cancelled = true;
 
   Future<PreparedAudio> prepare(
     List<Line> lines, {
@@ -75,32 +80,43 @@ class LineAudioPreparer {
           pickAutoVoice(deviceVoices!, gender)?.id;
     }
 
+    final shared =
+        await autoVoiceFor(Gender.female) == await autoVoiceFor(Gender.male);
+
     for (final line in targets) {
+      if (_cancelled) break;
       final profile =
           line.type == LineType.direction ? narrator : voiceFor(line.speaker ?? '');
-      await _tts.setSpeechRate(DeviceSpeechEngine.mapRate(profile.rate));
-      await _tts.setPitch(profile.pitch.clamp(0.5, 2.0));
       // 声：明示指定があればそれを、無ければ性別に合う高音質ボイスを自動選択。
-      final voiceId = (profile.voiceId != null && profile.voiceId!.isNotEmpty)
-          ? profile.voiceId
-          : await autoVoiceFor(profile.gender);
-      if (voiceId != null && voiceId.isNotEmpty) {
-        await _tts.setVoice({'name': voiceId, 'locale': languageCode});
-      }
-
+      final explicit = profile.voiceId != null && profile.voiceId!.isNotEmpty;
+      final voiceId = explicit ? profile.voiceId : await autoVoiceFor(profile.gender);
       final fullPath = '${dir.path}/line_${line.id}.$ext';
-      try {
-        // （）内は演技指示なので声に出さない。
-        final result =
-            await _tts.synthesizeToFile(speechText(line.text), fullPath, true);
-        if (result == 1 && await File(fullPath).exists()) {
-          map[line.id] = fullPath;
-          // 準備完了した行から順次使えるように通知（バックグラウンド準備用）。
-          onLineReady?.call(line.id, fullPath);
+      final text = speechText(line.text);
+      // 合成が中断されて完了通知が来ない（Androidで再生側の停止に巻き込まれる等）
+      // 場合でもロックを手放せるよう、行の長さに応じた上限時間を設ける。
+      final limit = Duration(
+          milliseconds: (4000 + text.length * 200).clamp(4000, 20000));
+      await TtsLock.run(() async {
+        if (_cancelled) return;
+        await _tts.setSpeechRate(DeviceSpeechEngine.mapRate(profile.rate));
+        await _tts.setPitch(DeviceSpeechEngine.effectivePitch(profile,
+            shared: !explicit && shared));
+        if (voiceId != null && voiceId.isNotEmpty) {
+          await _tts.setVoice({'name': voiceId, 'locale': languageCode});
         }
-      } catch (_) {
-        // 未対応プラットフォーム → 再生側でライブ合成にフォールバック。
-      }
+        try {
+          // （）内は演技指示なので声に出さない。
+          final result =
+              await _tts.synthesizeToFile(text, fullPath, true).timeout(limit);
+          if (result == 1 && await File(fullPath).exists() && !_cancelled) {
+            map[line.id] = fullPath;
+            // 準備完了した行から順次使えるように通知（バックグラウンド準備用）。
+            onLineReady?.call(line.id, fullPath);
+          }
+        } catch (_) {
+          // 未対応プラットフォーム・中断・時間切れ → 再生側でライブ合成。
+        }
+      });
 
       done++;
       onProgress?.call(done, targets.length);
@@ -110,6 +126,7 @@ class LineAudioPreparer {
   }
 
   Future<void> dispose() async {
+    _cancelled = true;
     await _tts.stop();
   }
 }

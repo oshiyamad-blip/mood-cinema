@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:charset/charset.dart' show shiftJis;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serifu_app/services/text_extractor.dart';
 
@@ -31,6 +34,31 @@ void main() {
     test('記号・数字混じりの正常テキストは化けと判定しない', () {
       const mixed = '第2場　カフェ（夕）\nA子「1時に来てね、じゃあまた。」';
       expect(TextExtractor.looksGarbled(mixed), isFalse);
+    });
+  });
+
+  group('テキストファイルの文字コード判別', () {
+    const text = 'ハルカ「雨、やんだね」\nケンタ「帰ろう。送るよ」';
+    test('UTF-8', () => expect(TextExtractor.decodeText(utf8.encode(text)), text));
+    test('UTF-8（BOM付き）', () {
+      expect(TextExtractor.decodeText([0xEF, 0xBB, 0xBF, ...utf8.encode(text)]), text);
+    });
+    test('Shift_JIS（古いメモ帳等）を化けずに読む', () {
+      expect(TextExtractor.decodeText(shiftJis.encode(text)), text);
+    });
+    test('Windows拡張文字（髙=FB FC）を含む Shift_JIS も、その字以外は正しく読む', () {
+      final bytes = [...shiftJis.encode('ケンタ「'), 0xFB, 0xFC, ...shiftJis.encode('橋さん」')];
+      final decoded = TextExtractor.decodeText(bytes);
+      expect(decoded, startsWith('ケンタ「'));
+      expect(decoded, endsWith('橋さん」'));
+      expect(TextExtractor.looksGarbled(decoded), isFalse);
+    });
+    test('UTF-16LE（BOM付き・メモ帳の「Unicode」保存）', () {
+      final bytes = <int>[0xFF, 0xFE];
+      for (final u in text.codeUnits) {
+        bytes..add(u & 0xFF)..add(u >> 8);
+      }
+      expect(TextExtractor.decodeText(bytes), text);
     });
   });
 }
