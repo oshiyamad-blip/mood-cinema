@@ -1,0 +1,12 @@
+{
+  "name": "honyomi-e2e",
+  "private": true,
+  "type": "module",
+  "description": "ホンヨミ Web版の総合E2Eテスト（Playwright）",
+  "scripts": {
+    "test": "node full.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
+}
