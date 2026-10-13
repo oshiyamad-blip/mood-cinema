@@ -30,7 +30,12 @@ export function diffDocs(prev: CallSheetDoc | null, next: CallSheetDoc): DocChan
   if (prev.wrapPlan !== next.wrapPlan) {
     out.push({ kind: 'wrap', text: `撤収予定 ${formatTime(prev.wrapPlan) || '未定'} → ${formatTime(next.wrapPlan) || '未定'}`, personIds: null });
   }
-  const locKey = (d: CallSheetDoc) => d.locations.map((l) => `${l.name}\u0000${l.address}\u0000${l.meetingPoint}`).join('\u0001');
+  // 場所は並びではなく中身で比べる（撮影順を入れ替えただけで「場所が変わった」にしない）
+  const locKey = (d: CallSheetDoc) =>
+    d.locations
+      .map((l) => `${l.name}\u0000${l.address}\u0000${l.meetingPoint}`)
+      .sort()
+      .join('\u0001');
   if (locKey(prev) !== locKey(next)) {
     const names = (d: CallSheetDoc) => d.locations.map((l) => l.name).join('・') || '未定';
     out.push({ kind: 'location', text: `場所・集合場所 ${names(prev)} → ${names(next)}`, personIds: null });
@@ -186,15 +191,25 @@ function meetingLine(doc: CallSheetDoc): string {
   return l.meetingPoint ? `${l.meetingPoint}（${l.name}）` : l.name;
 }
 
-export function lineText(doc: CallSheetDoc, versionN: number, url: string, person: Person | null, resend = false): string {
-  const head = `${resend ? '【差し替え】' : ''}【${doc.projectTitle}】${formatDateLong(doc.date)} 日々スケ${versionN > 1 ? `（第${versionN}版）` : ''}`;
+/** first：はじめて配る。changed：差し替え（再配布）。remind：まだ確認していない人への催促 */
+export type LineKind = 'first' | 'changed' | 'remind';
+
+export function lineText(doc: CallSheetDoc, versionN: number, url: string, person: Person | null, kind: LineKind = 'first'): string {
+  const tag = kind === 'changed' ? '【差し替え】' : kind === 'remind' ? '【確認のお願い】' : '';
+  const head = `${tag}【${doc.projectTitle}】${formatDateLong(doc.date)} 日々スケ${versionN > 1 ? `（第${versionN}版）` : ''}`;
   const lines = [head];
   lines.push(`集合 ${formatTime(doc.generalCall)}${meetingLine(doc) ? ` ${meetingLine(doc)}` : ''}`);
   if (person) {
     const me = personalSummary(doc, person.id);
     if (me?.call != null) lines.push(`${person.name}さんの入り ${formatTime(me.call)}`);
   }
-  lines.push(resend ? '内容が変わりました。開いて「確認しました」を押してください。' : '開いて「確認しました」を押してください。');
+  lines.push(
+    kind === 'changed'
+      ? '内容が変わりました。開いて「確認しました」を押してください。'
+      : kind === 'remind'
+        ? 'まだ確認が届いていません。開いて「確認しました」を押してください。'
+        : '開いて「確認しました」を押してください。',
+  );
   lines.push(url);
   return lines.join('\n');
 }

@@ -286,7 +286,7 @@ function ShareDay({ p, dayId }: { p: Project; dayId: ID }) {
           <h2>グループ用の文面と PDF</h2>
           <p className="muted">サービスが止まっても、この文面と日々スケの PDF で手作業の配布に戻れます（この端末に保存した最新の版から作ります）。</p>
           <LineBox
-            text={lineText(latest.doc, latest.n, groupShare ? viewUrl(origin, groupShare.token) : '（PDF を添付してください）', null, latest.n > 1)}
+            text={lineText(latest.doc, latest.n, groupShare ? viewUrl(origin, groupShare.token) : '（PDF を添付してください）', null, latest.n > 1 ? 'changed' : 'first')}
           />
           <Link to={`/p/${p.id}/days/${dayId}`} className="btn btn-sm">
             日々スケを開いて印刷・PDF
@@ -306,7 +306,7 @@ function ShareRow({ r, p, origin, onRevoke }: { r: AckRow; p: Project; origin: s
   const latest = latestVersion(p, r.share.dayId)!;
   const person = r.person as Person;
   const url = viewUrl(origin, r.share.token);
-  const text = lineText(latest.doc, latest.n, url, person, r.state === 'stale');
+  const text = lineText(latest.doc, latest.n, url, person, r.state === 'stale' ? 'changed' : r.state === 'none' && r.share.createdAt < Date.now() - 3600000 ? 'remind' : 'first');
   return (
     <tr>
       <td>
@@ -355,11 +355,16 @@ function ResendPanel({ p, rows, affected, origin, versionN }: { p: Project; rows
   const toast = useToast();
   const latest = latestVersion(p, rows[0].share.dayId)!;
   const [picked, setPicked] = useState<Set<ID>>(() => new Set(rows.map((r) => r.share.id)));
-  const texts = rows.filter((r) => picked.has(r.share.id)).map((r) => ({ r, text: lineText(latest.doc, versionN, viewUrl(origin, (r.share as Share).token), r.person, true) }));
+  const kindOf = (r: AckRow) => (versionN > 1 && (affected.has(r.person!.id) || r.state === 'stale') ? 'changed' : 'remind');
+  const texts = rows
+    .filter((r) => picked.has(r.share.id))
+    .map((r) => ({ r, text: lineText(latest.doc, versionN, viewUrl(origin, (r.share as Share).token), r.person, kindOf(r)) }));
   return (
     <section className="panel" aria-label="再送">
-      <h2>再送する人（{picked.size}）</h2>
-      <p className="muted">第{versionN}版で予定が変わった人と、まだ確認していない人です。一人ずつ LINE で送れます。</p>
+      <h2>{versionN > 1 ? `再送する人（${picked.size}）` : `確認を催促する人（${picked.size}）`}</h2>
+      <p className="muted">
+        {versionN > 1 ? `第${versionN}版で予定が変わった人と、まだ確認していない人です。` : 'まだ確認していない人です。'}一人ずつ LINE で送れます。
+      </p>
       <ul className="issues">
         {rows.map((r) => (
           <li key={r.share.id}>
@@ -376,26 +381,25 @@ function ResendPanel({ p, rows, affected, origin, versionN }: { p: Project; rows
               />
               {r.person!.name}
               <span className="muted">
-                {affected.has(r.person!.id) ? '予定が変わった' : ''}
-                {affected.has(r.person!.id) && r.state !== 'acked' ? '・' : ''}
-                {r.state !== 'acked' ? ACK_LABEL[r.state] : ''}
+                {[versionN > 1 && affected.has(r.person!.id) ? '予定が変わった' : '', r.state !== 'acked' ? ACK_LABEL[r.state] : ''].filter(Boolean).join('・')}
               </span>
             </label>
           </li>
         ))}
       </ul>
       {texts.map(({ r, text }) => (
-        <div key={r.share.id} style={{ marginTop: 8 }}>
-          <div className="row">
-            <strong>{r.person!.name}</strong>
-            <a className="btn btn-sm" href={`https://line.me/R/share?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
-              LINEで送る
-            </a>
-            <button type="button" className="btn btn-sm" onClick={async () => toast({ text: (await copyText(text)) ? '文面を写しました' : '写せませんでした' })}>
-              文面を写す
-            </button>
-          </div>
-          <pre className="line-text">{text}</pre>
+        <div key={r.share.id} className="row" style={{ marginTop: 6 }}>
+          <strong style={{ minWidth: '6em' }}>{r.person!.name}</strong>
+          <a className="btn btn-sm" href={`https://line.me/R/share?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+            LINEで送る
+          </a>
+          <button type="button" className="btn btn-sm" onClick={async () => toast({ text: (await copyText(text)) ? '文面を写しました' : '写せませんでした' })}>
+            文面を写す
+          </button>
+          <details style={{ flexBasis: '100%' }}>
+            <summary className="muted">文面を見る</summary>
+            <pre className="line-text">{text}</pre>
+          </details>
         </div>
       ))}
     </section>

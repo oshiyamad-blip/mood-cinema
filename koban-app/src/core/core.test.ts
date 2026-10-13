@@ -157,6 +157,7 @@ describe('日々スケと配布', () => {
     const aff = affectedPersonIds(before, after, ch);
     expect(aff.has(tanaka.id)).toBe(true);
     expect(aff.has(sato.id)).toBe(true); // S#1 の開始が動いた
+    expect(ch.some((c) => c.kind === 'location')).toBe(false);
     // 何も変えなければ差分なし
     expect(diffDocs(before, buildCallSheet(p, p.days[0]))).toEqual([]);
   });
@@ -179,10 +180,12 @@ describe('日々スケと配布', () => {
     const p = scheduled();
     const doc = buildCallSheet(p, p.days[0]);
     const tanaka = p.persons.find((x) => x.name === '田中')!;
-    const t = lineText(doc, 2, 'https://x/v/#tok', tanaka, true);
+    const t = lineText(doc, 2, 'https://x/v/#tok', tanaka, 'changed');
     expect(t).toContain('【差し替え】【テスト】2026年10月20日（火） 日々スケ（第2版）');
     expect(t).toContain('田中さんの入り 7:00');
     expect(t.endsWith('https://x/v/#tok')).toBe(true);
+    expect(lineText(doc, 1, 'u', tanaka, 'remind')).toMatch(/^【確認のお願い】/);
+    expect(lineText(doc, 1, 'u', null)).not.toContain('さんの入り');
   });
 
   it('確認の集計', () => {
@@ -202,3 +205,26 @@ describe('日々スケと配布', () => {
 function emptyOv() {
   return { personCall: {}, deptCall: {}, meals: '', moves: '', notices: '', deptNotes: {}, weather: '' };
 }
+
+describe('見本の香盤表', () => {
+  it('取り込み、撮影順の入れ替えでは場所の変化を出さない', async () => {
+    const fs = await import('node:fs');
+    const text = fs.readFileSync(new URL('../../public/koban-template.csv', import.meta.url), 'utf8');
+    const grid = parseDelimited(text);
+    const m = guessMapping(grid, null);
+    let p = applyImport(createProject('見本', 'drama'), buildDraft(grid, m), m);
+    expect(p.scenes).toHaveLength(4);
+    expect(p.locations.map((l) => l.name)).toEqual(['〇〇駅', '喫茶ひかり', 'スタジオA']);
+    const day = createDay('2026-10-20');
+    p = { ...p, days: [day] };
+    for (const no of ['1', '2', '4']) p = moveSceneToDay(p, p.scenes.find((s) => s.no === no)!.id, day.id);
+    const before = buildCallSheet(p, p.days[0]);
+    const swapped = { ...p, days: [{ ...p.days[0], items: [p.days[0].items[1], p.days[0].items[0], p.days[0].items[2]] }] };
+    const after = buildCallSheet(swapped, swapped.days[0]);
+    expect(before.locations.map((l) => l.name)).toEqual(['〇〇駅', '喫茶ひかり']);
+    expect(after.locations.map((l) => l.name)).toEqual(['喫茶ひかり', '〇〇駅']);
+    const ch = diffDocs(before, after);
+    expect(ch.some((c) => c.kind === 'location')).toBe(false);
+    expect(ch.some((c) => c.kind === 'order')).toBe(true);
+  });
+});

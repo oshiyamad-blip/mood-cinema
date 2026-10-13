@@ -106,7 +106,25 @@ do $$ begin
 exception when sqlstate 'P0001' then
   if sqlerrm like '2本目%' then raise; end if;
 end $$;
-select public.koban_plan();
+-- 課金の関数は利用者からは呼べない
+do $$ begin
+  begin perform public.koban_admin_set_company(auth.uid(), now() + interval '1 year');
+    raise exception '利用者が会社プランを自分に付けられた';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+-- service_role が会社プランを付けると、無料枠の制限が外れる
+set role service_role;
+select public.koban_admin_set_company('00000000-0000-0000-0000-00000000000a', now() + interval '1 month');
+reset role;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+do $$ begin
+  perform public.koban_publish('66666666-6666-6666-6666-666666666666', gen_random_uuid(), jsonb_build_array(jsonb_build_object(
+    'id', gen_random_uuid(), 'token_hash', encode(sha256(convert_to('p4xxxxxxxxxxxxxxxxxx', 'UTF8')), 'hex'), 'person_id', gen_random_uuid(),
+    'version', 1, 'expires_at', (extract(epoch from now() + interval '1 day') * 1000)::bigint, 'payload', '{}'::jsonb)));
+end $$;
+select public.koban_plan() ->> 'companyUntil' is not null as company;
 -- 退会
 select public.koban_delete_account();
 reset role;

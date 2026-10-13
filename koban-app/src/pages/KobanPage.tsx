@@ -115,7 +115,7 @@ export function KobanPage({ project: p }: { project: Project }) {
               <th>見積</th>
               <th>ロケ地</th>
               {castCols.map((x) => (
-                <th key={x.id} className="vertical-head" title={x.role || x.name}>
+                <th key={x.id} className="person-head" title={x.role ? `${x.name}（${x.role}）` : x.name}>
                   {x.name}
                 </th>
               ))}

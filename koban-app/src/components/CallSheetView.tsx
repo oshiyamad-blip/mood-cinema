@@ -78,7 +78,8 @@ export function CallSheetView({ doc, versionN, highlightPersonId }: Props) {
 
       <section aria-label="香盤（撮影順）">
         <h3>撮影順</h3>
-        <div className="cs-scroll">
+        {/* 広い画面と印刷は表、スマホの画面は縦に並べる */}
+        <div className="cs-scroll cs-wide">
           <table className="cs-table">
             <thead>
               <tr>
@@ -127,6 +128,34 @@ export function CallSheetView({ doc, versionN, highlightPersonId }: Props) {
             </tbody>
           </table>
         </div>
+        <ol className="cs-list">
+          {doc.rows.map((r, i) =>
+            r.kind === 'break' ? (
+              <li key={i} className="cs-break">
+                <span className="num cs-time">{formatTime(r.start)}</span>
+                <span>
+                  {r.label}（〜{formatTime(r.end)}）
+                </span>
+              </li>
+            ) : (
+              <li key={i} className={highlightPersonId && r.castIds.includes(highlightPersonId) ? 'cs-mine' : undefined}>
+                <span className="num cs-time">{formatTime(r.start)}</span>
+                <div>
+                  <p className="cs-li-head">
+                    <span className="num cs-no">S#{r.sceneNo}</span> {r.heading}
+                    <span className="cs-li-meta">
+                      {[r.timeOfDay, INT_EXT[r.intExt] ?? r.intExt, r.pages != null ? `${r.pages}P` : ''].filter(Boolean).join('・')}
+                    </span>
+                  </p>
+                  {r.locationName && r.locationName !== r.heading && <p className="cs-sub">{r.locationName}</p>}
+                  {r.castNames.length > 0 && <p className="cs-li-cast">{r.castNames.join('、')}</p>}
+                  {r.synopsis && <p className="cs-sub">{r.synopsis}</p>}
+                </div>
+              </li>
+            ),
+          )}
+          {doc.rows.length === 0 && <li className="cs-empty">シーンがまだ入っていません</li>}
+        </ol>
       </section>
 
       <div className="cs-cols">

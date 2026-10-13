@@ -14,6 +14,7 @@
 }
 .cs-head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
@@ -183,6 +184,60 @@
   justify-content: space-between;
   gap: 8px;
   border-bottom: 1px solid var(--rule);
+}
+
+.cs-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cs-list li {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  gap: 6px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.cs-list p {
+  margin: 0;
+}
+.cs-list .cs-break {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+.cs-list .cs-mine {
+  background: var(--accent-soft);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.cs-time {
+  font-weight: 700;
+}
+.cs-li-head {
+  font-weight: 600;
+}
+.cs-li-meta {
+  font-weight: 400;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  margin-left: 6px;
+}
+.cs-li-cast {
+  font-size: 0.875rem;
+}
+@media screen and (max-width: 640px) {
+  .cs {
+    padding: 12px 10px;
+  }
+  .cs-wide {
+    display: none;
+  }
+  .cs-list {
+    display: block;
+  }
+  .cs-cols .cs-table {
+    font-size: 0.8125rem;
+  }
 }
 
 @media print {

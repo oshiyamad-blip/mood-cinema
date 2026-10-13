@@ -308,13 +308,14 @@ table.grid td select:focus {
   color: var(--accent);
   font-weight: 700;
 }
-.vertical-head {
-  writing-mode: vertical-rl;
-  white-space: nowrap;
-  padding: 6px 0 !important;
-  height: auto !important;
+.person-head {
   text-align: center !important;
-  min-width: 34px;
+  min-width: 40px;
+  max-width: 5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  padding: 0 2px !important;
 }
 .chip {
   display: inline-flex;
@@ -442,8 +443,49 @@ table.grid td select:focus {
   padding: 2px 6px;
   vertical-align: middle;
 }
+.day-items td input {
+  width: 100%;
+}
 .day-items tr.break td {
   background: var(--sunken);
+}
+@media (max-width: 640px) {
+  .day-items,
+  .day-items tbody {
+    display: block;
+  }
+  .day-items tr {
+    display: grid;
+    grid-template-columns: 6.5em 5em 1fr;
+    gap: 4px 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--rule);
+    align-items: center;
+  }
+  .day-items td {
+    border: 0;
+    padding: 0;
+    width: auto !important;
+  }
+  .day-items td:nth-child(1) {
+    grid-column: 1;
+  }
+  .day-items td:nth-child(2) {
+    grid-column: 2 / span 2;
+  }
+  .day-items td:nth-child(3) {
+    grid-column: 1;
+  }
+  .day-items td:nth-child(4) {
+    grid-column: 2;
+  }
+  .day-items td:nth-child(5) {
+    grid-column: 3;
+    justify-self: end;
+  }
+  .day-items td[colspan] {
+    grid-column: 1 / -1;
+  }
 }
 .day-foot {
   padding: 6px 10px;

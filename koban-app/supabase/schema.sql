@@ -322,3 +322,52 @@ grant execute on function public.koban_view(text) to anon, authenticated;
 grant execute on function public.koban_ack(text, integer) to anon, authenticated;
 
 revoke all on all functions in schema koban from public, anon, authenticated;
+
+-- ---- 課金（Edge Function の service_role だけが呼ぶ） ----
+
+create or replace function public.koban_admin_customer(p_owner uuid, p_customer text)
+returns text
+language plpgsql security definer set search_path = '' as $$
+declare cur text;
+begin
+  select stripe_customer into cur from koban.entitlements where owner = p_owner;
+  if cur is not null or p_customer is null then
+    return cur;
+  end if;
+  insert into koban.entitlements as e (owner, stripe_customer) values (p_owner, p_customer)
+  on conflict (owner) do update set stripe_customer = coalesce(e.stripe_customer, excluded.stripe_customer), updated_at = now();
+  return p_customer;
+end $$;
+
+create or replace function public.koban_admin_grant_project(p_owner uuid, p_project uuid, p_source text, p_grant boolean)
+returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if p_grant then
+    insert into koban.project_plans (project_id, owner, paid_at, source)
+    values (p_project, p_owner, now(), p_source)
+    on conflict (project_id) do update set paid_at = now(), source = excluded.source
+      where koban.project_plans.owner = p_owner;
+  else
+    delete from koban.project_plans where project_id = p_project and owner = p_owner and source = p_source;
+  end if;
+end $$;
+
+create or replace function public.koban_admin_set_company(p_owner uuid, p_until timestamptz)
+returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into koban.entitlements as e (owner, company_until) values (p_owner, p_until)
+  on conflict (owner) do update set company_until = excluded.company_until, updated_at = now();
+end $$;
+
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    execute 'revoke all on function public.koban_admin_customer(uuid, text) from public, anon, authenticated';
+    execute 'revoke all on function public.koban_admin_grant_project(uuid, uuid, text, boolean) from public, anon, authenticated';
+    execute 'revoke all on function public.koban_admin_set_company(uuid, timestamptz) from public, anon, authenticated';
+    execute 'grant execute on function public.koban_admin_customer(uuid, text) to service_role';
+    execute 'grant execute on function public.koban_admin_grant_project(uuid, uuid, text, boolean) to service_role';
+    execute 'grant execute on function public.koban_admin_set_company(uuid, timestamptz) to service_role';
+  end if;
+end $$;
