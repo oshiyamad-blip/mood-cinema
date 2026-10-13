@@ -27,6 +27,13 @@ JSON バックアップ）。自動処理でユーザーの本文を静かに失
 ローカルを絶対に落とさない、メモ帳の書き戻しは id と打刻時刻を引き継ぐ）。迷ったら
 消さない方に倒す。
 
+### 同居している別のアプリ
+
+- **`koban-app/`** — 撮影準備の台帳アプリ KOBAN（仮称）の段階1（日々スケの配布と確認）。Tsumugi とは独立した
+  Vite + React アプリで、依存・ビルド・テスト（vitest）・Supabase の SQL も別。作業するときは `koban-app/README.md` と
+  `docs/prepro-app/03-requirements.md` を正とする。ルートの `npm run build` には含まれない。
+- `serifu-app/` — 別の Flutter アプリ。
+
 ## 技術スタック
 
 - **React 19** + **react-router-dom 7**（SPA ルーティング）

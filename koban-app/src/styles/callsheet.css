@@ -1,0 +1,268 @@
+/* 日々スケ（画面と印刷で共通） */
+.cs {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.cs h3 {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  margin: 16px 0 6px;
+  letter-spacing: 0.04em;
+}
+.cs-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+}
+.cs-title {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.cs-date {
+  margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.3;
+}
+.cs-meta {
+  margin: 0;
+  display: flex;
+  gap: 12px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+.cs-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.cs-key dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0;
+}
+.cs-key dt {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.cs-key dd {
+  margin: 0;
+  font-weight: 600;
+}
+.cs-big {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.cs-locs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.cs-locs li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.cs-locs span {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.cs-scroll {
+  overflow-x: auto;
+}
+.cs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.cs-table th {
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+}
+.cs-table th,
+.cs-table td {
+  border: 1px solid var(--rule);
+  padding: 3px 6px;
+  vertical-align: top;
+}
+.cs-no,
+.cs-call {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cs-break td {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+.cs-mine td {
+  background: var(--accent-soft);
+}
+.cs-mine td:first-child {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.cs-sub {
+  display: block;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+.cs-syn {
+  color: var(--ink-2);
+  min-width: 8em;
+}
+.cs-empty {
+  color: var(--ink-3);
+  text-align: center;
+  padding: 16px;
+}
+.cs-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0 16px;
+}
+.cs-person {
+  display: inline-block;
+  margin-right: 10px;
+}
+.cs-person .cs-sub {
+  display: inline;
+  margin-left: 2px;
+}
+.cs-prep {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.cs-prep > div {
+  display: grid;
+  grid-template-columns: 6em 1fr;
+  gap: 8px;
+  border-bottom: 1px solid var(--rule);
+  padding: 2px 0;
+}
+.cs-prep dt {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+.cs-prep dd {
+  margin: 0;
+}
+.cs-pre {
+  white-space: pre-wrap;
+  margin: 0;
+}
+.cs-texts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 16px;
+}
+.cs-contacts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2px 16px;
+}
+.cs-contacts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cs-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cs-list li {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  gap: 6px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.cs-list p {
+  margin: 0;
+}
+.cs-list .cs-break {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+.cs-list .cs-mine {
+  background: var(--accent-soft);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.cs-time {
+  font-weight: 700;
+}
+.cs-li-head {
+  font-weight: 600;
+}
+.cs-li-meta {
+  font-weight: 400;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  margin-left: 6px;
+}
+.cs-li-cast {
+  font-size: 0.875rem;
+}
+@media screen and (max-width: 640px) {
+  .cs {
+    padding: 12px 10px;
+  }
+  .cs-wide {
+    display: none;
+  }
+  .cs-list {
+    display: block;
+  }
+  .cs-cols .cs-table {
+    font-size: 0.8125rem;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  .cs {
+    border: 0;
+    padding: 0;
+    font-size: 10pt;
+  }
+  .cs-table {
+    font-size: 9pt;
+  }
+  .cs-scroll {
+    overflow: visible;
+  }
+  .cs-table tr,
+  .cs-prep > div {
+    break-inside: avoid;
+  }
+  .cs-mine td {
+    background: #e4e9f6 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

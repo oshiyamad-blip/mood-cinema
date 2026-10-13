@@ -1,0 +1,134 @@
+/* 罫線帳（06-ui-design.md 第2章）。ライトはルート、ダークは OS の設定に従う */
+:root {
+  --paper: #f5f4f0;
+  --surface: #fdfdfb;
+  --sunken: #eceae4;
+  --rule: #d6d3cb;
+  --rule-strong: #8c877d;
+  --rule-heavy: #76716a;
+  --groove: #76716a;
+  --ink: #1b1a18;
+  --ink-2: #4d4a44;
+  --ink-3: #67635b;
+  --accent: #2b4a9e;
+  --accent-press: #1e3778;
+  --accent-soft: #e4e9f6;
+  --on-accent: #ffffff;
+  --err: #b0261c;
+  --on-err: #ffffff;
+  --warn-fill: #fce3b0;
+  --on-warn: #5e3200;
+  --warn-ink: #8a4a00;
+  --info-ink: #0e6483;
+  --info-fill: #ddf0f6;
+  --ok-ink: #1f6a3a;
+  --focus-outer: #2b4a9e;
+  --focus-inner: #ffffff;
+  --inverse-bg: #1b1a18;
+  --inverse-ink: #edebe6;
+  --inverse-accent: #b7c6f7;
+
+  --font: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  --r: 4px;
+  --row: 28px;
+  --touch: 44px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 4px 16px rgb(0 0 0 / 10%);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #111213;
+    --surface: #1a1b1d;
+    --sunken: #0b0c0d;
+    --rule: #34373b;
+    --rule-strong: #6a6e75;
+    --rule-heavy: #82878f;
+    --groove: #82878f;
+    --ink: #edebe6;
+    --ink-2: #bdbab2;
+    --ink-3: #9a978f;
+    --accent: #93a9f2;
+    --accent-press: #b7c6f7;
+    --accent-soft: #1f2a47;
+    --on-accent: #0e1426;
+    --err: #ff8f84;
+    --on-err: #2a0b08;
+    --warn-fill: #f5b65a;
+    --on-warn: #241400;
+    --warn-ink: #f5b65a;
+    --info-ink: #74c7e3;
+    --info-fill: #10303b;
+    --ok-ink: #7fd49b;
+    --focus-outer: #93a9f2;
+    --focus-inner: #0e1426;
+    --inverse-bg: #edebe6;
+    --inverse-ink: #1b1a18;
+    --inverse-accent: #2b4a9e;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-outer);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner);
+}
+
+a {
+  color: var(--accent);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 印刷はダークの設定でも白い紙に黒で出す */
+@media print {
+  :root,
+  :root:not([data-theme='light']) {
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --sunken: #eeeeee;
+    --rule: #999999;
+    --ink: #000000;
+    --ink-2: #333333;
+    --ink-3: #555555;
+    --accent: #1a3075;
+    --accent-soft: #e4e9f6;
+    color-scheme: light;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
