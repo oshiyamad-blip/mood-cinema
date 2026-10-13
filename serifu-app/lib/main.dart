@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ads/ad_route_observer.dart';
 import 'ads/ads.dart';
@@ -34,7 +35,10 @@ class SerifuApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       // UIは日本語固定（端末/ブラウザのロケールに依存しない）。
+      // 標準ウィジェットの文言（戻る・コピー/貼り付け等）も日本語にする。
       locale: const Locale('ja'),
+      supportedLocales: const [Locale('ja'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // 広告制御用：ホームが最前面かどうかを AdBanner が検知するため。
       navigatorObservers: [adRouteObserver],
       home: const HomeScreen(),

@@ -69,6 +69,10 @@ void main() {
     expect(src.contains('canRequestAds'), isTrue);
     // 同意が済むまでバナーをロードしないゲート。
     expect(src.contains('adsReady'), isTrue);
+    // 同意完了が練習中に届いても、ホームが最前面でなければロードしない。
+    expect(src.contains('_isTop'), isTrue);
+    // タイムアウト後に同意フォームが閉じられても広告を開始できる。
+    expect(src.contains('_startAdsIfAllowed'), isTrue);
   });
 
   test('Web/モバイルの広告サービスは同じ公開APIを持つ', () {

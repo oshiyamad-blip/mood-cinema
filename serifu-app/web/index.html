@@ -66,6 +66,13 @@
         Object.defineProperty(navigator, 'languages', { get: function () { return cleaned; }, configurable: true });
         Object.defineProperty(navigator, 'language', { get: function () { return cleaned[0]; }, configurable: true });
       } catch (e) { /* 失敗しても通常のブラウザには影響しない */ }
+      // 台本はこのブラウザ内（localStorage）だけに保存されるため、
+      // ブラウザの自動削除の対象になりにくいよう永続化を要求しておく（任意・失敗可）。
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().catch(function () {});
+        }
+      } catch (e) {}
     })();
   </script>
 </head>

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:charset/charset.dart' show ShiftJISDecoder, shiftJis;
 import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
@@ -31,7 +32,7 @@ class TextExtractor {
     final ext = file.path.toLowerCase().split('.').last;
     if (ext == 'pdf') return _extractPdf(file);
     if (ext == 'docx') return _docx.extract(file);
-    if (ext == 'txt') return file.readAsString();
+    if (ext == 'txt') return decodeText(await file.readAsBytes());
     if (imageExtensions.contains(ext)) return _ocr.recognizeImageFile(file);
     throw UnsupportedError('未対応の形式です: .$ext');
   }
@@ -51,11 +52,46 @@ class TextExtractor {
           'Web版では取り込めません。モバイル版（写真OCR対応）をお試しください。');
     }
     if (ext == 'docx') return _docx.extractFromBytes(bytes);
-    if (ext == 'txt') return utf8.decode(bytes, allowMalformed: true);
+    if (ext == 'txt') return decodeText(bytes);
     if (imageExtensions.contains(ext)) {
       throw UnsupportedError('画像・写真のOCRはWeb版では未対応です（モバイル版をご利用ください）。');
     }
     throw UnsupportedError('未対応の形式です: .$ext');
+  }
+
+  /// テキストファイルの文字コードを判別して読む（純関数・テスト可能）。
+  ///
+  /// 日本の台本テキストは UTF-8 だけでなく、古いメモ帳等で保存した
+  /// Shift_JIS や、「Unicode」保存の UTF-16 も多い。UTF-8 として正しく
+  /// 読めなければ Shift_JIS として読む（化けたまま取り込まない）。
+  static String decodeText(List<int> bytes) {
+    // UTF-8 の BOM
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+      return utf8.decode(bytes.sublist(3), allowMalformed: true);
+    }
+    // UTF-16（BOM付き。メモ帳の「Unicode」保存）
+    if (bytes.length >= 2 &&
+        ((bytes[0] == 0xFF && bytes[1] == 0xFE) ||
+            (bytes[0] == 0xFE && bytes[1] == 0xFF))) {
+      final little = bytes[0] == 0xFF;
+      final units = <int>[
+        for (var i = 2; i + 1 < bytes.length; i += 2)
+          little ? bytes[i] | (bytes[i + 1] << 8) : (bytes[i] << 8) | bytes[i + 1],
+      ];
+      return String.fromCharCodes(units);
+    }
+    try {
+      return utf8.decode(bytes); // 正しい UTF-8 ならそのまま
+    } on FormatException {
+      try {
+        return shiftJis.decode(bytes);
+      } on FormatException {
+        // Windows の拡張文字（髙・﨑・①など）だけ読めない場合も、
+        // その字を「�」にして残りは正しく読む（全体を化けさせない）。
+        return const ShiftJISDecoder(allowMalformed: true).convert(bytes);
+      }
+    }
   }
 
   Future<String> _extractPdf(File file) async {

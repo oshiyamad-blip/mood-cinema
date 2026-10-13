@@ -9,6 +9,7 @@ import '../data/practice_log.dart';
 import '../data/script_repository.dart';
 import '../data/script_transfer.dart';
 import '../models/script.dart';
+import '../services/file_download.dart';
 import '../theme/app_theme.dart';
 import 'read_through_screen.dart';
 import 'rehearsal_screen.dart';
@@ -47,6 +48,20 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
 
   /// 台本を .honyomi ファイルとして共有（バックアップ・共演者への受け渡し）。
   Future<void> _exportScript() async {
+    // Web版：ファイルとしてダウンロード（ブラウザ内の保存は消えることがあるため
+    // バックアップ手段として重要）。
+    if (kIsWeb) {
+      // iPhoneのSafariは見慣れない拡張子(.honyomi)をファイル選択で選べない
+      // ことがあるため、Webでは .json を付けて保存する（取り込み側も対応）。
+      final ok = FileDownload.save(
+          '${ScriptTransfer.fileNameFor(s)}.json', ScriptTransfer.encode(s));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? '書き出しました（ダウンロード）。戻すときはホームの「台本を取り込む」でこのファイルを選んでください。'
+            : '書き出しできませんでした。'),
+      ));
+      return;
+    }
     try {
       final dir = await getTemporaryDirectory();
       final path = '${dir.path}/${ScriptTransfer.fileNameFor(s)}';
@@ -125,13 +140,12 @@ class _ScriptDetailScreenState extends State<ScriptDetailScreen> {
       appBar: AppBar(
         title: Text(s.title),
         actions: [
-          // 書き出し（機種変バックアップ・共演者への共有）。モバイルのみ。
-          if (!kIsWeb)
-            IconButton(
-              icon: const Icon(Icons.ios_share),
-              tooltip: '台本を書き出す（共有・バックアップ）',
-              onPressed: _exportScript,
-            ),
+          // 書き出し（機種変バックアップ・共演者への共有）。Webはダウンロード。
+          IconButton(
+            icon: Icon(kIsWeb ? Icons.download_outlined : Icons.ios_share),
+            tooltip: '台本を書き出す（共有・バックアップ）',
+            onPressed: _exportScript,
+          ),
           IconButton(
             icon: const Icon(Icons.edit_note),
             tooltip: '解析結果を修正',

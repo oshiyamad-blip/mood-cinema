@@ -219,8 +219,57 @@ class _ReadThroughScreenState extends State<ReadThroughScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// 録音中に戻ろうとしたら確認する（黙って戻ると今回の録音が失われる）。
+  Future<void> _confirmLeaveWhileRecording() async {
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('録音中です'),
+        content: const Text('戻る前に、ここまでの録音を保存しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('続ける'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('保存せず戻る'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('保存して戻る'),
+          ),
+        ],
+      ),
+    );
+    if (save == null || !mounted || !_recording) return;
+    if (save) {
+      await _stopRecording();
+    } else {
+      _clock.stop();
+      await _ampSub?.cancel();
+      _ampSub = null;
+      try {
+        await _recorder.stop();
+      } catch (_) {}
+      await _store.delete(s.id); // 途中までの不完全な録音は残さない
+      if (mounted) setState(() => _recording = false);
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_recording,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeaveWhileRecording();
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       appBar: AppBar(title: const Text('通し録音')),
       body: Column(

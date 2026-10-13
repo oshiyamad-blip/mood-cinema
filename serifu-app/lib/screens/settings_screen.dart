@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../ads/ads.dart';
@@ -22,6 +23,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _store = SettingsStore.instance;
 
+  /// 「広告の同意設定」を出すかの判定（毎ビルドで作り直すとボタンが点滅する）。
+  late final Future<bool> _privacyOptionsRequired =
+      AdsService.privacyOptionsRequired();
+
   AppSettings get s => _store.settings;
   void _save(AppSettings next) => setState(() => _store.update(next));
 
@@ -39,10 +44,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _autoAdvanceSection(),
           const SizedBox(height: AppSpacing.md),
           _replyPauseSection(),
-          const SizedBox(height: AppSpacing.md),
-          _myTakeSection(),
-          const SizedBox(height: AppSpacing.md),
-          _recognitionSection(),
+          // 自分のセリフの録音・高精度認識はアプリ版のみの機能
+          // （Webでは録音せず、ブラウザの認識は常にブラウザ提供元のサービス）。
+          if (!kIsWeb) ...[
+            const SizedBox(height: AppSpacing.md),
+            _myTakeSection(),
+            const SizedBox(height: AppSpacing.md),
+            _recognitionSection(),
+          ],
           // クラウド音声は自前エンドポイントを設定したビルドでのみ表示
           // （通常ビルドでは費用のかかる外部APIは一切使わない）。
           if (CloudTtsConfig.configured) ...[
@@ -336,7 +345,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           // 広告の同意設定（UMPが要求する地域＝EEA/英国等でのみ表示）。
           FutureBuilder<bool>(
-            future: AdsService.privacyOptionsRequired(),
+            future: _privacyOptionsRequired,
             builder: (context, snap) {
               if (snap.data != true) return const SizedBox.shrink();
               return TextButton.icon(

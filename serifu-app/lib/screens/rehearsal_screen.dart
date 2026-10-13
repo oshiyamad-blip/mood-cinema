@@ -313,18 +313,24 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
   Future<void> _startMyLineRecording(Line? line) async {
     if (kIsWeb || line == null || _handsFree) return;
     if (!SettingsStore.instance.settings.recordMyLines) return;
+    // 開始処理（権限確認・前回分の削除・録音開始）の途中で「言えた・次へ」が
+    // 押されても止められるよう、先に「この行を録音中」と印を付けておく。
+    _recordingLineId = line.id;
+    bool stillWanted() => mounted && _recordingLineId == line.id;
     try {
-      if (!await _myRecorder.hasPermission()) return;
+      if (!await _myRecorder.hasPermission() || !stillWanted()) return;
       if (!_myTakesCleared) {
         _myTakesCleared = true;
         await _myTakes.clear(s.id); // 直近の練習1回分だけを保持
       }
       final path = await _myTakes.pathFor(s.id, line.id);
+      if (!stillWanted()) return;
       await _myRecorder.start(
         const RecordConfig(encoder: AudioEncoder.aacLc),
         path: path,
       );
-      _recordingLineId = line.id;
+      // 開始を待つ間に次へ進んでいた → 相手のセリフまで録らないよう即停止。
+      if (!stillWanted()) await _myRecorder.stop();
     } catch (_) {}
   }
 
@@ -332,7 +338,7 @@ class _RehearsalScreenState extends State<RehearsalScreen> {
     if (_recordingLineId == null) return;
     _recordingLineId = null;
     try {
-      await _myRecorder.stop();
+      if (await _myRecorder.isRecording()) await _myRecorder.stop();
     } catch (_) {}
   }
 

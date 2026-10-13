@@ -78,6 +78,10 @@ jobs:
           AAB=build/app/outputs/bundle/release/app-release.aab
           SIGNER=$(jarsigner -verify -verbose -certs "$AAB" 2>/dev/null | grep -i "CN=" | head -n1 || true)
           echo "signer: $SIGNER"
+          if [ -z "$SIGNER" ]; then
+            echo "::error::AAB の署名を確認できませんでした（未署名の可能性）。署名 Secrets を確認してください。"
+            exit 1
+          fi
           if echo "$SIGNER" | grep -qi "Android Debug"; then
             echo "::error::AAB が debug 鍵で署名されています。署名 Secrets を確認してください。"
             exit 1

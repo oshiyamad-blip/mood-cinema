@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
         content: Text(
           '「${s.title}」を削除します。通し録音と練習の記録も一緒に消え、'
           '元に戻せません。'
-          '${kIsWeb ? '' : '\n\n残しておきたい場合は、台本の画面から書き出せます。'}',
+          '\n\n残しておきたい場合は、先に台本の画面から書き出してください。',
         ),
         actions: [
           TextButton(
@@ -103,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
         type: FileType.custom,
         allowedExtensions: const [
           'honyomi', // ホンヨミ形式（書き出した台本の読み込み）
+          'json', // Web版で書き出した台本（.honyomi.json）
           'pdf',
           'docx',
           'txt',
@@ -121,7 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (picked == null) return;
 
       // ホンヨミ形式（書き出した台本）はそのまま復元（解析不要）。
-      if (picked.name.toLowerCase().endsWith('.${ScriptTransfer.fileExtension}')) {
+      final lowerName = picked.name.toLowerCase();
+      if (lowerName.endsWith('.${ScriptTransfer.fileExtension}') ||
+          lowerName.endsWith('.json')) {
         final String content;
         if (kIsWeb) {
           final bytes = picked.bytes;

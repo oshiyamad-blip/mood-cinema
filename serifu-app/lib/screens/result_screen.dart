@@ -319,7 +319,8 @@ class _StuckSection extends StatelessWidget {
           Text('つまずいたかも？', style: AppText.h2),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '時間がかかった・チラ見したセリフです。役作りの「間」なら気にしないでください。',
+            '時間がかかった・チラ見したセリフです。役作りの「間」なら気にしないでください。'
+            '${myTakes.isEmpty ? '' : '\n▶で、そのときの自分の演技を聞き返せます。'}',
             style: AppText.caption,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -351,6 +352,21 @@ class _StuckSection extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // 練習中に自動録音した自分の演技を、その場で聞き返す。
+                if (myTakes.containsKey(item.line.id))
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: playingLineId == item.line.id
+                        ? '停止'
+                        : '自分の演技を聞く',
+                    icon: Icon(
+                      playingLineId == item.line.id
+                          ? Icons.stop_circle_outlined
+                          : Icons.play_circle_outline,
+                      color: AppColors.primary600,
+                    ),
+                    onPressed: () => onTogglePlay(item.line.id),
+                  ),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
